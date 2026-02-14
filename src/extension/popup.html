@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogiTask Orchestrator</title>
+  <link rel="stylesheet" href="lib/tabulator/tabulator_semanticui.min.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>LogiTask Orchestrator</h1>
+    <div id="controls">
+      <button id="btn-refresh" title="Ejecutar barrido ahora">Ejecutar Ahora</button>
+      <select id="filter-tipo">
+        <option value="">Todos</option>
+        <option value="OPERATIVO">Operativo</option>
+        <option value="ADMINISTRATIVA">Administrativa</option>
+        <option value="SIN_CLASIFICAR">Sin clasificar</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <div id="tabla-seguimiento"></div>
+  </main>
+
+  <div id="modal-vincular" class="modal hidden">
+    <div class="modal-content">
+      <h2>Forzar Vinculacion</h2>
+      <label for="input-codcar">Codigo de Carga:</label>
+      <input type="number" id="input-codcar" placeholder="168345">
+      <div class="modal-actions">
+        <button id="btn-confirmar-vincular">Vincular</button>
+        <button id="btn-cancelar-vincular">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="ultimo-barrido">Ultimo barrido: --</span>
+    <span id="total-registros">Total: 0</span>
+  </footer>
+
+  <script src="lib/tabulator/tabulator.min.js"></script>
+  <script src="fases-config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

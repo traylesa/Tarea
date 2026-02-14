@@ -1,0 +1,278 @@
+# justfile - Fábrica Agéntica PruebaInicializa4
+# Sistema de comandos para automatización, despliegue y gestión de agentes
+#
+# Uso: just [comando] [argumentos]
+# Lista completa: just --list
+
+set shell := ["C:\\Program Files\\Git\\bin\\bash.exe", "-c"]
+
+# Variables globales
+PROYECTO_RAIZ := justfile_directory() / ".."
+FABRICA_DIR := justfile_directory()
+NOMBRE_PROYECTO := "PruebaInicializa4"
+SERVIDOR := "localhost:8080"
+RUTA_BUZONES := FABRICA_DIR / "buzon_agente"
+RUTA_DEPLOY := FABRICA_DIR / "deploy"
+RUTA_RAMAS := FABRICA_DIR / "ramas_paralelas"
+RUTA_SCRIPTS := FABRICA_DIR / "scripts"
+
+# ==============================================================================
+# COMANDOS PRINCIPALES
+# ==============================================================================
+
+# Mostrar ayuda completa
+ayuda:
+    @echo "╔════════════════════════════════════════════════════════════╗"
+    @echo "║          FÁBRICA AGÉNTICA - {{NOMBRE_PROYECTO}}           ║"
+    @echo "╚════════════════════════════════════════════════════════════╝"
+    @echo ""
+    @echo "📋 COMANDOS DISPONIBLES:"
+    @echo ""
+    @echo "🔧 Gestión del Proyecto:"
+    @echo "  just iniciar                Verificar sistema y dependencias"
+    @echo "  just probar                 Ejecutar tests"
+    @echo "  just limpiar [todo]         Limpiar archivos temporales"
+    @echo "  just diagnostico            Diagnóstico completo del sistema"
+    @echo ""
+    @echo "🚀 Despliegue:"
+    @echo "  just desplegar [componente] Desplegar aplicación"
+    @echo ""
+    @echo "🤖 Sistema de Buzones:"
+    @echo "  just automatizar            Vigilante automático (watch continuo)"
+    @echo "  just automatizar-batch      Procesar entrada/ una sola vez"
+    @echo "  just ejecutar-buzon [id]    Procesar expediente específico"
+    @echo "  just estado-buzones         Ver estado de todos los buzones"
+    @echo "  just concluir [id]          Mover expediente a archivo_concluido/"
+    @echo ""
+    @echo "🌳 Desarrollo Paralelo (Git Worktrees):"
+    @echo "  just paralelo [nombre]      Crear rama paralela"
+    @echo "  just paralelos-activos      Listar ramas paralelas activas"
+    @echo "  just paralelo-limpiar [nom] Eliminar rama paralela"
+    @echo ""
+    @echo "🎓 Habilidades (Skills):"
+    @echo "  just habilidades            Listar skills disponibles"
+    @echo "  just habilidades-reindexar  Reindexar catálogo de skills"
+    @echo ""
+    @echo "📚 Documentación:"
+    @echo "  Consulta fabrica/GUIA_COMPLETA.md para guía detallada"
+    @echo "  Consulta docs/AGENT_GUIDE.md para protocolo de agentes"
+    @echo ""
+
+# Verificar sistema y dependencias
+iniciar:
+    @echo "🔍 Verificando sistema..."
+    @echo ""
+    @echo "📁 Proyecto: {{NOMBRE_PROYECTO}}"
+    @echo "📂 Raíz: {{PROYECTO_RAIZ}}"
+    @echo "🏭 Fábrica: {{FABRICA_DIR}}"
+    @echo ""
+    @echo "✅ Estructura de carpetas:"
+    @test -d "{{RUTA_BUZONES}}" && echo "  ✓ Sistema de buzones" || echo "  ✗ Sistema de buzones (falta)"
+    @test -d "{{RUTA_RAMAS}}" && echo "  ✓ Ramas paralelas" || echo "  ✗ Ramas paralelas (falta)"
+    @test -d "{{RUTA_DEPLOY}}" && echo "  ✓ Deploy" || echo "  ✗ Deploy (falta)"
+    @test -d "{{PROYECTO_RAIZ}}/docs" && echo "  ✓ Documentación" || echo "  ✗ Documentación (falta)"
+    @test -d "{{PROYECTO_RAIZ}}/.claude" && echo "  ✓ Comandos Claude" || echo "  ✗ Comandos Claude (falta)"
+    @echo ""
+    @echo "📦 Verificando dependencias clave..."
+    @command -v git > /dev/null && echo "  ✓ Git instalado" || echo "  ✗ Git no encontrado"
+    @command -v python > /dev/null && echo "  ✓ Python instalado" || echo "  ✗ Python no encontrado"
+    @command -v node > /dev/null && echo "  ✓ Node.js instalado" || echo "  ⚠ Node.js no encontrado (opcional)"
+    @echo ""
+    @echo "✅ Sistema verificado. Usa 'just ayuda' para ver comandos disponibles."
+
+# ==============================================================================
+# TESTING Y DESARROLLO
+# ==============================================================================
+
+# Ejecutar tests (configurar según tu framework)
+probar *ARGS:
+    @echo "🧪 Ejecutando tests..."
+    @if [ -f "package.json" ]; then \
+        echo "Stack detectado: Node.js"; \
+        npm test {{ARGS}}; \
+    elif [ -f "requirements.txt" ]; then \
+        echo "Stack detectado: Python"; \
+        pytest tests/ {{ARGS}}; \
+    else \
+        echo "⚠️  No se detectó framework de testing."; \
+        echo "Configura este comando en fabrica/justfile según tu stack."; \
+    fi
+
+# Desplegar aplicación
+desplegar *ARGS:
+    @echo "🚀 Desplegando {{NOMBRE_PROYECTO}}..."
+    @echo "⚠️  Comando pendiente de configuración."
+    @echo "Edita fabrica/justfile y configura según tu entorno de despliegue."
+
+# ==============================================================================
+# SISTEMA DE BUZONES Y EXPEDIENTES
+# ==============================================================================
+
+# Inicializar sistema de buzones
+iniciar-fabrica:
+    @echo "🏭 Inicializando sistema de buzones..."
+    @python "{{RUTA_SCRIPTS}}/inicializar_fabrica.py"
+
+# Iniciar vigilante automático (monitoreo continuo)
+automatizar:
+    @echo "🤖 Iniciando vigilante automático (modo watch)..."
+    @echo "📂 Vigilando: {{RUTA_BUZONES}}/entrada/"
+    @echo "📌 Deposita archivos en entrada/ y se procesarán automáticamente."
+    @echo "🛑 Presiona Ctrl+C para detener."
+    @echo ""
+    @python "{{RUTA_BUZONES}}/vigilante.py" --modo watch
+
+# Procesar entrada/ una sola vez (modo batch)
+automatizar-batch:
+    @echo "🤖 Procesando buzón de entrada (modo batch, una sola vez)..."
+    @python "{{RUTA_BUZONES}}/vigilante.py" --modo batch
+
+# Ver estado de todos los buzones
+estado-buzones:
+    @echo "📊 Estado del Sistema de Buzones"
+    @echo "═══════════════════════════════════════════════════════"
+    @echo ""
+    @echo "📥 ENTRADA (pendientes de procesar):"
+    @ls -1 "{{RUTA_BUZONES}}/entrada" 2>/dev/null | grep -v "LEEME.md" | wc -l | xargs -I {} echo "   {} archivo(s)"
+    @ls "{{RUTA_BUZONES}}/entrada" 2>/dev/null | grep -v "LEEME.md" | sed 's/^/   - /'
+    @echo ""
+    @echo "🔧 TALLER ACTIVO (en proceso):"
+    @ls -1 "{{RUTA_BUZONES}}/taller_activo" 2>/dev/null | wc -l | xargs -I {} echo "   {} expediente(s)"
+    @ls "{{RUTA_BUZONES}}/taller_activo" 2>/dev/null | sed 's/^/   - /'
+    @echo ""
+    @echo "✅ ARCHIVO CONCLUIDO (finalizados):"
+    @ls -1 "{{RUTA_BUZONES}}/archivo_concluido" 2>/dev/null | wc -l | xargs -I {} echo "   {} expediente(s)"
+    @echo ""
+
+# Ejecutar expediente específico por ID
+ejecutar-buzon ID:
+    @echo "🔄 Procesando expediente: {{ID}}"
+    @if [ ! -d "{{RUTA_BUZONES}}/taller_activo/{{ID}}" ]; then \
+        echo "❌ Expediente no encontrado: {{ID}}"; \
+        exit 1; \
+    fi
+    @echo "📂 Expediente encontrado en taller_activo/{{ID}}"
+    @echo "📋 Contenido:"
+    @ls -la "{{RUTA_BUZONES}}/taller_activo/{{ID}}"
+    @echo ""
+    @echo "📝 Instrucciones:"
+    @cat "{{RUTA_BUZONES}}/taller_activo/{{ID}}/INSTRUCCIONES_AGENTE.md" 2>/dev/null || echo "Sin instrucciones generadas"
+
+# Concluir expediente (mover a archivo_concluido)
+concluir ID:
+    @echo "✅ Concluyendo expediente: {{ID}}"
+    @python "{{RUTA_SCRIPTS}}/concluir_expediente.py" "{{ID}}"
+
+# ==============================================================================
+# DESARROLLO PARALELO (GIT WORKTREES)
+# ==============================================================================
+
+# Crear rama paralela con git worktree
+paralelo NOMBRE:
+    @echo "🌳 Creando rama paralela: {{NOMBRE}}"
+    @python "{{RUTA_DEPLOY}}/gestor_worktrees.py" crear "{{NOMBRE}}"
+
+# Listar ramas paralelas activas
+paralelos-activos:
+    @echo "🌳 Ramas Paralelas Activas"
+    @echo "═══════════════════════════════════════════════════════"
+    @python "{{RUTA_DEPLOY}}/gestor_worktrees.py" listar
+
+# Eliminar rama paralela
+paralelo-limpiar NOMBRE:
+    @echo "🗑️  Eliminando rama paralela: {{NOMBRE}}"
+    @python "{{RUTA_DEPLOY}}/gestor_worktrees.py" eliminar "{{NOMBRE}}"
+
+# ==============================================================================
+# GESTIÓN DE HABILIDADES (SKILLS)
+# ==============================================================================
+
+# Listar habilidades disponibles
+habilidades:
+    @echo "🎓 Habilidades Disponibles"
+    @echo "═══════════════════════════════════════════════════════"
+    @python "{{RUTA_DEPLOY}}/gestor_habilidades.py" listar
+
+# Reindexar catálogo de habilidades
+habilidades-reindexar:
+    @echo "🔄 Reindexando catálogo de habilidades..."
+    @python "{{RUTA_DEPLOY}}/gestor_habilidades.py" reindexar
+
+# ==============================================================================
+# LIMPIEZA Y MANTENIMIENTO
+# ==============================================================================
+
+# Limpiar archivos temporales
+limpiar TARGET="basico":
+    @echo "🧹 Limpiando archivos temporales..."
+    @if [ "{{TARGET}}" = "todo" ]; then \
+        echo "⚠️  Limpieza completa (incluye logs y cache)"; \
+        rm -rf "{{PROYECTO_RAIZ}}/logs/*" 2>/dev/null; \
+        rm -rf "{{PROYECTO_RAIZ}}/.pytest_cache" 2>/dev/null; \
+        rm -rf "{{PROYECTO_RAIZ}}/node_modules/.cache" 2>/dev/null; \
+        rm -f "{{RUTA_BUZONES}}"/*.log 2>/dev/null; \
+        echo "✅ Limpieza completa finalizada"; \
+    else \
+        echo "Limpieza básica (solo temporales)"; \
+        find "{{PROYECTO_RAIZ}}" -name "*.pyc" -delete 2>/dev/null; \
+        find "{{PROYECTO_RAIZ}}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null; \
+        find "{{PROYECTO_RAIZ}}" -name ".DS_Store" -delete 2>/dev/null; \
+        find "{{PROYECTO_RAIZ}}" -name "*.tmp" -delete 2>/dev/null; \
+        echo "✅ Limpieza básica finalizada"; \
+    fi
+
+# Diagnóstico completo del sistema
+diagnostico:
+    @echo "🔍 DIAGNÓSTICO COMPLETO DEL SISTEMA"
+    @echo "═══════════════════════════════════════════════════════"
+    @echo ""
+    @echo "📁 RUTAS:"
+    @echo "  Proyecto: {{PROYECTO_RAIZ}}"
+    @echo "  Fábrica: {{FABRICA_DIR}}"
+    @echo "  Buzones: {{RUTA_BUZONES}}"
+    @echo ""
+    @echo "📊 ESTADÍSTICAS:"
+    @echo "  Archivos código: $$(find '{{PROYECTO_RAIZ}}/src' -type f 2>/dev/null | wc -l)"
+    @echo "  Skills: $$(ls '{{PROYECTO_RAIZ}}/.claude/skills' 2>/dev/null | wc -l)"
+    @echo "  Plans: $$(ls '{{PROYECTO_RAIZ}}/docs/plans' 2>/dev/null | wc -l)"
+    @echo "  Expedientes activos: $$(ls '{{RUTA_BUZONES}}/taller_activo' 2>/dev/null | wc -l)"
+    @echo ""
+    @echo "🔧 HERRAMIENTAS:"
+    @command -v git > /dev/null && git --version || echo "  ✗ Git no encontrado"
+    @command -v python > /dev/null && python --version || echo "  ✗ Python no encontrado"
+    @command -v node > /dev/null && node --version || echo "  ⚠ Node.js no encontrado"
+    @command -v just > /dev/null && just --version || echo "  ✗ Just no encontrado"
+    @echo ""
+    @echo "📋 CONFIGURACIÓN GIT:"
+    @git config user.name 2>/dev/null && echo "  Usuario: $$(git config user.name)" || echo "  ⚠ Usuario no configurado"
+    @git config user.email 2>/dev/null && echo "  Email: $$(git config user.email)" || echo "  ⚠ Email no configurado"
+    @git branch --show-current 2>/dev/null && echo "  Rama actual: $$(git branch --show-current)" || echo "  ⚠ No es repositorio git"
+    @echo ""
+    @echo "✅ Diagnóstico completado"
+
+# ==============================================================================
+# COMANDOS AVANZADOS
+# ==============================================================================
+
+# Turno nocturno (automatización programada)
+[private]
+turno-noche:
+    @echo "🌙 Ejecutando turno nocturno..."
+    @python "{{RUTA_SCRIPTS}}/turno_noche.py"
+
+# Backup de buzones
+[private]
+backup-buzones:
+    @echo "💾 Creando backup de buzones..."
+    @FECHA=$$(date +%Y%m%d_%H%M%S); \
+    tar -czf "{{PROYECTO_RAIZ}}/backups/buzones_$$FECHA.tar.gz" "{{RUTA_BUZONES}}"
+    @echo "✅ Backup creado en backups/"
+
+# ==============================================================================
+# AYUDA Y DOCUMENTACIÓN
+# ==============================================================================
+
+# Listar todos los comandos disponibles (default)
+[private]
+default:
+    @just --list

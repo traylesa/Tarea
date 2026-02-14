@@ -1,0 +1,23 @@
+{
+  "expediente": "FiltosyMensajes_20260214_000831",
+  "fase_actual": "08_OPERACION",
+  "estado": "COMPLETADO",
+  "inicio": "2026-02-14T00:08:31",
+  "ultima_actualizacion": "2026-02-14T12:00:00",
+  "fases_completadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION"
+  ],
+  "tests": {
+    "total": 141,
+    "passed": 141,
+    "failed": 0,
+    "cobertura": "95.12%"
+  }
+}

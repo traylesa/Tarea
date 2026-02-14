@@ -1,0 +1,5 @@
+- que en vez de popup sea una ventana movible y redimensinable por el usuario.
+- Que aquello que pueda ser configurable, usa variables que pueda parametrizar desde la interfaz por el usuario, por ejemplo:
+ * la ruta de acceso a los archivos csv del erp,
+ * patrones regex para la extracción de valores
+ * y cualquier otra que veas conveniente

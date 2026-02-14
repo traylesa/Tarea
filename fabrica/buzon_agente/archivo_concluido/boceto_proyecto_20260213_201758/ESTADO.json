@@ -1,0 +1,44 @@
+{
+  "expediente": "boceto_proyecto_20260213_201758",
+  "creado_en": "2026-02-13T20:17:58.647913",
+  "archivo_principal": "boceto_proyecto.md",
+  "clasificacion": {
+    "categoria": "BUG",
+    "severidad": "CRITICA",
+    "impacto": "BAJO",
+    "urgencia": "NORMAL",
+    "complejidad": "EPIC",
+    "nota": "Clasificación automática incorrecta. Es un proyecto nuevo (EPIC), no un BUG."
+  },
+  "camino_estrategico": {
+    "camino": "PROYECTO_COMPLETO",
+    "justificacion": "Proyecto complejo que requiere análisis profundo y todas las fases"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "02_INVESTIGACION",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION",
+    "09_EVOLUCION"
+  ],
+  "fase_actual": "09_EVOLUCION",
+  "estado": "COMPLETADO",
+  "timestamps": {
+    "creado": "2026-02-13T20:17:58.647913",
+    "ultima_actualizacion": "2026-02-13T20:45:00.000000",
+    "completado": "2026-02-13T20:45:00.000000"
+  },
+  "resumen": {
+    "proyecto": "LogiTask Orchestrator",
+    "descripcion": "Sistema híbrido Chrome Extension + Google Apps Script para seguimiento logístico de cargas",
+    "arquitectura": "GAS (backend) + Chrome Extension MV3 (frontend) + Google Sheets (almacenamiento)",
+    "tareas_planificadas": 10,
+    "esfuerzo_estimado": "43h",
+    "sprints": 4
+  }
+}

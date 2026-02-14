@@ -1,0 +1,44 @@
+{
+  "expediente": "boceto_proyecto_20260213_213008",
+  "creado_en": "2026-02-13T21:30:08.780133",
+  "archivo_principal": "boceto_proyecto.md",
+  "clasificacion": {
+    "categoria": "BUG",
+    "severidad": "CRITICA",
+    "impacto": "BAJO",
+    "urgencia": "NORMAL",
+    "complejidad": "EPIC"
+  },
+  "camino_estrategico": {
+    "camino": "PROYECTO_COMPLETO",
+    "justificacion": "Proyecto complejo que requiere análisis profundo y todas las fases"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "02_INVESTIGACION",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION",
+    "09_EVOLUCION"
+  ],
+  "fase_actual": "09_EVOLUCION",
+  "estado": "COMPLETADO",
+  "timestamps": {
+    "creado": "2026-02-13T21:30:08.780133",
+    "ultima_actualizacion": "2026-02-13T22:00:00.000000",
+    "completado": "2026-02-13T22:00:00.000000"
+  },
+  "resultados": {
+    "tests_total": 67,
+    "tests_pasando": 67,
+    "cobertura_statements": "100%",
+    "cobertura_branches": "98.48%",
+    "archivos_creados": 16,
+    "lineas_codigo": 527,
+    "lineas_tests": 350
+  }
+}

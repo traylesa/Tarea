@@ -1,0 +1,41 @@
+{
+  "expediente": "FiltosyMensajes_20260213_225601",
+  "creado_en": "2026-02-13T22:56:01.968511",
+  "archivo_principal": "FiltosyMensajes.md",
+  "clasificacion": {
+    "categoria": "FEATURE",
+    "severidad": "MEDIA",
+    "impacto": "BAJO",
+    "urgencia": "NORMAL",
+    "complejidad": "MINI"
+  },
+  "camino_estrategico": {
+    "camino": "MINI_PROYECTO",
+    "justificacion": "Feature o refactor de complejidad media con fases estándar"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION"
+  ],
+  "fase_actual": "COMPLETADO",
+  "estado": "COMPLETADO",
+  "timestamps": {
+    "creado": "2026-02-13T22:56:01.968511",
+    "ultima_actualizacion": "2026-02-13T23:30:00.000000",
+    "completado": "2026-02-13T23:30:00.000000"
+  },
+  "resultados": {
+    "tests_total": 55,
+    "tests_pasados": 55,
+    "cobertura_stmts": 94.49,
+    "cobertura_lines": 97.84,
+    "archivos_creados": 11,
+    "archivos_modificados": 3
+  }
+}

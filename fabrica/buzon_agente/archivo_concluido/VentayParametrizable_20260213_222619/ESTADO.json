@@ -1,0 +1,34 @@
+{
+  "expediente": "VentayParametrizable_20260213_222619",
+  "creado_en": "2026-02-13T22:26:19.433311",
+  "archivo_principal": "VentayParametrizable.txt",
+  "clasificacion": {
+    "categoria": "PROYECTO",
+    "severidad": "MEDIA",
+    "impacto": "BAJO",
+    "urgencia": "NORMAL",
+    "complejidad": "MINI"
+  },
+  "camino_estrategico": {
+    "camino": "PROYECTO_COMPLETO",
+    "justificacion": "Proyecto complejo que requiere análisis profundo y todas las fases"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "02_INVESTIGACION",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION",
+    "09_EVOLUCION"
+  ],
+  "fase_actual": "09_EVOLUCION",
+  "estado": "COMPLETADO",
+  "timestamps": {
+    "creado": "2026-02-13T22:26:19.433311",
+    "ultima_actualizacion": "2026-02-13T23:30:00.000000"
+  }
+}

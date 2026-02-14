@@ -1,0 +1,17 @@
+{
+  "name": "logitask-orchestrator",
+  "version": "0.1.0",
+  "description": "Sistema de seguimiento logistico automatizado - Extension Chrome + Google Apps Script",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "tabulator-tables": "^6.3.1"
+  }
+}

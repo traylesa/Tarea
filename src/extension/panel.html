@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogiTask Orchestrator</title>
+  <link rel="stylesheet" href="lib/tabulator/tabulator_semanticui.min.css">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header>
+    <h1>LogiTask Orchestrator</h1>
+    <nav id="tabs">
+      <button class="tab active" data-tab="datos">Datos</button>
+      <button class="tab" data-tab="plantillas">Plantillas</button>
+      <button class="tab" data-tab="config">Configuracion</button>
+      <button class="tab tab-help" data-tab="ayuda" title="Ayuda">?</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Tab Datos -->
+    <section id="tab-datos" class="tab-content active">
+      <!-- Barra de controles -->
+      <div id="controls">
+        <button id="btn-refresh" title="Ejecutar barrido ahora">Ejecutar Ahora</button>
+        <select id="selector-servicio" title="Servicio GAS activo"></select>
+        <input type="text" id="filtro-global" placeholder="Buscar en todos los campos..." title="Busqueda rapida">
+        <button id="btn-toggle-filtros" title="Mostrar/ocultar filtros avanzados">Filtros</button>
+        <button id="btn-toggle-agrupar" title="Agrupar por hilo">Agrupar por hilo</button>
+        <button id="btn-responder-seleccionados" title="Responder a los correos seleccionados" disabled>Responder seleccionados</button>
+        <button id="btn-limpiar-todo" title="Limpiar todos los filtros" class="btn-secundario hidden">Limpiar todo</button>
+        <span id="badge-filtros" class="badge-filtros hidden">0 filtros</span>
+      </div>
+
+      <!-- Panel edicion masiva -->
+      <div id="panel-bulk" class="panel-bulk">
+        <label><input type="checkbox" id="chk-bulk-fase"> Fase:</label>
+        <select id="bulk-fase"></select>
+        <label><input type="checkbox" id="chk-bulk-estado"> Estado:</label>
+        <select id="bulk-estado">
+          <option value="">--</option>
+          <option value="ENVIADO">ENVIADO</option>
+          <option value="RECIBIDO">RECIBIDO</option>
+          <option value="GESTIONADO">GESTIONADO</option>
+          <option value="ALERTA">ALERTA</option>
+        </select>
+        <label class="bulk-fecha-label">Correo Desde: <input type="date" id="filtro-fecha-inicio"></label>
+        <label class="bulk-fecha-label">Hasta: <input type="date" id="filtro-fecha-fin"></label>
+        <label class="chk-sin-fecha"><input type="checkbox" id="chk-correo-sin-fecha"> Incl. sin fecha</label>
+        <button id="btn-bulk-aplicar" class="btn-primario" disabled>Aplicar a seleccionados</button>
+      </div>
+
+      <!-- Panel filtros avanzados (colapsable) -->
+      <div id="panel-filtros" class="panel-colapsable hidden">
+        <div class="panel-filtros-header">
+          <span>Filtros Avanzados</span>
+          <button id="btn-limpiar-filtros" class="btn-secundario">Limpiar filtros</button>
+        </div>
+
+        <!-- Filtros temporales -->
+        <div class="filtros-temporales">
+          <label class="filtro-temporal">
+            <input type="checkbox" id="chk-rango-carga"> Rango Carga:
+            <input type="date" id="filtro-carga-desde" disabled>
+            <span>a</span>
+            <input type="date" id="filtro-carga-hasta" disabled>
+            <label class="chk-sin-fecha"><input type="checkbox" id="chk-carga-sin-fecha"> Incl. sin fecha</label>
+          </label>
+          <label class="filtro-temporal">
+            <input type="checkbox" id="chk-rango-descarga"> Rango Descarga:
+            <input type="date" id="filtro-descarga-desde" disabled>
+            <span>a</span>
+            <input type="date" id="filtro-descarga-hasta" disabled>
+            <label class="chk-sin-fecha"><input type="checkbox" id="chk-descarga-sin-fecha"> Incl. sin fecha</label>
+          </label>
+        </div>
+
+        <!-- Cards de fases -->
+        <div id="fase-cards-container" class="fase-cards"></div>
+
+        <!-- Baterias predefinidas -->
+        <div id="baterias-filtros" class="baterias"></div>
+
+        <!-- Filtros personalizados -->
+        <div id="filtros-personalizados">
+          <div class="filtro-fila" id="plantilla-filtro">
+            <select class="filtro-campo">
+              <option value="">-- Campo --</option>
+              <option value="estado">Estado</option>
+              <option value="fase">Fase</option>
+              <option value="codCar">CODCAR</option>
+              <option value="nombreTransportista">Transportista</option>
+              <option value="emailRemitente">Email</option>
+              <option value="tipoTarea">Tipo</option>
+              <option value="vinculacion">Vinculacion</option>
+              <option value="fCarga">FCarga</option>
+              <option value="fEntrega">FEntrega</option>
+              <option value="zona">Zona</option>
+              <option value="zDest">ZDest</option>
+            </select>
+            <select class="filtro-operador">
+              <option value="contiene">Contiene</option>
+              <option value="no_contiene">No contiene</option>
+              <option value="igual">Igual a</option>
+              <option value="<">Menor que (&lt;)</option>
+              <option value="<=">Menor o igual (&le;)</option>
+              <option value=">">Mayor que (&gt;)</option>
+              <option value=">=">Mayor o igual (&ge;)</option>
+            </select>
+            <input type="text" class="filtro-valor" placeholder="Valor...">
+            <button class="btn-quitar-filtro" title="Quitar este filtro">X</button>
+          </div>
+        </div>
+        <div class="filtro-acciones">
+          <button id="btn-agregar-filtro" class="btn-secundario">+ Agregar filtro</button>
+        </div>
+
+        <button id="btn-aplicar-filtros" class="btn-primario">Aplicar Filtros</button>
+      </div>
+
+      <div id="tabla-seguimiento"></div>
+    </section>
+
+    <!-- Tab Plantillas -->
+    <section id="tab-plantillas" class="tab-content">
+      <div class="plantillas-layout">
+        <div class="plantillas-lista">
+          <h3>Plantillas de Respuesta</h3>
+          <button id="btn-nueva-plantilla" class="btn-primario">+ Nueva Plantilla</button>
+          <div id="lista-plantillas"></div>
+        </div>
+        <div class="plantillas-editor">
+          <div id="editor-plantilla" class="hidden">
+            <label>Alias: <input type="text" id="tpl-alias" placeholder="Nombre de la plantilla"></label>
+            <label>Asunto: <input type="text" id="tpl-asunto" placeholder="Re: {{asunto}}"></label>
+            <label>Cuerpo (HTML):</label>
+            <textarea id="tpl-cuerpo" rows="8" placeholder="<p>Estimado {{nombreTransportista}},</p>"></textarea>
+            <label>Firma (HTML):</label>
+            <textarea id="tpl-firma" rows="3" placeholder="<p>--<br>Departamento Logistica</p>"></textarea>
+
+            <div class="editor-acciones">
+              <button id="btn-guardar-plantilla" class="btn-primario">Guardar</button>
+              <button id="btn-previsualizar-plantilla" class="btn-secundario">Previsualizar</button>
+              <button id="btn-variables-disponibles" class="btn-secundario">Variables disponibles</button>
+            </div>
+
+            <div id="preview-plantilla" class="hidden">
+              <h4>Previsualizacion</h4>
+              <div id="preview-contenido"></div>
+            </div>
+
+            <div id="panel-variables" class="hidden">
+              <h4>Variables Disponibles</h4>
+              <table id="tabla-variables"></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab Configuracion -->
+    <section id="tab-config" class="tab-content">
+      <form id="form-config">
+        <fieldset>
+          <legend>Servicios GAS</legend>
+          <div id="lista-servicios"></div>
+          <div class="servicio-nuevo">
+            <input type="text" id="nuevo-servicio-alias" placeholder="Alias (ej: Produccion)">
+            <input type="url" id="nuevo-servicio-url" placeholder="https://script.google.com/macros/s/.../exec">
+            <button type="button" id="btn-agregar-servicio" class="btn-primario">Agregar</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Barrido</legend>
+          <label for="cfg-intervalo">Intervalo de barrido (minutos)</label>
+          <input type="number" id="cfg-intervalo" min="1" max="1440" value="15">
+        </fieldset>
+
+        <fieldset>
+          <legend>Rutas</legend>
+          <label for="cfg-ruta-csv">Ruta archivos CSV del ERP</label>
+          <input type="text" id="cfg-ruta-csv" placeholder="Z:\Datos\ERP\exportaciones">
+        </fieldset>
+
+        <fieldset>
+          <legend>Patrones de extraccion (regex)</legend>
+          <label for="cfg-patron-codcar">Patron CODCAR en adjuntos</label>
+          <input type="text" id="cfg-patron-codcar" placeholder="Carga_0*(\d+)\.pdf">
+
+          <label for="cfg-patron-keywords">Keywords administrativos</label>
+          <input type="text" id="cfg-patron-keywords" placeholder="certificado|hacienda|347|aeat|factura">
+        </fieldset>
+
+        <fieldset>
+          <legend>Fases de Transporte</legend>
+          <p class="info-texto">Configura las fases logisticas. Las fases criticas se destacan en rojo.</p>
+          <div id="lista-fases-config"></div>
+          <button type="button" id="btn-nueva-fase" class="btn-primario">+ Nueva Fase</button>
+        </fieldset>
+
+        <fieldset>
+          <legend>Exportar / Importar Configuracion</legend>
+          <p class="info-texto">Comparte tu configuracion entre instalaciones o como backup.</p>
+          <div class="export-import-actions">
+            <button type="button" id="btn-exportar-config" class="btn-primario">Exportar Configuracion</button>
+            <button type="button" id="btn-importar-config" class="btn-secundario">Importar Configuracion</button>
+            <input type="file" id="input-importar-config" accept=".json" class="hidden">
+          </div>
+          <div id="import-resultado" class="hidden"></div>
+        </fieldset>
+
+        <div id="config-errores" class="errores hidden"></div>
+        <div id="config-exito" class="exito hidden">Configuracion guardada</div>
+
+        <div class="form-actions">
+          <button type="submit" id="btn-guardar-config">Guardar</button>
+          <button type="button" id="btn-restaurar-defaults">Restaurar valores por defecto</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Tab Ayuda -->
+    <section id="tab-ayuda" class="tab-content">
+      <div id="panel-ayuda">
+        <h2>Ayuda - LogiTask Orchestrator</h2>
+        <nav id="ayuda-nav"></nav>
+        <div id="ayuda-contenido"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Vincular -->
+  <div id="modal-vincular" class="modal hidden">
+    <div class="modal-content">
+      <h2>Forzar Vinculacion</h2>
+      <label for="input-codcar">Codigo de Carga:</label>
+      <input type="number" id="input-codcar" placeholder="168345">
+      <div class="modal-actions">
+        <button id="btn-confirmar-vincular">Vincular</button>
+        <button id="btn-cancelar-vincular">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Respuesta Masiva -->
+  <div id="modal-respuesta" class="modal hidden">
+    <div class="modal-content modal-respuesta-content">
+      <h2>Responder a correos seleccionados</h2>
+      <div id="respuesta-destinatarios"></div>
+      <label>Plantilla:
+        <select id="respuesta-plantilla"><option value="">-- Sin plantilla --</option></select>
+      </label>
+      <label>Asunto: <input type="text" id="respuesta-asunto" class="input-full"></label>
+      <label>Mensaje:</label>
+      <textarea id="respuesta-cuerpo" rows="6"></textarea>
+      <label>Firma:
+        <select id="respuesta-firma-selector">
+          <option value="">Sin firma</option>
+          <option value="__custom__">Personalizada</option>
+        </select>
+      </label>
+      <textarea id="respuesta-firma" rows="2" class="hidden" placeholder="Escriba su firma personalizada..."></textarea>
+      <div id="respuesta-error" class="errores hidden"></div>
+      <div class="modal-actions">
+        <button id="btn-preview-respuesta" class="btn-secundario">Previsualizar</button>
+        <button id="btn-enviar-respuesta" class="btn-primario">Enviar</button>
+        <button id="btn-cancelar-respuesta">Cancelar</button>
+      </div>
+      <div id="preview-respuesta" class="hidden">
+        <h4>Previsualizacion</h4>
+        <div id="preview-respuesta-contenido"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar Fase -->
+  <div id="modal-fase" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="modal-fase-titulo">Nueva Fase</h2>
+      <label for="fase-codigo">Codigo (2 caracteres):</label>
+      <input type="text" id="fase-codigo" maxlength="2" placeholder="05">
+      <label for="fase-nombre">Nombre:</label>
+      <input type="text" id="fase-nombre" placeholder="05 Incidencia">
+      <label for="fase-orden">Orden:</label>
+      <input type="number" id="fase-orden" min="0" max="99" placeholder="4">
+      <label><input type="checkbox" id="fase-critica"> Fase critica</label>
+      <label for="fase-clase-css">Clase CSS:</label>
+      <select id="fase-clase-css">
+        <option value="">(ninguna)</option>
+        <option value="fase-incidencia">fase-incidencia (rojo)</option>
+        <option value="fase-ok">fase-ok (verde)</option>
+      </select>
+      <label><input type="checkbox" id="fase-activa" checked> Activa</label>
+      <div id="modal-fase-error" class="errores hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-guardar-fase">Guardar</button>
+        <button type="button" id="btn-cancelar-fase">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="ultimo-barrido">Ultimo barrido: --</span>
+    <span>
+      <span id="registros-excluidos" class="badge-excluidos hidden">0 ocultos</span>
+      <button id="btn-mostrar-excluidos" class="btn-excluidos hidden">Mostrar ocultos</button>
+    </span>
+    <span id="total-registros">Total: 0</span>
+  </footer>
+
+  <script src="lib/tabulator/tabulator.min.js"></script>
+  <script src="fases-config.js"></script>
+  <script src="config.js"></script>
+  <script src="filters.js"></script>
+  <script src="templates.js"></script>
+  <script src="gas-services.js"></script>
+  <script src="thread-grouping.js"></script>
+  <script src="bulk-reply.js"></script>
+  <script src="help-content.js"></script>
+  <script src="panel.js"></script>
+  <script src="config-ui.js"></script>
+</body>
+</html>

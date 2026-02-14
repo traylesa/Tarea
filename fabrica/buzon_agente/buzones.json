@@ -1,0 +1,72 @@
+{
+  "version": "2.3.1",
+  "creado_en": "2026-02-13T00:00:00",
+  "modelo": "expedientes_por_tema",
+  "rutas": {
+    "entrada": "fabrica/buzon_agente/entrada/",
+    "taller_activo": "fabrica/buzon_agente/taller_activo/",
+    "archivo_concluido": "fabrica/buzon_agente/archivo_concluido/"
+  },
+  "deteccion_tipo": {
+    ".md": {
+      "tipo": "especificacion",
+      "accion": "/implanta",
+      "descripcion": "Especificación de feature o historia de usuario"
+    },
+    ".txt": {
+      "tipo": "especificacion",
+      "accion": "/implanta",
+      "descripcion": "Especificación en texto plano"
+    },
+    ".log": {
+      "tipo": "error",
+      "accion": "/corrige",
+      "descripcion": "Log de error para corrección"
+    },
+    ".email": {
+      "tipo": "feedback",
+      "accion": "Transformar a especificacion",
+      "descripcion": "Email de usuario con feedback"
+    }
+  },
+  "lanzamiento_automatico": {
+    "habilitado": true,
+    "comando": "claude",
+    "opciones": "--dangerously-skip-permissions"
+  },
+  "vigilante": {
+    "habilitado": true,
+    "version": "2.3.1",
+    "patrones_ignorar": [
+      "*.tmp",
+      "*.processing",
+      ".DS_Store",
+      "INSTRUCCIONES_AGENTE.md",
+      "LEEME.md"
+    ],
+    "archivo_log": "fabrica/buzon_agente/vigilante.log",
+    "intervalo_watch": 1
+  },
+  "clasificacion": {
+    "habilitada": true,
+    "categorias": ["FEATURE", "BUGFIX", "REFACTOR", "DOCS", "HOTFIX", "RESEARCH"],
+    "caminos_estrategicos": ["TICKET_RAPIDO", "MINI_PROYECTO", "PROYECTO_COMPLETO"],
+    "descripcion": "Clasificación inteligente por contenido del archivo"
+  },
+  "diccionario": {
+    "ubicacion": "docs/DICCIONARIO_DOMINIO.md",
+    "obligatorio": true,
+    "propuesta_por_expediente": "PROPUESTA_DICCIONARIO.md"
+  },
+  "expedientes": {
+    "plantilla_instrucciones": "INSTRUCCIONES_AGENTE.md",
+    "estado_json": "ESTADO.json",
+    "campos_metadata": [
+      "fecha_creacion",
+      "tipo_archivo",
+      "accion_recomendada",
+      "clasificacion",
+      "camino_estrategico"
+    ]
+  }
+}
