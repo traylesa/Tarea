@@ -1,0 +1,787 @@
+OPTIMIZA TareaLog Copiloto — De herramienta de emails a asistente inteligente del operador
+
+ Contexto: Por qué esta ampliación
+
+ El problema real del operador de tráfico
+
+ Un operador de tráfico de TRAYLESA gestiona 30-80 cargas simultáneas con 6+ aplicaciones abiertas:
+
+ ┌──────────────────┬───────────────────────────────────────────┬───────────────────────────────────────────────┐
+ │     Pantalla     │              Para qué la usa              │                   Problema                    │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ GPS web          │ Ver dónde está cada camión                │ Tiene que abrir y buscar uno a uno            │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ ERP              │ Asignar cargas, facturar, consultar datos │ Formularios lentos, cambio de contexto        │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ WhatsApp         │ Hablar con conductores urgente            │ Mensajes se mezclan, no queda registro formal │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ Gmail            │ Comunicación formal con transportistas    │ Volumen alto, cosas se pierden entre correos  │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ TareaLog         │ Seguimiento de fases por email            │ Hay que abrir y mirar, no avisa solo          │
+ ├──────────────────┼───────────────────────────────────────────┼───────────────────────────────────────────────┤
+ │ Teléfono + Excel │ Llamadas, planning, reportes              │ Manual, disperso                              │
+ └──────────────────┴───────────────────────────────────────────┴───────────────────────────────────────────────┘
+
+ Realidad: El operador NO puede estar mirando TareaLog. Cuando detecta un problema, a menudo ya ha pasado tiempo
+ valioso. Las cosas "se escapan" por volumen y cambio de contexto entre ventanas.
+
+ Objetivo: Transformar TareaLog de "herramienta que hay que ir a mirar" a copiloto que avisa, recuerda y facilita —
+ reduciendo cambios de aplicación, eliminando olvidos, y dando visión instantánea.
+
+ ---
+ Principios de diseño
+
+ 1. Mínima fricción
+
+ - Visible sin buscar (aparece solo)
+ - Comprensible en 2 segundos (título + dato clave)
+ - Accionable con 1 click (abrir, gestionar, posponer, descartar)
+
+ 2. Priorización por urgencia
+
+ ┌─────────┬─────────┬────────────────────────────────┬──────────────────────────────┐
+ │  Nivel  │ Visual  │         Comportamiento         │           Ejemplo            │
+ ├─────────┼─────────┼────────────────────────────────┼──────────────────────────────┤
+ │ CRITICO │ Rojo    │ Ventana emergente + badge rojo │ Carga por vencer, incidencia │
+ ├─────────┼─────────┼────────────────────────────────┼──────────────────────────────┤
+ │ ALTO    │ Naranja │ Notificación Chrome + badge    │ Sin respuesta 4h             │
+ ├─────────┼─────────┼────────────────────────────────┼──────────────────────────────┤
+ │ MEDIO   │ Azul    │ Notificación silenciosa        │ Resumen matutino             │
+ ├─────────┼─────────┼────────────────────────────────┼──────────────────────────────┤
+ │ BAJO    │ Verde   │ Solo badge                     │ Fase actualizada             │
+ └─────────┴─────────┴────────────────────────────────┴──────────────────────────────┘
+
+ 3. Agrupación inteligente
+
+ 15 cargas pendientes → UN resumen, no 15 notificaciones.
+
+ 4. Horario consciente
+
+ Avisos solo en horario laboral. Modo concentración para silenciar temporalmente.
+
+ 5. No duplicar
+
+ Misma alerta no se repite. IDs únicos por alerta + cooldown configurable.
+
+ ---
+ Historias de Usuario
+
+ ---
+ BLOQUE A: AVISOS PROACTIVOS (el sistema vigila por ti)
+
+ ---
+ HU-01: Resumen matutino — "Buenos días, esto es lo que tienes"
+
+ Como operador que acaba de empezar turno,
+ quiero ver automáticamente un resumen de la situación,
+ para priorizar mi trabajo sin revisar manualmente cada carga.
+
+ Escenario:
+ 7:00. María abre Chrome. TareaLog muestra ventana emergente:
+ - 3 cargas salen HOY sin orden enviada
+ - 2 transportistas no responden desde ayer
+ - 5 cargas entregadas sin documentación
+ - 1 incidencia abierta
+
+ Click en "3 cargas sin orden" → panel abre filtrado → envío masivo.
+
+ Criterios de aceptación:
+ - CA-1.1: Primer barrido tras horaInicio → mostrar ventana resumen
+ - CA-1.2: Agrupa por: URGENTE, PENDIENTE, DOCUMENTACIÓN, INCIDENCIAS
+ - CA-1.3: Cada categoría clickable → abre panel con filtro aplicado
+ - CA-1.4: Botón "Descartar" cierra; botón "Posponer 1h" retrasa
+ - CA-1.5: Solo 1 vez al día (flag con fecha en storage)
+ - CA-1.6: Activar/desactivar en Config
+
+ ---
+ HU-02: Silencio de transportista — "Nadie ha respondido"
+
+ Como operador que envió una orden de carga,
+ quiero un aviso si el transportista no responde en X horas,
+ para llamarle o buscar alternativa antes de que sea tarde.
+
+ Escenario:
+ 8:00 se envió orden a López para salida a las 14:00. Son las 12:00, sin respuesta.
+ Notificación: "Transportes López no responde — Carga 168400 sale en 2h"
+ Click → ve hilo → decide llamar.
+
+ Criterios de aceptación:
+ - CA-2.1: estado=ENVIADO + (ahora - fechaCorreo) > umbralH + sin RECIBIDO en threadId → alerta
+ - CA-2.2: Umbral configurable (default: 4h)
+ - CA-2.3: Urgencia escala según proximidad a fCarga (< 2h = CRITICO)
+ - CA-2.4: Click → panel filtrado en ese registro
+ - CA-2.5: Se cancela si llega respuesta
+ - CA-2.6: Cooldown 1h (no repetir)
+
+ ---
+ HU-03: Fase estancada — "Algo no avanza"
+
+ Como operador que supervisa decenas de cargas,
+ quiero aviso si una carga lleva demasiado tiempo en la misma fase,
+ para investigar si hay un problema no reportado.
+
+ Escenario:
+ Carga 168300 en "12 Cargando" desde hace 6h (lo normal: 1-2h).
+ "Carga 168300 lleva 6h en fase Cargando"
+ Operador mira GPS → camión sigue en punto de carga → llama → hay problema de mercancía.
+
+ Criterios de aceptación:
+ - CA-3.1: Tiempo máximo por fase configurable (ej: Cargando=3h, En ruta=24h)
+ - CA-3.2: (ahora - últimaActualización) > tiempoMax → aviso
+ - CA-3.3: ALTO si supera 2x, MEDIO si supera 1x
+ - CA-3.4: Click → panel filtrado
+ - CA-3.5: Se silencia al cambiar fase
+ - CA-3.6: Activar/desactivar por fase
+
+ ---
+ HU-04: Documentación pendiente — "Entregado pero sin cerrar"
+
+ Como operador responsable del cierre administrativo,
+ quiero aviso de cargas entregadas sin documentación,
+ para reclamar justificantes a tiempo.
+
+ Escenario:
+ Carga 168200 entregada hace 3 días (fase 29) sin pasar a Documentado (30).
+ Resumen: "5 cargas sin documentar (más antigua: 5 días)"
+ Selecciona las 5 → respuesta masiva con plantilla "Recordatorio docs".
+
+ Criterios de aceptación:
+ - CA-4.1: fase=29 + (ahora - fEntrega) > umbralDias (default: 2) → aviso
+ - CA-4.2: En resumen matutino como categoría propia
+ - CA-4.3: Individual si > 5 días (ALTO)
+ - CA-4.4: Click → panel filtrado
+ - CA-4.5: Desaparece al pasar a fase 30
+ - CA-4.6: Botón "Reclamar docs" → preselecciona plantilla + registros
+
+ ---
+ HU-05: Incidencia en tiempo real — "Algo ha ido mal"
+
+ Como operador que no puede estar mirando la tabla,
+ quiero aviso inmediato cuando se detecte incidencia (fase 05/25),
+ para reaccionar al instante.
+
+ Escenario:
+ 11:30, operador en el ERP facturando. Llega correo de avería, se detecta fase 05.
+ "INCIDENCIA — Carga 168500 (García) Incidencia pre-carga"
+ Badge rojo en icono extensión.
+
+ Criterios de aceptación:
+ - CA-5.1: Cambio a fase 05/25 → notificación CRITICA inmediata
+ - CA-5.2: Badge icono extensión rojo con conteo incidencias
+ - CA-5.3: Click → panel filtrado incidencias
+ - CA-5.4: Persiste hasta que fase cambie
+ - CA-5.5: Sonido configurable (default: activado para CRITICO)
+ - CA-5.6: Agrupa si hay varias: "2 incidencias activas"
+
+ ---
+ HU-06: Cargas de HOY sin orden — "Se te va a pasar"
+
+ Como operador al inicio del día,
+ quiero saber qué cargas salen HOY sin orden enviada,
+ para enviar antes de que sea tarde.
+
+ Criterios de aceptación:
+ - CA-6.1: fCarga=HOY + sin registro ENVIADO para ese CODIGO de PEDCLI, (donde codCar está vacío) → alerta
+ - CA-6.2: En resumen matutino como URGENTE
+ - CA-6.3: < 3h para hCarga → CRITICO individual
+ - CA-6.4: Click → panel filtrado + preselecciona para envío masivo
+ - CA-6.5: Autoresuelve al enviar orden
+
+ ---
+ BLOQUE B: RECORDATORIOS — "No te olvides de esto"
+
+ ---
+ HU-07: Recordatorios manuales con snooze
+
+ Como operador que tiene que hacer algo "dentro de un rato",
+ quiero programar un recordatorio asociado a una carga con opciones de posponer,
+ para no depender de mi memoria con 60+ cargas activas.
+
+ Escenario:
+ 9:00 — Operador habla por teléfono con transportista García: "Llamo a las 11 para confirmar hora de carga". Desde
+ TareaLog, click en carga 168345 → "Recordar" → "Llamar a García para confirmar hora" → selecciona "En 2h".
+
+ 11:00 — Notificación: "Llamar a García — Carga 168345 (Cargando)"
+ Botones: [Snooze 15min] [Snooze 1h] [Hecho] [Abrir carga]
+
+ El operador está ocupado → click "Snooze 15min" → a las 11:15 vuelve a sonar.
+
+ Criterios de aceptación:
+ - CA-7.1: Botón "Recordar" en cada fila con input de texto + selector de tiempo
+ - CA-7.2: Presets: 15min, 30min, 1h, 2h, 4h, Mañana 9am, Lunes 9am, Fecha custom
+ - CA-7.3: Notificación en el momento con datos de carga + botones snooze
+ - CA-7.4: Snooze reprograma (15min, 1h, mañana)
+ - CA-7.5: Persistente (sobrevive cierre navegador, usa chrome.alarms)
+ - CA-7.6: Panel "Mis recordatorios" con todos los activos y countdown
+ - CA-7.7: Indicador en fila si carga tiene recordatorio activo
+
+ ---
+ HU-08: Recordatorios automáticos sugeridos
+
+ Como operador que a veces olvida hacer seguimiento,
+ quiero que el sistema sugiera recordatorios basados en la fase de la carga,
+ para que el seguimiento sea proactivo sin esfuerzo.
+
+ Escenario:
+ Carga 168400 acaba de pasar a fase "19 Cargado". TareaLog sugiere automáticamente:
+ "Verificar descarga en 8h (hora estimada llegada: 17:00)"
+ El operador acepta o ajusta la hora.
+
+ Criterios de aceptación:
+ - CA-8.1: Sugerencias automáticas al cambiar fase:
+   - Cargado (19) → "Verificar descarga" X horas antes de hEntrega
+   - Vacío (29) → "Reclamar POD" 24h después si no pasa a 30
+   - Enviado → "Seguimiento si no responde" en umbralH
+ - CA-8.2: El operador puede aceptar, ajustar hora, o descartar
+ - CA-8.3: Los aceptados se comportan como recordatorios manuales (con snooze)
+ - CA-8.4: Configurable: activar/desactivar sugerencias por fase
+
+ ---
+ BLOQUE C: SECUENCIAS AUTOMÁTICAS — "Persigue por mí"
+
+ ---
+ HU-09: Secuencia de follow-up para documentación
+
+ Como operador que tiene que reclamar documentos repetidamente,
+ quiero programar una secuencia de emails automática (solicitar → recordar → escalar),
+ para que los documentos se reclamen sin intervención manual repetitiva.
+
+ Escenario:
+ Carga 168200 entregada. Operador lanza secuencia "Reclamar POD":
+ - Día 1: Email "Solicitar justificante de entrega" (plantilla)
+ - Día 3: Si no responde → Email "Recordatorio documentos pendientes"
+ - Día 7: Si no responde → Email "Escalado a responsable" (CC jefe transportista)
+ - Si responde en cualquier momento → secuencia se detiene automáticamente
+
+ Criterios de aceptación:
+ - CA-9.1: Al enviar email, opción "Crear secuencia de seguimiento"
+ - CA-9.2: Configurar pasos: plantilla + horas/días de espera + condición de salida
+ - CA-9.3: Condición de salida: si se recibe respuesta en threadId → detener
+ - CA-9.4: Visualización de secuencias activas con estado de cada paso
+ - CA-9.5: Cancelación manual de secuencia en cualquier momento
+ - CA-9.6: Máximo 3 pasos por secuencia (evitar spam)
+ - CA-9.7: Secuencias predefinidas: "Reclamar POD", "Confirmar carga", "Seguimiento incidencia"
+
+ ---
+ HU-10: Reporte automático de fin de turno
+
+ Como operador que termina su jornada,
+ quiero recibir un resumen automático de lo que gestioné y lo que queda pendiente,
+ para tener cierre de turno limpio y entregar al siguiente turno.
+
+ Criterios de aceptación:
+ - CA-10.1: A la hora configurada (ej: 14:30 y 19:00) generar reporte automático
+ - CA-10.2: Contenido: cargas gestionadas hoy, incidencias activas, recordatorios pendientes para mañana
+ - CA-10.3: Formato: ventana resumen (reutiliza alert-summary.html)
+ - CA-10.4: Opción "Enviar por email" al propio operador (para constancia)
+ - CA-10.5: KPIs del día: cargas cerradas, emails enviados, tiempo promedio por fase
+
+ ---
+ BLOQUE D: MICRO-ACCIONES — "Hazlo rápido y pasa al siguiente"
+
+ ---
+ HU-11: Acciones contextuales por fase — "1 click, no 5"
+
+ Como operador que repite las mismas acciones según la fase de la carga,
+ quiero botones de acción rápida que cambien según la fase actual,
+ para eliminar navegación repetitiva entre menús.
+
+ Escenario:
+ Carga en fase "29 Vacío" → botones: [Reclamar POD] [Documentado]
+ Carga en fase "01 Espera en carga" → botones: [Confirmar hora] [Retrasar]
+ Carga en fase "12 Cargando" → botones: [Solicitar posición] [Avisar destino]
+
+ Criterios de aceptación:
+ - CA-11.1: Barra de acciones contextual visible al seleccionar/expandir fila
+ - CA-11.2: Acciones por fase (configurables):
+   - Espera (00-02): "Confirmar hora carga", "Retrasar carga"
+   - Cargando (11-12): "Solicitar posición", "Avisar próxima descarga"
+   - Cargado/En ruta (19): "Verificar ETA", "Avisar destino"
+   - Descargando (21-22): "Confirmar descarga"
+   - Vacío (29): "Reclamar POD", "Marcar documentado"
+   - Incidencia (05/25): "Solicitar detalle", "Escalar a responsable"
+ - CA-11.3: Cada acción = 1 click → ejecuta plantilla + cambia fase
+ - CA-11.4: Botón "Gestionado + siguiente" → marca y salta a próxima sin gestionar
+
+ ---
+ HU-12: Notas rápidas en cargas — "Apuntar sin buscar papel"
+
+ Como operador que acaba de hablar por teléfono/WhatsApp,
+ quiero apuntar una nota rápida asociada a la carga,
+ para no olvidar contexto y que otros operadores lo vean.
+
+ Escenario:
+ Operador habla con conductor por WhatsApp: "Llego 30min tarde por tráfico en A2".
+ Click en nota de carga 168345 → escribe "Conductor avisa 30min retraso, tráfico A2" → listo.
+ Al día siguiente otro operador abre la carga → ve la nota → tiene contexto.
+
+ Criterios de aceptación:
+ - CA-12.1: Icono de nota en cada fila (badge si tiene notas)
+ - CA-12.2: Click → modal con historial de notas (timestamp + texto)
+ - CA-12.3: Input rápido para nueva nota (Enter para guardar)
+ - CA-12.4: Persistencia en chrome.storage.local (asociada a codCar)
+ - CA-12.5: Visible en búsqueda global (buscar en notas)
+ - CA-12.6: Notas ordenadas cronológicamente descendente
+
+ ---
+ HU-13: Resumen bajo demanda — "¿Cómo voy?"
+
+ Como operador en medio del turno,
+ quiero pedir un resumen rápido con 1 click,
+ para tener visión global instantánea sin filtrar.
+
+ Criterios de aceptación:
+ - CA-13.1: Botón "Resumen" en popup y en panel
+ - CA-13.2: Abre ventana resumen (misma que matutino pero datos actualizados)
+ - CA-13.3: KPIs: activas, hoy, alertas, sin respuesta, sin docs, recordatorios
+ - CA-13.4: Cada KPI clickable → panel filtrado
+ - CA-13.5: Carga < 3 segundos
+
+ ---
+ BLOQUE E: COMODIDAD — "Me encanta usar esto"
+
+ ---
+ HU-14: Dashboard "Mi turno" — Panel de control personal
+
+ Como operador que empieza su jornada,
+ quiero una vista resumen visual como primera pantalla,
+ para saber instantáneamente qué requiere mi atención.
+
+ Criterios de aceptación:
+ - CA-14.1: Widget en tab principal con KPIs:
+   - Cargas activas (desglose por grupo de fase)
+   - Atención urgente (conteo alertas)
+   - Recordatorios pendientes hoy
+   - Productividad: cargas cerradas hoy/semana
+ - CA-14.2: Mini-gráfico de evolución semanal (cargas cerradas/día)
+ - CA-14.3: Botón "Empezar gestión" filtra cargas sin gestionar
+ - CA-14.4: Colapsable para no ocupar espacio si no se quiere
+
+ ---
+ HU-15: Historial de acciones — "¿Qué hice con esta carga?"
+
+ Como operador al que le preguntan por una carga,
+ quiero ver cronología de todas las acciones realizadas,
+ para responder rápido a supervisores o clientes.
+
+ Criterios de aceptación:
+ - CA-15.1: Panel expandible en cada carga con historial:
+   - "15/02 14:23 | Email enviado: Solicitud POD"
+   - "15/02 12:10 | Fase: EN_RUTA → DESCARGADO"
+   - "15/02 09:45 | Recordatorio creado: Verificar descarga"
+   - "14/02 16:00 | Nota: Conductor avisa retraso 30min"
+ - CA-15.2: Filtro por tipo de acción
+ - CA-15.3: Almacenamiento local (chrome.storage) con rotación (max 30 días)
+
+ ---
+ Arquitectura técnica
+
+ Componentes nuevos/modificados
+
+ src/extension/
+ ├── alerts.js            (NUEVO)  Lógica pura: reglas de evaluación, deduplicación
+ ├── reminders.js         (NUEVO)  Lógica pura: CRUD recordatorios, snooze, sugerencias
+ ├── sequences.js         (NUEVO)  Lógica pura: secuencias de follow-up
+ ├── notes.js             (NUEVO)  Lógica pura: CRUD notas por carga
+ ├── action-bar.js        (NUEVO)  Lógica pura: mapa acciones por fase
+ ├── alert-summary.html   (NUEVO)  Ventana resumen emergente
+ ├── alert-summary.css    (NUEVO)  Estilos ventana resumen
+ ├── alert-summary.js     (NUEVO)  Controlador ventana resumen
+ ├── background.js        (MOD)    Integrar evaluación alertas + recordatorios post-barrido
+ ├── config.js            (MOD)    Config alertas, umbrales, activaciones
+ ├── config-ui.js         (MOD)    Sección "Avisos Inteligentes" en tab Config
+ ├── panel.html           (MOD)    Dashboard Mi Turno, action bar, notas, historial
+ ├── panel.js             (MOD)    Integrar action bar, notas, recordatorios
+ ├── panel.css            (MOD)    Estilos nuevos componentes
+ ├── popup.html           (MOD)    Botón Resumen
+ ├── popup.js             (MOD)    Lanzar resumen bajo demanda
+ ├── manifest.json        (SIN CAMBIOS — permisos ya declarados)
+
+ src/gas/
+ ├── Codigo.js            (MOD)    Endpoint: action=getResumen
+ ├── SLAChecker.js        (MOD)    Ampliar: silencio, estancamiento, docs pendientes
+ ├── AlertEvaluator.js    (NUEVO)  Evaluación centralizada de reglas en Sheets
+
+ tests/TDD/unit/
+ ├── test_alerts.js       (NUEVO)  Tests reglas de evaluación
+ ├── test_reminders.js    (NUEVO)  Tests recordatorios + snooze
+ ├── test_sequences.js    (NUEVO)  Tests secuencias follow-up
+ ├── test_notes.js        (NUEVO)  Tests notas
+ ├── test_action_bar.js   (NUEVO)  Tests mapa acciones por fase
+
+ Flujo de datos principal
+
+ BACKGROUND.JS (cada N minutos, alarma existente)
+ │
+ ├─ 1. fetch(?action=procesarCorreos)           ← ya existe
+ ├─ 2. fetch(?action=getResumen)                ← NUEVO
+ │     GAS evalúa en Sheets:
+ │     - Cargas HOY sin orden (codcar vacíos)
+ │     - Correos sin respuesta > umbral
+ │     - Fases estancadas > tiempo máximo
+ │     - Entregadas sin documentar > umbral
+ │     - Incidencias activas (05/25)
+ │     - Secuencias activas (siguiente paso due)
+ │
+ ├─ 3. alerts.js evalúa respuesta:
+ │     - ¿Primera actividad del día? → Resumen matutino (ventana)
+ │     - ¿CRITICOS nuevos? → Notificación prominente
+ │     - ¿ALTOS nuevos? → Notificación estándar
+ │     - ¿Ya mostrada? → No duplicar (deduplicación por ID)
+ │     - Actualizar badge icono extensión
+ │
+ ├─ 4. reminders.js verifica recordatorios:
+ │     - chrome.alarms ya maneja el timing
+ │     - Listener muestra notificación con botones snooze
+ │
+ └─ 5. sequences.js verifica secuencias:
+       - ¿Siguiente paso due? → Ejecutar envío programado
+       - ¿Respuesta recibida? → Detener secuencia
+
+ Ventana de resumen (alert-summary.html)
+
+ ┌───────────────────────────────────────────────────┐
+ │  TareaLog — Resumen 15/02/2026           [X]      │
+ ├───────────────────────────────────────────────────┤
+ │                                                   │
+ │  URGENTE (3)                              [> Ver] │
+ │  ┌───────────────────────────────────────────┐    │
+ │  │ Carga 168345 sale en 1.5h sin orden       │    │
+ │  │ Carga 168400 sale en 2h, sin respuesta    │    │
+ │  │ Carga 168500 INCIDENCIA desde ayer        │    │
+ │  └───────────────────────────────────────────┘    │
+ │                                                   │
+ │  SIN RESPUESTA (5)                        [> Ver] │
+ │  ┌───────────────────────────────────────────┐    │
+ │  │ 5 correos sin respuesta (> 4h)            │    │
+ │  │ Más antiguo: Transportes López (18h)      │    │
+ │  └───────────────────────────────────────────┘    │
+ │                                                   │
+ │  DOCUMENTACIÓN (7)                        [> Ver] │
+ │  ┌───────────────────────────────────────────┐    │
+ │  │ 7 entregadas sin documentar               │    │
+ │  │ Más antigua: 5 días (Carga 168100)        │    │
+ │  └───────────────────────────────────────────┘    │
+ │                                                   │
+ │  RECORDATORIOS HOY (3)                    [> Ver] │
+ │  ┌───────────────────────────────────────────┐    │
+ │  │ 11:00 Llamar a García (168345)            │    │
+ │  │ 14:00 Verificar descarga (168400)         │    │
+ │  │ 16:00 Reclamar POD (168200)               │    │
+ │  └───────────────────────────────────────────┘    │
+ │                                                   │
+ │  ESTADO GENERAL                                   │
+ │  ┌───────────────────────────────────────────┐    │
+ │  │ Activas: 45  │  Hoy: 12  │  Cerradas: 8  │    │
+ │  │ En ruta: 18  │  Docs ok: 22 │ Alertas: 6  │    │
+ │  └───────────────────────────────────────────┘    │
+ │                                                   │
+ │  [Silenciar 30 min]   [Posponer 1h]  [Panel >]   │
+ └───────────────────────────────────────────────────┘
+
+ ---
+ Reglas de evaluación (alerts.js)
+
+ ┌─────┬────────────────────────┬────────────────────────────────────────────┬──────────────┬───────────────┐
+ │  #  │         Regla          │                 Condición                  │    Nivel     │  Frecuencia   │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R1  │ SLA por vencer         │ fCarga=HOY, (hCarga-ahora)<2h, sin ENVIADO │ CRITICO      │ Cada barrido  │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R2  │ Silencio transportista │ ENVIADO, sin RECIBIDO en hilo, > umbralH   │ ALTO→CRITICO │ Cada barrido  │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R3  │ Fase estancada         │ (ahora-últimaAct) > tiempoMaxFase          │ MEDIO→ALTO   │ Cada barrido  │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R4  │ Docs pendientes        │ fase=29, (ahora-fEntrega) > umbralDias     │ MEDIO→ALTO   │ Cada barrido  │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R5  │ Incidencia activa      │ fase IN [05,25]                            │ CRITICO      │ Inmediata     │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R6  │ Carga HOY sin orden    │ fCarga=HOY, sin ENVIADO                    │ ALTO→CRITICO │ Cada barrido  │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R7  │ Resumen matutino       │ Primer barrido tras horaInicio             │ INFO         │ 1x/día        │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R8  │ Recordatorio manual    │ Hora programada alcanzada                  │ MEDIO        │ chrome.alarms │
+ ├─────┼────────────────────────┼────────────────────────────────────────────┼──────────────┼───────────────┤
+ │ R9  │ Secuencia paso due     │ Siguiente paso de secuencia listo          │ BAJO         │ Cada barrido  │
+ └─────┴────────────────────────┴────────────────────────────────────────────┴──────────────┴───────────────┘
+
+ ---
+ Configuración de avisos (nueva sección en Config)
+
+ ┌─ Avisos Inteligentes ──────────────────────────────────┐
+ │                                                        │
+ │ Resumen matutino                                       │
+ │ ☑ Activado     Hora: [07:00]                          │
+ │                                                        │
+ │ Alertas por regla                                      │
+ │ ☑ Transportista sin responder    Umbral: [4] horas    │
+ │ ☑ Fase estancada                                       │
+ │     Cargando [3]h  En ruta [24]h  Descargando [3]h    │
+ │ ☑ Documentación pendiente        Umbral: [2] días     │
+ │ ☑ Incidencias (fase 05/25)       Siempre activo       │
+ │ ☑ Cargas HOY sin orden           Siempre activo       │
+ │                                                        │
+ │ Recordatorios                                          │
+ │ ☑ Sugerencias automáticas por fase                     │
+ │ ☑ Sonido en notificaciones                             │
+ │                                                        │
+ │ Modo concentración                                     │
+ │ ☐ Silenciar [30] minutos                              │
+ │                                                        │
+ │ [Guardar]                                              │
+ └────────────────────────────────────────────────────────┘
+
+ ---
+ ## ANALIZA, OPTIMIZA Y MEJORA EL SIGUIENTE sprint:
+
+ Contexto
+
+● Sprint 1 implemento alerts.js (motor de 5 reglas, 42 tests). background.js ya evalua alertas tras cada barrido y
+ muestra badge + notificaciones Chrome. Falta darle al operador una vista consolidada de las alertas: resumen matutino
+ automatico + boton bajo demanda.
+
+● Sprint 2 implementado. Resumen del trabajo realizado 
+  Objetivo cumplido                                                                                                     
+  Transformar las alertas proactivas (Sprint 1: notificaciones individuales) en una vista consolidada para el operador,
+  con resumen matutino automatico y bajo demanda.
+
+  HUs implementadas
+
+  ┌───────┬──────────────────────┬──────────────────────────────────────────────────────────────┐
+  │  HU   │        Nombre        │                            Estado                            │
+  ├───────┼──────────────────────┼──────────────────────────────────────────────────────────────┤
+  │ HU-01 │ Resumen matutino     │ Implementado — ventana automatica 1x/dia al inicio del turno │
+  ├───────┼──────────────────────┼──────────────────────────────────────────────────────────────┤
+  │ HU-13 │ Resumen bajo demanda │ Implementado — boton "Resumen" en panel                      │
+  └───────┴──────────────────────┴──────────────────────────────────────────────────────────────┘
+
+  Entregables
+
+  Tipo: 3 archivos nuevos
+  Detalle: alert-summary.js (logica pura + UI), alert-summary.html, alert-summary.css
+  ────────────────────────────────────────
+  Tipo: 5 archivos modificados
+  Detalle: background.js, config.js, panel.html, panel.js, config-ui.js
+  ────────────────────────────────────────
+  Tipo: 28 tests nuevos
+  Detalle: categorizarAlertas (7), calcularKPIs (6), debeMostrarMatutino (7), crearFlagMostrado (3), filtroParaCategoria
+
+    (5)
+  ────────────────────────────────────────
+  Tipo: 70 tests totales
+  Detalle: 28 nuevos + 42 existentes, 0 fallos
+  ────────────────────────────────────────
+  Tipo: Diccionario
+  Detalle: 2 storage keys + 2 terminos glosario nuevos
+
+  Funcionalidades clave
+
+  1. Ventana resumen con tarjetas por categoria (Urgente, Sin respuesta, Documentacion, Estancadas) + KPIs
+  2. Click-through: click en categoria abre panel con filtro Tabulator aplicado
+  3. Flag matutino: 1 vez/dia, configurable hora, posponer 1h
+  4. Config UI: checkbox activar/desactivar + selector hora en tab Config
+
+  ---
+● Sprint 3 implantado: Recordatorios con Snooze 
+  RESUMEN TRABAJO REALIZADO — TareaLog Copiloto
+                                                                                                                          Estado General del Proyecto
+
+  ┌─────────────────────┬────────────────────────────┐
+  │       Métrica       │           Valor            │
+  ├─────────────────────┼────────────────────────────┤
+  │ Versión             │ 0.2.0 (manifest)           │
+  ├─────────────────────┼────────────────────────────┤
+  │ Archivos JS         │ 17 propios (~5.600 líneas) │
+  ├─────────────────────┼────────────────────────────┤
+  │ Archivos test       │ 17 (Jest)                  │
+  ├─────────────────────┼────────────────────────────┤
+  │ Tests totales       │ 112 pasando                │
+  ├─────────────────────┼────────────────────────────┤
+  │ Sprints completados │ 3 de 5                     │
+  ├─────────────────────┼────────────────────────────┤
+  │ HUs completadas     │ 8 de 15                    │
+  └─────────────────────┴────────────────────────────┘
+
+  Sprints Completados
+
+  ┌──────────┬──────────────────────┬───────────────────┬───────┬────────────────────────────┐
+  │  Sprint  │       Feature        │        HUs        │ Tests │      Módulo principal      │
+  ├──────────┼──────────────────────┼───────────────────┼───────┼────────────────────────────┤
+  │ Sprint 1 │ Alertas proactivas   │ HU-02 a HU-06 (5) │ 42    │ alerts.js (283 lín)        │
+  ├──────────┼──────────────────────┼───────────────────┼───────┼────────────────────────────┤
+  │ Sprint 2 │ Resumen matutino     │ HU-01, HU-13 (2)  │ 28    │ alert-summary.js (297 lín) │
+  ├──────────┼──────────────────────┼───────────────────┼───────┼────────────────────────────┤
+  │ Sprint 3 │ Recordatorios snooze │ HU-07, HU-08 (2)  │ 42    │ reminders.js (143 lín)     │
+  └──────────┴──────────────────────┴───────────────────┴───────┴────────────────────────────┘
+
+  Patrón Consolidado (3 sprints exitosos)
+
+  Cada sprint sigue el mismo ciclo probado:
+  1. Módulo lógica pura (xxx.js) — sin DOM, sin Chrome API, testeable con Jest
+  2. Integración background.js — alarma periódica + notificaciones
+  3. Integración panel.js/html — UI colapsable + modal
+  4. Config.js — defaults + auto-migración
+  5. Dual-compat — module.exports condicional
+
+  Cobertura por Módulo
+
+  ┌──────────────────┬───────┬──────────┬───────────┐
+  │      Módulo      │ Stmts │ Branches │ Functions │
+  ├──────────────────┼───────┼──────────┼───────────┤
+  │ alerts.js        │ 95%   │ 83%      │ 100%      │
+  ├──────────────────┼───────┼──────────┼───────────┤
+  │ alert-summary.js │ 92%   │ 85%      │ 100%      │
+  ├──────────────────┼───────┼──────────┼───────────┤
+  │ reminders.js     │ 96%   │ 89%      │ 100%      │
+  └──────────────────┴───────┴──────────┴───────────┘
+
+  ---
+● SPRINT 4 implantado: ACCIONES CONTEXTUALES + NOTAS.
+
+  Resumen Sprint 4: Acciones Contextuales + Notas Rápidas
+
+  Expediente completado y archivado                                                                                     
+  fabrica/buzon_agente/archivo_concluido/OPTIMIZA_TareaLog_Copiloto_4Sprint_20260215_184502/                            
+  ---
+  HUs implementadas
+
+  ┌───────┬────────────────────────────────┬─────────────────────────────┬────────┐
+  │  HU   │             Nombre             │           Módulo            │ Líneas │
+  ├───────┼────────────────────────────────┼─────────────────────────────┼────────┤
+  │ HU-11 │ Acciones contextuales por fase │ src/extension/action-bar.js │ 68     │
+  ├───────┼────────────────────────────────┼─────────────────────────────┼────────┤
+  │ HU-12 │ Notas rápidas en cargas        │ src/extension/notes.js      │ 88     │
+  └───────┴────────────────────────────────┴─────────────────────────────┴────────┘
+
+  ---
+  Archivos creados
+
+  Archivo: src/extension/action-bar.js
+  Descripción: Mapa acciones por fase, lógica pura. 2 funciones: obtenerAccionesPorFase(), obtenerGrupoFase()
+  ────────────────────────────────────────
+  Archivo: src/extension/notes.js
+  Descripción: CRUD notas por codCar, lógica pura. 5 funciones: crearNota(), obtenerNotas(), eliminarNota(),
+    contarNotas(), tieneNotas()
+  ────────────────────────────────────────
+  Archivo: tests/TDD/unit/test_action_bar.js
+  Descripción: 27 tests
+  ────────────────────────────────────────
+  Archivo: tests/TDD/unit/test_notes.js
+  Descripción: 30 tests
+
+  Archivos modificados
+
+  Archivo: docs/DICCIONARIO_DOMINIO.md
+  Cambio: +3 entidades (ACCION_CONTEXTUAL, NOTA_CARGA, GRUPO_FASE), +1 storage key, +3 glosario
+
+  ---
+  Métricas
+
+  ┌─────────────────────────┬─────────────────────────────────────────┐
+  │         Métrica         │                  Valor                  │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ Tests nuevos            │ 57 (27 + 30)                            │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ Tests totales           │ 169 pasando (0 regresiones)             │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ Cobertura action-bar.js │ 93% stmts, 83% branches, 100% functions │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ Cobertura notes.js      │ 95% stmts, 88% branches, 100% functions │
+  └─────────────────────────┴─────────────────────────────────────────┘
+
+  ---
+  Diseño clave
+
+  action-bar.js — 6 grupos de fase con acciones contextuales:
+
+  ┌────────────┬────────────┬────────────────────────────────────────┐
+  │   Grupo    │   Fases    │                Acciones                │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ espera     │ 00, 01, 02 │ Confirmar hora carga, Retrasar carga   │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ carga      │ 11, 12     │ Solicitar posición, Avisar destino     │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ en_ruta    │ 19         │ Verificar ETA, Avisar destino          │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ descarga   │ 21, 22     │ Confirmar descarga                     │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ vacio      │ 29         │ Reclamar POD, Marcar documentado       │
+  ├────────────┼────────────┼────────────────────────────────────────┤
+  │ incidencia │ 05, 25     │ Solicitar detalle, Escalar responsable │
+  └────────────┴────────────┴────────────────────────────────────────┘
+
+  notes.js — Patrón inmutable: crearNota() retorna {almacen, nota} sin mutar el original. Almacén es mapa { codCar:
+  NOTA_CARGA[] }, storage key tarealog_notas.
+
+  ---
+● SPRINT 5: AUTOMATIZACIÓN + DASHBOARD (SIGUIENTE)
+
+  HU-09: Secuencias de Follow-up
+
+  - Cadenas automáticas de emails: solicitar → recordar → escalar
+  - Se detienen al recibir respuesta en el threadId
+  - Máximo 3 pasos por secuencia
+  - Presets: "Reclamar POD", "Confirmar carga", "Seguimiento incidencia"
+  - Módulo: sequences.js (~250 lín) + mod Codigo.js (GAS)
+
+  HU-10: Reporte Fin de Turno
+
+  - Generado automáticamente a horas configuradas (14:30, 19:00)
+  - Contenido: cargas gestionadas, incidencias activas, pendientes mañana
+  - Reutiliza ventana alert-summary.html
+  - Opción enviar por email
+  - Módulo: mod background.js + alert-summary.js
+
+  HU-14: Dashboard "Mi Turno"
+
+  - Widget KPIs en tab principal: cargas activas, alertas, recordatorios, productividad
+  - Mini-gráfico evolución semanal
+  - Botón "Empezar gestión" → filtra cargas sin gestionar
+  - Módulo: dashboard.js (~200 lín)
+
+  HU-15: Historial de Acciones
+
+  - Panel expandible por carga: emails, cambios fase, notas, recordatorios
+  - Filtrable por tipo de acción
+  - Rotación 30 días
+  - Módulo: mod panel.js
+
+  Resumen Sprint 5
+
+  ┌─────────────────┬─────────────────────────────────────────────────┐
+  │     Aspecto     │                      Valor                      │
+  ├─────────────────┼─────────────────────────────────────────────────┤
+  │ HUs             │ 4 (HU-09, HU-10, HU-14, HU-15)                  │
+  ├─────────────────┼─────────────────────────────────────────────────┤
+  │ Complejidad     │ ALTA (requiere cambios GAS)                     │
+  ├─────────────────┼─────────────────────────────────────────────────┤
+  │ Tests estimados │ ~25 nuevos (~167 total)                         │
+  ├─────────────────┼─────────────────────────────────────────────────┤
+  │ Nota            │ Sprint más grande — considerar dividir en 5a/5b │
+  └─────────────────┴─────────────────────────────────────────────────┘
+  ---
+  Estado general del proyecto
+
+  ┌──────────┬──────────────────────────────────┬─────────────┬──────────┐
+  │  Sprint  │               HUs                │   Estado    │  Tests   │
+  ├──────────┼──────────────────────────────────┼─────────────┼──────────┤
+  │ Sprint 1 │ Alertas proactivas (R2-R6)       │ COMPLETADO  │ 42       │
+  ├──────────┼──────────────────────────────────┼─────────────┼──────────┤
+  │ Sprint 2 │ Resumen matutino + bajo demanda  │ COMPLETADO  │ 28       │
+  ├──────────┼──────────────────────────────────┼─────────────┼──────────┤
+  │ Sprint 3 │ Recordatorios + snooze           │ COMPLETADO  │ ~20 est. │
+  ├──────────┼──────────────────────────────────┼─────────────┼──────────┤
+  │ Sprint 4 │ Acciones contextuales + notas    │ COMPLETADO  │ ~20 est. │
+  ├──────────┼──────────────────────────────────┼─────────────┼──────────┤
+  │ Sprint 5 │ Secuencias + dashboard + reporte │ SIGUIENTE   │ ~25 est. │
+  └──────────┴──────────────────────────────────┴─────────────┴──────────┘
+ ---
+ Verificacion
+
+ 1. npx jest tests/TDD/unit/test_alert_summary.js --coverage --collectCoverageFrom='src/extension/alerts*.js' → 20+
+ tests pasando, >80% branches
+ 2. Cargar extension en chrome://extensions → recargar
+ 3. Click boton "Resumen" en panel → ventana se abre con categorias y KPIs
+ 4. Click en categoria → panel se abre/enfoca con filtros aplicados
+ 5. Configurar hora matutino a +2 minutos → verificar ventana automatica
+ 6. Verificar flag: no se abre segunda vez el mismo dia
+ 7. "Posponer 1h" → no se abre hasta cumplir 1h

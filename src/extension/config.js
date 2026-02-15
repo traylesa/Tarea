@@ -73,6 +73,14 @@ function getDefaults() {
     },
     recordatorios: {
       sugerenciasActivadas: true
+    },
+    secuencias: {
+      activado: true,
+      evaluacionMinutos: 15
+    },
+    reporteTurno: {
+      activado: true,
+      hora: '18:00'
     }
   };
 }
@@ -156,6 +164,18 @@ async function cargar() {
     config.recordatorios = defaults.recordatorios;
   } else {
     config.recordatorios = { ...defaults.recordatorios, ...guardada.recordatorios };
+  }
+
+  if (!guardada.secuencias) {
+    config.secuencias = defaults.secuencias;
+  } else {
+    config.secuencias = { ...defaults.secuencias, ...guardada.secuencias };
+  }
+
+  if (!guardada.reporteTurno) {
+    config.reporteTurno = defaults.reporteTurno;
+  } else {
+    config.reporteTurno = { ...defaults.reporteTurno, ...guardada.reporteTurno };
   }
 
   return config;

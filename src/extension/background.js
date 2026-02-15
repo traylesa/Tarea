@@ -2,10 +2,13 @@
 importScripts('alerts.js');
 importScripts('alert-summary.js');
 importScripts('reminders.js');
+importScripts('sequences.js');
+importScripts('shift-report.js');
 
 const ALARM_NAME = 'tarealog-barrido';
 const ALARM_MATUTINO = 'tarealog-resumen-matutino';
 const ALARM_RECORDATORIOS = 'tarealog-recordatorios';
+const ALARM_SECUENCIAS = 'tarealog-secuencias';
 const STORAGE_KEY_CONFIG = 'tarealog_config';
 
 let panelWindowId = null;
@@ -118,6 +121,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   chrome.alarms.create(ALARM_RECORDATORIOS, {
     periodInMinutes: 1
   });
+  // Alarma secuencias follow-up: verificar cada 15 minutos
+  chrome.alarms.create(ALARM_SECUENCIAS, {
+    periodInMinutes: 15
+  });
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -131,6 +138,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
   if (alarm.name === ALARM_RECORDATORIOS) {
     await verificarRecordatorios();
+    return;
+  }
+  if (alarm.name === ALARM_SECUENCIAS) {
+    await verificarSecuencias();
     return;
   }
 });
@@ -261,6 +272,54 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
 
   chrome.notifications.clear(notifId);
 });
+
+async function verificarSecuencias() {
+  if (typeof evaluarPasos !== 'function') return;
+  if (typeof obtenerSecuenciasActivas !== 'function') return;
+
+  try {
+    var stored = await chrome.storage.local.get('tarealog_secuencias');
+    var lista = stored.tarealog_secuencias || [];
+    var activas = obtenerSecuenciasActivas(lista);
+    if (activas.length === 0) return;
+
+    var ahora = new Date();
+    var cambio = false;
+
+    for (var i = 0; i < activas.length; i++) {
+      var sec = activas[i];
+      var pendientes = evaluarPasos(sec, ahora);
+      if (pendientes.length > 0) {
+        cambio = true;
+        // Marcar pasos como ejecutados
+        for (var j = 0; j < sec.pasos.length; j++) {
+          for (var k = 0; k < pendientes.length; k++) {
+            if (sec.pasos[j].orden === pendientes[k].orden) {
+              sec.pasos[j].estado = 'EJECUTADO';
+            }
+          }
+        }
+        // Verificar si todos ejecutados
+        var todosEjecutados = sec.pasos.every(function(p) { return p.estado === 'EJECUTADO'; });
+        if (todosEjecutados) sec.estado = 'COMPLETADA';
+
+        chrome.notifications.create('seq_' + sec.id + '_' + pendientes[0].orden, {
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: 'Secuencia: ' + sec.nombre,
+          message: 'Paso ' + pendientes[0].orden + ' listo para enviar (carga ' + sec.codCar + ')',
+          requireInteraction: true
+        });
+      }
+    }
+
+    if (cambio) {
+      await chrome.storage.local.set({ tarealog_secuencias: lista });
+    }
+  } catch (error) {
+    console.error('Error verificando secuencias:', error);
+  }
+}
 
 async function _evaluarYNotificarAlertas(registros, config) {
   if (!config.alertas || !config.alertas.activado) return;

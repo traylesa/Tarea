@@ -191,6 +191,9 @@ Claves usadas en `chrome.storage.local` para persistencia de la extension.
 | `tarealog_filtro_pendiente` | object\|null | Filtros Tabulator pendientes para click-through desde ventana resumen |
 | `tarealog_recordatorios` | array(RECORDATORIO) | Lista de recordatorios activos del operador |
 | `tarealog_recordatorios_vencidos` | array(RECORDATORIO) | Temporal: recordatorios vencidos pendientes de snooze/completar |
+| `tarealog_notas` | object | Mapa `{ [codCar]: NOTA_CARGA[] }` — notas rapidas por carga |
+| `tarealog_historial` | object | Mapa `{ [codCar]: ENTRADA_HISTORIAL[] }` — historial acciones por carga |
+| `tarealog_secuencias` | array(SECUENCIA_FOLLOWUP) | Secuencias de follow-up activas |
 
 ### TIPO_ALERTA
 - `ALERTA_CONTACTO_NO_REGISTRADO` - Email no coincide con ERP
@@ -224,6 +227,92 @@ Aviso programado asociado a una carga, con snooze y persistencia.
 | `fechaDisparo` | string (ISO) | Cuando debe dispararse la notificacion |
 | `snoozeCount` | number | Veces pospuesto (default 0) |
 | `origen` | string | 'manual' (creado por operador) o 'sugerido' (propuesto al cambiar fase) |
+
+### ACCION_CONTEXTUAL
+Accion rapida asociada a un grupo de fase de transporte.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `etiqueta` | string | Texto del boton de accion |
+| `faseSiguiente` | string/null | Fase destino al ejecutar (null = no cambia) |
+| `plantilla` | string/null | Alias de plantilla a preseleccionar |
+
+### GRUPO_FASE
+Agrupacion de fases de transporte para determinar acciones contextuales disponibles.
+
+| Valor | Fases incluidas | Descripcion |
+|-------|----------------|-------------|
+| `espera` | 00, 01, 02 | Fases de espera pre-carga |
+| `carga` | 11, 12 | Fases de proceso de carga |
+| `en_ruta` | 19 | Cargado / en transito |
+| `descarga` | 21, 22 | Fases de descarga |
+| `vacio` | 29 | Descargado, pendiente documentacion |
+| `incidencia` | 05, 25 | Incidencias pre/post carga |
+
+### NOTA_CARGA
+Nota rapida asociada a un codigo de carga para contexto operativo.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `id` | string | ID unico (nota_timestamp_random) |
+| `texto` | string | Contenido de la nota |
+| `fechaCreacion` | string (ISO) | Timestamp de creacion |
+
+### ENTRADA_HISTORIAL
+Entrada de accion en el historial auditable de una carga.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `id` | string | ID unico (hist_timestamp_random) |
+| `codCar` | number | Codigo de carga |
+| `tipo` | enum(TIPO_ACCION) | Tipo de accion |
+| `descripcion` | string | Texto descriptivo |
+| `fechaCreacion` | string (ISO) | Timestamp |
+
+### TIPO_ACCION
+Tipo de accion registrada en el historial de una carga.
+- `EMAIL` - Email enviado/recibido
+- `FASE` - Cambio de fase
+- `RECORDATORIO` - Recordatorio creado/completado
+- `NOTA` - Nota anadida
+
+### SECUENCIA_FOLLOWUP
+Secuencia de emails automatica para reclamar documentos.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `id` | string | ID unico (seq_timestamp_random) |
+| `codCar` | number | Codigo de carga |
+| `threadId` | string | ID hilo Gmail |
+| `nombre` | string | Nombre predefinido (ej: "Reclamar POD") |
+| `estado` | enum(ESTADO_SECUENCIA) | Estado global |
+| `pasos` | array(PASO_SECUENCIA) | Pasos de la secuencia (max 3) |
+| `fechaCreacion` | string (ISO) | Timestamp |
+
+### PASO_SECUENCIA
+Paso individual de una secuencia de follow-up.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `orden` | number | 1, 2 o 3 |
+| `plantilla` | string | Alias plantilla a usar |
+| `horasEspera` | number | Horas desde inicio secuencia |
+| `estado` | enum(ESTADO_PASO) | PENDIENTE/EJECUTADO/DETENIDO/CANCELADO |
+| `fechaProgramada` | string (ISO) | Fecha para ejecutar |
+
+### ESTADO_SECUENCIA
+Estado global de una secuencia de follow-up.
+- `ACTIVA` - Secuencia en curso
+- `COMPLETADA` - Todos los pasos ejecutados
+- `DETENIDA` - Detenida por respuesta recibida
+- `CANCELADA` - Cancelada manualmente
+
+### ESTADO_PASO
+Estado de un paso individual de secuencia.
+- `PENDIENTE` - Esperando ejecucion
+- `EJECUTADO` - Email enviado
+- `DETENIDO` - Detenido por respuesta
+- `CANCELADO` - Cancelado por usuario
 
 ### SUGERENCIA_RECORDATORIO
 Configuracion de sugerencias automaticas por fase.
@@ -307,11 +396,20 @@ Configuracion de horario en que el trigger procesa envios programados (almacenad
 - **Recordatorio:** Aviso programado por el operador (o sugerido por el sistema) asociado a una carga, con opciones de snooze y persistencia via chrome.alarms
 - **Snooze:** Posponer un recordatorio por un periodo predefinido (15min, 1h, manana)
 - **Sugerencia de recordatorio:** Recordatorio propuesto automaticamente al cambiar fase de una carga (ej: Cargado→Verificar descarga)
+- **Accion contextual:** Boton de accion rapida que aparece al seleccionar una carga, cambiando segun la fase actual (ej: fase 29 muestra "Reclamar POD")
+- **Nota de carga:** Anotacion breve asociada a un codCar para registrar contexto de llamadas, WhatsApp u observaciones del operador
+- **Grupo de fase:** Clasificacion de fases de transporte en categorias operativas (espera, carga, en_ruta, descarga, vacio, incidencia) para determinar acciones disponibles
+- **Historial de acciones:** Cronologia auditable de todas las acciones realizadas sobre una carga (emails, cambios fase, recordatorios, notas) con rotacion a 30 dias
+- **Secuencia de follow-up:** Serie de emails automaticos (max 3 pasos) que se envian si no hay respuesta, con detencion automatica al recibir respuesta en threadId
+- **Dashboard Mi Turno:** Panel de control personal con KPIs (cargas activas, alertas, recordatorios, cerradas), grafico semanal y acceso rapido a cargas pendientes
+- **Reporte fin de turno:** Resumen automatico de actividad del dia con cargas gestionadas, incidencias activas y recordatorios pendientes
 
 ---
 
 ## 6. Historial de Cambios
 
+- **2026-02-15:** Sprint 5: Agregadas entidades ENTRADA_HISTORIAL, SECUENCIA_FOLLOWUP, PASO_SECUENCIA, enums TIPO_ACCION, ESTADO_SECUENCIA, ESTADO_PASO, storage keys tarealog_historial/tarealog_secuencias, glosario historial/secuencia/dashboard/reporte
+- **2026-02-15:** Sprint 4: Agregadas entidades ACCION_CONTEXTUAL, NOTA_CARGA, enum GRUPO_FASE, storage key tarealog_notas, glosario accion contextual/nota de carga/grupo de fase
 - **2026-02-15:** Sprint 3: Agregada entidad RECORDATORIO, SUGERENCIA_RECORDATORIO, storage keys tarealog_recordatorios/tarealog_recordatorios_vencidos, glosario recordatorio/snooze/sugerencia
 - **2026-02-15:** Agregados enums NIVEL_ALERTA y REGLA_ALERTA, storage key tarealog_alertas, glosario alertas proactivas/motor de reglas/deduplicacion/badge dinamico
 - **2026-02-15:** Agregada entidad programados (cola envios), enum ESTADO_PROGRAMADO, config HORARIO_LABORAL, glosario envio programado/horario laboral/cola programados
