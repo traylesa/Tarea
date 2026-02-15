@@ -1,0 +1,245 @@
+# Tu labor es analizar este plan, VERIFICAR que es el más adecuado para nuestro proyecto, si el desarrollo es conforme y qué se podría optimizar también desde el punto de vista del usuario:
+
+"Plan: Envios Programados de Email                                                          
+                                                
+ Contexto                                                                                   
+               
+ El sistema de respuesta masiva funciona correctamente (envio inmediato con HTML,
+ destinatarios correctos, rate limit configurable). El usuario necesita poder programar     
+ envios para fecha/hora futura, ver el estado de la cola (pendiente/enviado/error) y que un 
+  trigger periodico los ejecute automaticamente.
+
+ Limitaciones GAS investigadas:
+ - Max 20 triggers/script, precision +-15 min
+ - Ejecucion max 6 min/trigger, 6h/dia (Workspace)
+ - Gmail: 2,000 envios/dia (Workspace)
+ - PropertiesService: 500KB; Sheets: lento pero visual e ilimitado
+
+ Arquitectura elegida: Cola en Sheets + trigger periodico unico
+ - 1 nueva hoja PROGRAMADOS (visual, auditable, ilimitada)
+ - El trigger ejecutarBarridoProgramado() ya existe — se extiende para procesar la cola     
+ - Sin crear triggers individuales (evita limite de 20)
+ - Precision +-5 min (aceptable para logistica)
+
+ ---
+ Archivos a modificar
+
+ Archivo: src/gas/Configuracion.js
+ Tipo: Modificar
+ Cambios: +HOJA_PROGRAMADOS, +HEADERS_PROGRAMADOS
+ ────────────────────────────────────────
+ Archivo: src/gas/AdaptadorHojas.js
+ Tipo: Modificar
+ Cambios: +4 funciones CRUD programados
+ ────────────────────────────────────────
+ Archivo: src/gas/Codigo.js
+ Tipo: Modificar
+ Cambios: +3 endpoints, extender trigger, +LockService
+ ────────────────────────────────────────
+ Archivo: src/extension/panel.html
+ Tipo: Modificar
+ Cambios: +date/time picker en modal, +panel programados, +boton
+ ────────────────────────────────────────
+ Archivo: src/extension/panel.js
+ Tipo: Modificar
+ Cambios: +programarEnvioMasivo(), +vista programados, +handlers
+ ────────────────────────────────────────
+ Archivo: src/extension/panel.css
+ Tipo: Modificar
+ Cambios: +estilos programacion y tabla programados
+ ────────────────────────────────────────
+ Archivo: src/extension/scheduled.js
+ Tipo: Nuevo
+ Cambios: Logica pura: formatear estado, filtrar, ordenar
+ ────────────────────────────────────────
+ Archivo: src/extension/popup.html
+ Tipo: Modificar
+ Cambios: +tab/seccion programados, +boton toggle
+ ────────────────────────────────────────
+ Archivo: src/extension/popup.js
+ Tipo: Modificar
+ Cambios: +cargarProgramados(), +vista estados, +fix sorter luxon
+
+ ---
+ Fase 1: Backend GAS
+
+ 1.1 Configuracion.js — Nueva hoja PROGRAMADOS
+
+ Anadir despues de HEADERS_HILOS:
+
+ const HOJA_PROGRAMADOS = 'PROGRAMADOS';
+ const HEADERS_PROGRAMADOS = [
+   'id', 'threadId', 'interlocutor', 'asunto', 'cuerpo',
+   'cc', 'bcc', 'fechaProgramada', 'estado',
+   'fechaEnvio', 'errorDetalle', 'creadoPor', 'creadoAt'
+ ];
+
+ Estados posibles: PENDIENTE, ENVIADO, ERROR, CANCELADO
+
+ 1.2 AdaptadorHojas.js — CRUD para PROGRAMADOS
+
+ Actualizar obtenerHoja() para reconocer HOJA_PROGRAMADOS (anadir al if/else de headers).   
+
+ 4 funciones nuevas:
+ - guardarProgramado(registro) — appendRow a PROGRAMADOS
+ - leerProgramadosPendientes() — lee filas con estado=PENDIENTE y fechaProgramada<=ahora,   
+ incluye _fila para actualizar
+ - actualizarProgramado(fila, campo, valor) — actualiza celda por numero de fila
+ - leerTodosProgramados() — lee todos para la vista en extension
+
+ 1.3 Codigo.js — 3 endpoints nuevos + extender trigger
+
+ Endpoints nuevos en doPost:
+ - ?action=programarEnvio — Valida payload + fechaProgramada futura, guarda en PROGRAMADOS  
+ con estado=PENDIENTE, genera id unico (prog_timestamp_random)
+ - ?action=cancelarProgramado — Busca por id, cambia estado a CANCELADO
+
+ Endpoint nuevo en doGet:
+ - ?action=getProgramados — Devuelve todos los registros de PROGRAMADOS
+
+ Extender ejecutarBarridoProgramado():
+ 1. LockService para evitar race conditions entre ejecuciones del trigger
+ 2. Leer pendientes cuya fecha ya paso
+ 3. Para cada uno: enviar con enviarRespuesta() (reutiliza logica existente)
+ 4. Marcar como ENVIADO (con fechaEnvio) o ERROR (con errorDetalle)
+ 5. Limitar a 20 envios por ciclo (evitar timeout 6 min)
+ 6. Rate limit con Utilities.sleep() segun emailsPorMinuto de PropertiesService
+
+ var lock = LockService.getScriptLock();
+ if (!lock.tryLock(5000)) return; // otro trigger ya ejecuta
+ try { /* procesar cola */ } finally { lock.releaseLock(); }
+
+ ---
+ Fase 2: Frontend — UI
+
+ 2.1 panel.html — Modal de respuesta
+
+ Dentro de #modal-respuesta, anadir entre el error y los botones:
+ - Checkbox "Programar envio"
+ - Input datetime-local (oculto hasta marcar checkbox)
+ - El boton "Enviar" cambia texto a "Programar envio" dinamicamente
+
+ 2.2 panel.html — Panel de programados
+
+ Boton "Programados" en barra de controles superior.
+ Panel colapsable con:
+ - Selector de filtro (Todos/Pendientes/Enviados/Errores)
+ - Boton Actualizar
+ - Tabla HTML con: Estado, Interlocutor, Asunto, Programado para, Enviado, Acciones
+ - Boton "Cancelar" en filas PENDIENTE
+
+ 2.3 panel.js — Logica
+
+ - programarEnvioMasivo() — Valida fecha futura, construye payload igual que
+ enviarRespuestaMasiva pero con fechaProgramada, POST a ?action=programarEnvio
+ - cargarProgramados() — GET ?action=getProgramados, renderiza tabla
+ - cancelarProgramado(id) — POST ?action=cancelarProgramado
+ - togglePanelProgramados() — Mostrar/ocultar panel
+ - Handler checkbox: toggle campos fecha, cambiar texto boton
+ - Handler boton enviar: despachar a enviarRespuestaMasiva() o programarEnvioMasivo() segun 
+  checkbox
+
+ 2.4 scheduled.js — Modulo logica pura (nuevo)
+
+ - formatearEstadoProgramado(estado) — icono + clase CSS
+ - filtrarProgramados(lista, filtro) — filtra por estado
+ - ordenarPorFecha(lista) — ordena descendente
+ - Con module.exports para tests Jest
+
+ 2.5 panel.css — Estilos
+
+ - .programar-container — contenedor en modal
+ - .tabla-prog — tabla de programados
+ - .prog-pendiente/enviado/error/cancelado — colores por estado
+
+ ---
+ Fase 3: Popup — Vista de Programados
+
+ 3.1 popup.html — Seccion programados
+
+ Anadir debajo de #tabla-registros:
+ - Boton "Programados (N)" en barra de controles superior (junto a "Ejecutar Ahora")        
+ - Panel colapsable #panel-programados-popup con:
+   - Selector filtro (Todos/Pendientes/Enviados/Errores/Cancelados)
+   - Tabla HTML ligera con: Estado (icono+color), Interlocutor, Asunto, Programado para,    
+ Acciones
+   - Boton "Cancelar" en filas PENDIENTE
+   - Boton "Actualizar"
+ - Cargar scheduled.js en scripts (antes de popup.js)
+
+ 3.2 popup.js — Logica programados + fix sorter
+
+ Fix bug luxon (linea 167): Cambiar sorter: 'datetime' a custom function (mismo fix que     
+ panel.js):
+ sorter: function(a, b) {
+   var da = a ? new Date(a).getTime() : 0;
+   var db = b ? new Date(b).getTime() : 0;
+   return da - db;
+ }
+
+ Funciones nuevas:
+ - cargarProgramadosPopup() — GET ?action=getProgramados, renderiza tabla con
+ formatearEstadoProgramado() de scheduled.js
+ - cancelarProgramadoPopup(id) — POST ?action=cancelarProgramado, refresca tabla
+ - togglePanelProgramadosPopup() — Mostrar/ocultar panel, actualizar contador en boton      
+ - filtrarProgramadosPopup(filtro) — Usa filtrarProgramados() de scheduled.js
+
+ Nota: popup.js usa GAS_URL que se carga desde config. Las llamadas fetch siguen mismo      
+ patron que panel.js.
+
+ ---
+ Orden de implementacion
+
+ Paso 1: Configuracion.js (constantes)
+ Paso 2: AdaptadorHojas.js (CRUD)           } Backend
+ Paso 3: Codigo.js (endpoints + trigger)     }
+ Paso 4: scheduled.js (nuevo, logica pura)   } Frontend compartido
+ Paso 5: panel.html (UI modal + panel)       }
+ Paso 6: panel.js (logica completa)          } Panel
+ Paso 7: panel.css (estilos)                 }
+ Paso 8: popup.html (seccion programados)    }
+ Paso 9: popup.js (vista + fix luxon)        } Popup
+ Paso 10: Manual — crear trigger cada 5 min en editor GAS
+
+ Pasos 1-3 y 4-7 pueden ejecutarse en paralelo. Pasos 8-9 dependen de paso 4
+ (scheduled.js).
+
+El trigger existente (ejecutarBarridoProgramado) se extiende para revisar
+  la cola cada 5   min y enviar los que ya pasaron su fecha, establecer desde                 parametrización personalizable el horario laboral, es decir que sí cada 5 minutos de tal  
+  día de la semana (lunes a viernes) de 07 a 21.00 h 
+ ---
+ Verificacion
+
+ 1. Backend: clasp push + deploy, ejecutar diagnostico() — debe mostrar hoja PROGRAMADOS    
+ creada
+ 2. Programar: Seleccionar registro, abrir responder, marcar "Programar envio", elegir      
+ fecha +10 min, confirmar. Verificar en Sheets que aparece fila PENDIENTE
+ 3. Trigger: Esperar 5-10 min, verificar en Sheets que estado cambio a ENVIADO con
+ fechaEnvio. Verificar en Gmail que el email llego al interlocutor
+ 4. Cancelar desde panel: Programar otro envio futuro, ir a panel Programados, pulsar       
+ Cancelar. Verificar en Sheets que estado es CANCELADO
+ 5. Vista panel: Boton Programados muestra tabla con filtros, estados correctos con iconos  
+ 6. Vista popup: Abrir popup de la extension, pulsar boton Programados, verificar tabla con 
+  estados e iconos. Filtrar por Pendientes/Enviados. Cancelar desde popup
+ 7. Fix luxon popup: Verificar que columna fecha en popup ordena correctamente sin error    
+ luxon
+ 8. Error handling: Programar envio con threadId invalido, verificar que aparece ERROR con  
+ detalle
+ 9. Concurrencia: LockService evita doble procesamiento
+
+ ---
+ Riesgos y mitigaciones
+
+ ┌─────────────────────────────────────┬────────────────────────────────────────────┐       
+ │               Riesgo                │                 Mitigacion                 │       
+ ├─────────────────────────────────────┼────────────────────────────────────────────┤       
+ │ Precision +-15 min del trigger      │ Documentar en UI. Aceptable para logistica │       
+ ├─────────────────────────────────────┼────────────────────────────────────────────┤
+ │ Timeout 6 min con muchos pendientes │ Limitar a 20 envios/ciclo con slice(0, 20) │       
+ ├─────────────────────────────────────┼────────────────────────────────────────────┤       
+ │ Race conditions entre triggers      │ LockService.getScriptLock()                │       
+ ├─────────────────────────────────────┼────────────────────────────────────────────┤       
+ │ Hoja crece indefinidamente          │ Futura funcion de archivado (>30 dias)     │       
+ ├─────────────────────────────────────┼────────────────────────────────────────────┤       
+ │ Rate limit Google                   │ Respetar emailsPorMinuto con sleep         │       
+ └─────────────────────────────────────┴────────────────────────────────────────────┘ "

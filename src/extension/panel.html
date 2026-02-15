@@ -30,6 +30,8 @@
         <button id="btn-toggle-agrupar" title="Agrupar por hilo">Agrupar por hilo</button>
         <button id="btn-responder-seleccionados" title="Responder a los correos seleccionados" disabled>Responder seleccionados</button>
         <button id="btn-toggle-programados" title="Ver envios programados">Programados</button>
+        <button id="btn-resumen" title="Abrir resumen de alertas">Resumen</button>
+        <button id="btn-toggle-recordatorios" title="Ver mis recordatorios">Recordatorios</button>
         <button id="btn-limpiar-todo" title="Limpiar todos los filtros" class="btn-secundario hidden">Limpiar todo</button>
         <span id="badge-filtros" class="badge-filtros hidden">0 filtros</span>
       </div>
@@ -192,6 +194,16 @@
         <div id="programados-vacio" class="hidden" style="text-align:center;color:#999;padding:12px;">Sin envios programados</div>
       </div>
 
+      <!-- Panel Mis Recordatorios -->
+      <div id="panel-recordatorios" class="panel-colapsable hidden">
+        <div class="panel-filtros-header">
+          <span>Mis Recordatorios</span>
+          <span id="recordatorios-count" style="font-size:12px;color:#666"></span>
+        </div>
+        <div id="lista-recordatorios" style="max-height:200px;overflow-y:auto"></div>
+        <div id="recordatorios-vacio" class="hidden" style="text-align:center;color:#999;padding:12px;font-size:12px">Sin recordatorios activos</div>
+      </div>
+
       <div id="tabla-seguimiento"></div>
     </section>
 
@@ -322,6 +334,16 @@
         </fieldset>
 
         <fieldset>
+          <legend>Resumen matutino</legend>
+          <label>
+            <input type="checkbox" id="cfg-resumen-activado" checked>
+            Mostrar resumen automatico al inicio del turno
+          </label>
+          <label for="cfg-resumen-hora">Hora de inicio</label>
+          <input type="time" id="cfg-resumen-hora" value="08:00">
+        </fieldset>
+
+        <fieldset>
           <legend>Barrido</legend>
           <label for="cfg-intervalo">Intervalo de barrido (minutos)</label>
           <input type="number" id="cfg-intervalo" min="1" max="1440" value="15">
@@ -442,6 +464,32 @@
     </div>
   </div>
 
+  <!-- Modal Recordatorio -->
+  <div id="modal-recordatorio" class="modal hidden">
+    <div class="modal-content">
+      <h2>Crear Recordatorio</h2>
+      <div id="recordatorio-carga-info" style="margin-bottom:8px;color:#666;font-size:12px"></div>
+      <label for="recordatorio-texto">Texto:</label>
+      <input type="text" id="recordatorio-texto" placeholder="Llamar a Garcia para confirmar hora" style="width:100%">
+      <label for="recordatorio-preset">Cuando:</label>
+      <select id="recordatorio-preset" style="width:100%">
+        <option value="15min">En 15 minutos</option>
+        <option value="30min">En 30 minutos</option>
+        <option value="1h" selected>En 1 hora</option>
+        <option value="2h">En 2 horas</option>
+        <option value="4h">En 4 horas</option>
+        <option value="manana">Manana a las 9:00</option>
+      </select>
+      <div id="recordatorio-error" class="errores hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-guardar-recordatorio" class="btn-primario">Crear</button>
+        <button type="button" id="btn-cancelar-recordatorio">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Mis Recordatorios (colapsable, antes de tabla) -->
+
   <!-- Modal Editar Fase -->
   <div id="modal-fase" class="modal hidden">
     <div class="modal-content">
@@ -515,6 +563,7 @@
   <script src="thread-grouping.js"></script>
   <script src="bulk-reply.js"></script>
   <script src="scheduled.js"></script>
+  <script src="reminders.js"></script>
   <script src="help-content.js"></script>
   <script src="panel.js"></script>
   <script src="config-ui.js"></script>

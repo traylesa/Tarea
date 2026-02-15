@@ -85,7 +85,16 @@ function accionProcesarCorreos() {
   });
 
   Logger.log('=== FIN procesarCorreos: ' + procesados + ' procesados, ' + errores + ' errores ===');
-  return respuestaJson({ ok: true, procesados: procesados, errores: errores });
+
+  // Retornar registros actualizados para evaluacion client-side de alertas
+  var registrosActualizados = leerRegistros();
+
+  return respuestaJson({
+    ok: true,
+    procesados: procesados,
+    errores: errores,
+    registros: registrosActualizados
+  });
 }
 
 function accionActualizarCampo(body) {
@@ -378,6 +387,24 @@ function _procesarColaProgramados() {
   } finally {
     lock.releaseLock();
   }
+}
+
+// --- Setup trigger (ejecutar UNA VEZ desde editor GAS: Run > crearTrigger) ---
+
+function crearTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(t) {
+    if (t.getHandlerFunction() === 'ejecutarBarridoProgramado') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('ejecutarBarridoProgramado')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+
+  Logger.log('Trigger creado: ejecutarBarridoProgramado cada 5 min');
 }
 
 // --- Diagnostico (ejecutar manualmente desde editor GAS) ---

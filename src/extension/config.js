@@ -59,7 +59,21 @@ function getDefaults() {
     },
     emailsPorMinuto: 10,
     fases: _getDefaultFases(),
-    estados: _getDefaultEstados()
+    estados: _getDefaultEstados(),
+    alertas: {
+      activado: true,
+      silencioUmbralH: 4,
+      estancamientoMaxH: { '12': 3, '19': 24, '22': 3 },
+      docsUmbralDias: 2,
+      cooldownMs: 3600000
+    },
+    resumenMatutino: {
+      activado: true,
+      hora: '08:00'
+    },
+    recordatorios: {
+      sugerenciasActivadas: true
+    }
   };
 }
 
@@ -123,12 +137,25 @@ async function cargar() {
     ventana: { ...defaults.ventana, ...(guardada.ventana || {}) }
   };
 
-  // Auto-migracion: si config guardada no tiene fases/estados, inyectar defaults
-  if (!guardada.fases) {
-    config.fases = defaults.fases;
+  // Auto-migracion: inyectar defaults si no existen en guardada
+  if (!guardada.fases) config.fases = defaults.fases;
+  if (!guardada.estados) config.estados = defaults.estados;
+  if (!guardada.alertas) {
+    config.alertas = defaults.alertas;
+  } else {
+    config.alertas = { ...defaults.alertas, ...guardada.alertas };
   }
-  if (!guardada.estados) {
-    config.estados = defaults.estados;
+
+  if (!guardada.resumenMatutino) {
+    config.resumenMatutino = defaults.resumenMatutino;
+  } else {
+    config.resumenMatutino = { ...defaults.resumenMatutino, ...guardada.resumenMatutino };
+  }
+
+  if (!guardada.recordatorios) {
+    config.recordatorios = defaults.recordatorios;
+  } else {
+    config.recordatorios = { ...defaults.recordatorios, ...guardada.recordatorios };
   }
 
   return config;

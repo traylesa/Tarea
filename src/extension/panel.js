@@ -387,6 +387,23 @@ async function persistirCambio(cell) {
       body: JSON.stringify({ messageId, campo, valor })
     }).catch(() => {});
   }
+
+  // Sugerencias automaticas al cambiar fase
+  if (campo === 'fase' && configActual && typeof generarSugerencia === 'function') {
+    var sug = generarSugerencia(valor, configActual);
+    if (sug) {
+      var aceptar = confirm('Sugerencia: "' + sug.texto + '" en ' + sug.horasAntes + 'h. ¿Crear recordatorio?');
+      if (aceptar) {
+        var rec = aceptarSugerencia(sug, row.codCar || null, new Date());
+        var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
+        var lista = stored[STORAGE_KEY_RECORDATORIOS] || [];
+        lista.push(rec);
+        await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: lista });
+        recordatoriosCache = lista;
+        renderRecordatorios();
+      }
+    }
+  }
 }
 
 async function inicializarTabla(datos) {
@@ -1760,6 +1777,108 @@ async function confirmarVinculacion() {
   }
 }
 
+// --- Recordatorios ---
+
+const STORAGE_KEY_RECORDATORIOS = 'tarealog_recordatorios';
+let recordatoriosCache = [];
+let recordatorioCodCar = null;
+
+function togglePanelRecordatorios() {
+  var panel = document.getElementById('panel-recordatorios');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) cargarRecordatoriosUI();
+  setTimeout(function() { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
+}
+
+async function cargarRecordatoriosUI() {
+  var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
+  recordatoriosCache = stored[STORAGE_KEY_RECORDATORIOS] || [];
+  renderRecordatorios();
+}
+
+function renderRecordatorios() {
+  var activos = obtenerActivos(recordatoriosCache, new Date());
+  var container = document.getElementById('lista-recordatorios');
+  var vacio = document.getElementById('recordatorios-vacio');
+  var count = document.getElementById('recordatorios-count');
+  container.innerHTML = '';
+
+  if (activos.length === 0) {
+    vacio.classList.remove('hidden');
+    count.textContent = '';
+    return;
+  }
+  vacio.classList.add('hidden');
+  count.textContent = activos.length + ' activo' + (activos.length !== 1 ? 's' : '');
+
+  activos.forEach(function(rec) {
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid #eee;font-size:12px';
+    var disparo = new Date(rec.fechaDisparo);
+    var ahora = new Date();
+    var diffMin = Math.round((disparo - ahora) / 60000);
+    var countdown = diffMin > 60 ? Math.round(diffMin / 60) + 'h' : diffMin + 'min';
+
+    div.innerHTML =
+      '<div style="flex:1">' +
+        '<strong>' + (rec.codCar ? 'Carga ' + rec.codCar + ' — ' : '') + '</strong>' +
+        rec.texto +
+        ' <span style="color:#999">(' + countdown + ')</span>' +
+        (rec.origen === 'sugerido' ? ' <span style="color:#2196F3;font-size:10px">[sugerido]</span>' : '') +
+      '</div>';
+
+    var btnEliminar = document.createElement('button');
+    btnEliminar.className = 'btn-secundario';
+    btnEliminar.textContent = 'X';
+    btnEliminar.style.cssText = 'font-size:10px;padding:2px 6px;margin-left:8px';
+    btnEliminar.addEventListener('click', function() { eliminarRecordatorioUI(rec.id); });
+    div.appendChild(btnEliminar);
+    container.appendChild(div);
+  });
+
+  // Badge en boton
+  var btn = document.getElementById('btn-toggle-recordatorios');
+  btn.textContent = activos.length > 0 ? 'Recordatorios (' + activos.length + ')' : 'Recordatorios';
+}
+
+async function eliminarRecordatorioUI(id) {
+  recordatoriosCache = eliminarRecordatorio(id, recordatoriosCache);
+  await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
+  renderRecordatorios();
+}
+
+function abrirModalRecordatorio(codCar) {
+  recordatorioCodCar = codCar || null;
+  document.getElementById('recordatorio-texto').value = '';
+  document.getElementById('recordatorio-preset').value = '1h';
+  document.getElementById('recordatorio-error').classList.add('hidden');
+  document.getElementById('recordatorio-carga-info').textContent = codCar ? 'Carga: ' + codCar : 'Sin carga asociada';
+  document.getElementById('modal-recordatorio').classList.remove('hidden');
+  document.getElementById('recordatorio-texto').focus();
+}
+
+async function guardarRecordatorioUI() {
+  var texto = document.getElementById('recordatorio-texto').value;
+  var preset = document.getElementById('recordatorio-preset').value;
+
+  try {
+    var rec = crearRecordatorio(texto, recordatorioCodCar, preset, new Date(), recordatoriosCache);
+    recordatoriosCache.push(rec);
+    await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
+    chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
+    cerrarModalRecordatorio();
+    renderRecordatorios();
+  } catch (e) {
+    document.getElementById('recordatorio-error').textContent = e.message;
+    document.getElementById('recordatorio-error').classList.remove('hidden');
+  }
+}
+
+function cerrarModalRecordatorio() {
+  document.getElementById('modal-recordatorio').classList.add('hidden');
+  recordatorioCodCar = null;
+}
+
 // --- Envios programados ---
 
 let programadosCache = [];
@@ -2140,6 +2259,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Horario laboral
   document.getElementById('btn-guardar-horario').addEventListener('click', guardarHorarioLaboralUI);
+
+  // Recordatorios
+  document.getElementById('btn-toggle-recordatorios').addEventListener('click', togglePanelRecordatorios);
+  document.getElementById('btn-guardar-recordatorio').addEventListener('click', guardarRecordatorioUI);
+  document.getElementById('btn-cancelar-recordatorio').addEventListener('click', cerrarModalRecordatorio);
+
+  // Resumen de alertas
+  document.getElementById('btn-resumen').addEventListener('click', function() {
+    chrome.runtime.sendMessage({ tipo: 'ABRIR_RESUMEN' });
+  });
+
+  // Aplicar filtro pendiente desde click-through de ventana resumen
+  chrome.storage.local.get('tarealog_filtro_pendiente', function(data) {
+    if (!data.tarealog_filtro_pendiente) return;
+    var filtros = data.tarealog_filtro_pendiente.filtros;
+    chrome.storage.local.remove('tarealog_filtro_pendiente');
+    if (filtros && filtros.length > 0 && tabla) {
+      var tabulatorFilters = filtros.map(function(f) {
+        return { field: f.field, type: f.type, value: f.value };
+      });
+      tabla.setFilter(tabulatorFilters);
+    }
+  });
 
   window.addEventListener('resize', redimensionarTabla);
 });

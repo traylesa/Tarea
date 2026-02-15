@@ -1,0 +1,34 @@
+{
+  "expediente": "verificar_plan_programados_20260215_002645",
+  "creado_en": "2026-02-15T00:26:46.361126",
+  "archivo_principal": "verificar_plan_programados.txt",
+  "clasificacion": {
+    "categoria": "BUG",
+    "severidad": "MEDIA",
+    "impacto": "BAJO",
+    "urgencia": "INMEDIATA",
+    "complejidad": "EPIC"
+  },
+  "camino_estrategico": {
+    "camino": "PROYECTO_COMPLETO",
+    "justificacion": "Proyecto complejo que requiere análisis profundo y todas las fases"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "02_INVESTIGACION",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION",
+    "09_EVOLUCION"
+  ],
+  "fase_actual": "00_ESTRATEGIA",
+  "estado": "ACTIVO",
+  "timestamps": {
+    "creado": "2026-02-15T00:26:46.361126",
+    "ultima_actualizacion": "2026-02-15T00:26:46.361126"
+  }
+}

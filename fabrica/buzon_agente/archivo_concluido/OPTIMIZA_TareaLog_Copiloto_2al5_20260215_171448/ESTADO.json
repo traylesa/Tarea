@@ -1,0 +1,35 @@
+{
+  "expediente": "OPTIMIZA_TareaLog_Copiloto_2al5_20260215_171448",
+  "creado_en": "2026-02-15T17:14:48.972390",
+  "archivo_principal": "OPTIMIZA TareaLog Copiloto 2al5.txt",
+  "clasificacion": {
+    "categoria": "PROYECTO",
+    "severidad": "ALTA",
+    "impacto": "BAJO",
+    "urgencia": "INMEDIATA",
+    "complejidad": "EPIC"
+  },
+  "camino_estrategico": {
+    "camino": "PROYECTO_COMPLETO",
+    "justificacion": "Proyecto complejo que requiere análisis profundo y todas las fases"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "02_INVESTIGACION",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION",
+    "09_EVOLUCION"
+  ],
+  "fase_actual": "09_EVOLUCION",
+  "estado": "COMPLETADO",
+  "timestamps": {
+    "creado": "2026-02-15T17:14:48.972390",
+    "ultima_actualizacion": "2026-02-15T18:30:00.000000",
+    "completado": "2026-02-15T18:30:00.000000"
+  }
+}

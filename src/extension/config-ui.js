@@ -14,6 +14,11 @@ async function inicializarConfigUI() {
   document.getElementById('cfg-patron-codcar').value = config.patrones.codcarAdjunto;
   document.getElementById('cfg-patron-keywords').value = config.patrones.keywordsAdmin;
 
+  // Resumen matutino
+  var rm = config.resumenMatutino || { activado: true, hora: '08:00' };
+  document.getElementById('cfg-resumen-activado').checked = rm.activado;
+  document.getElementById('cfg-resumen-hora').value = rm.hora || '08:00';
+
   fasesEditando = config.fases ? JSON.parse(JSON.stringify(config.fases)) : getDefaultFases();
   estadosEditando = config.estados ? JSON.parse(JSON.stringify(config.estados)) : getDefaultEstados();
   renderListaFasesConfig();
@@ -43,7 +48,11 @@ function leerFormulario() {
       keywordsAdmin: document.getElementById('cfg-patron-keywords').value.trim()
     },
     fases: fasesEditando,
-    estados: estadosEditando
+    estados: estadosEditando,
+    resumenMatutino: {
+      activado: document.getElementById('cfg-resumen-activado').checked,
+      hora: document.getElementById('cfg-resumen-hora').value || '08:00'
+    }
   };
 }
 

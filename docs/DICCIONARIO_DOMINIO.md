@@ -186,11 +186,52 @@ Claves usadas en `chrome.storage.local` para persistencia de la extension.
 | `tarealog_spreadsheet` | string | ID del spreadsheet configurado |
 | `registros` | array | Cache local de registros de seguimiento |
 | `ultimoBarrido` | string (ISO) | Timestamp del ultimo barrido |
+| `tarealog_alertas` | array(Alerta) | Alertas proactivas activas evaluadas por motor de reglas |
+| `tarealog_resumen_flag` | object | Flag matutino: `{fecha: string, pospuestoHasta: string\|null}` |
+| `tarealog_filtro_pendiente` | object\|null | Filtros Tabulator pendientes para click-through desde ventana resumen |
+| `tarealog_recordatorios` | array(RECORDATORIO) | Lista de recordatorios activos del operador |
+| `tarealog_recordatorios_vencidos` | array(RECORDATORIO) | Temporal: recordatorios vencidos pendientes de snooze/completar |
 
 ### TIPO_ALERTA
 - `ALERTA_CONTACTO_NO_REGISTRADO` - Email no coincide con ERP
 - `ALERTA_SIN_CONTACTO_ERP` - Transportista sin email en ERP
 - `ALERTA_SLA_VENCIMIENTO` - Carga proxima a vencer sin correo
+
+### NIVEL_ALERTA
+Nivel de urgencia de una alerta proactiva evaluada por el motor de reglas.
+- `CRITICO` - Rojo, notificacion prominente (prioridad 2). Ej: incidencia activa, carga < 2h sin orden
+- `ALTO` - Naranja, notificacion estandar (prioridad 1). Ej: sin respuesta > umbral, carga HOY sin orden
+- `MEDIO` - Azul, notificacion silenciosa. Ej: fase estancada > tiempoMax
+- `BAJO` - Verde, solo badge. Ej: informativo
+
+### REGLA_ALERTA
+Identificadores de reglas de evaluacion de alertas proactivas.
+- `R2` - Silencio transportista: ENVIADO > umbralH sin RECIBIDO en threadId
+- `R3` - Fase estancada: (ahora - fechaCorreo) > tiempoMaxFase
+- `R4` - Documentacion pendiente: fase=29 + (ahora - fEntrega) > umbralDias
+- `R5` - Incidencia activa: fase IN [05, 25]
+- `R6` - Carga HOY sin orden: fCarga=HOY + sin ENVIADO
+
+### RECORDATORIO
+Aviso programado asociado a una carga, con snooze y persistencia.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `id` | string | ID unico (rec_timestamp_random) |
+| `codCar` | number/null | Codigo de carga asociado |
+| `texto` | string | Texto del recordatorio |
+| `fechaCreacion` | string (ISO) | Timestamp de creacion |
+| `fechaDisparo` | string (ISO) | Cuando debe dispararse la notificacion |
+| `snoozeCount` | number | Veces pospuesto (default 0) |
+| `origen` | string | 'manual' (creado por operador) o 'sugerido' (propuesto al cambiar fase) |
+
+### SUGERENCIA_RECORDATORIO
+Configuracion de sugerencias automaticas por fase.
+
+| Fase | Texto | Horas |
+|------|-------|-------|
+| `19` (Cargado) | Verificar descarga | 8 |
+| `29` (Vacio) | Reclamar POD | 24 |
 
 ### ESTADO_PROGRAMADO
 Estado del envio en la cola de programados.
@@ -257,11 +298,22 @@ Configuracion de horario en que el trigger procesa envios programados (almacenad
 - **Envio programado:** Correo configurado para enviarse automaticamente en una fecha/hora futura via trigger periodico
 - **Horario laboral:** Ventana de dias y horas en que el trigger procesa envios programados (configurable desde UI)
 - **Cola de programados:** Hoja PROGRAMADOS en Sheets que almacena envios pendientes, enviados, con error o cancelados
+- **Alerta proactiva:** Aviso generado automaticamente por el motor de reglas tras cada barrido, categorizado por nivel de urgencia (CRITICO/ALTO/MEDIO/BAJO)
+- **Motor de reglas:** Modulo alerts.js que evalua 5 reglas (R2-R6) sobre registros de seguimiento para detectar situaciones que requieren atencion
+- **Deduplicacion:** Mecanismo que evita repetir la misma alerta dentro de un periodo de cooldown configurable
+- **Badge dinamico:** Indicador numerico + color en el icono de la extension Chrome que muestra cantidad y gravedad de alertas activas
+- **Resumen matutino:** Ventana popup automatica que se abre 1 vez/dia al inicio del turno con alertas agrupadas por categoria
+- **Resumen bajo demanda:** Misma ventana de resumen pero abierta manualmente con boton en panel
+- **Recordatorio:** Aviso programado por el operador (o sugerido por el sistema) asociado a una carga, con opciones de snooze y persistencia via chrome.alarms
+- **Snooze:** Posponer un recordatorio por un periodo predefinido (15min, 1h, manana)
+- **Sugerencia de recordatorio:** Recordatorio propuesto automaticamente al cambiar fase de una carga (ej: Cargado→Verificar descarga)
 
 ---
 
 ## 6. Historial de Cambios
 
+- **2026-02-15:** Sprint 3: Agregada entidad RECORDATORIO, SUGERENCIA_RECORDATORIO, storage keys tarealog_recordatorios/tarealog_recordatorios_vencidos, glosario recordatorio/snooze/sugerencia
+- **2026-02-15:** Agregados enums NIVEL_ALERTA y REGLA_ALERTA, storage key tarealog_alertas, glosario alertas proactivas/motor de reglas/deduplicacion/badge dinamico
 - **2026-02-15:** Agregada entidad programados (cola envios), enum ESTADO_PROGRAMADO, config HORARIO_LABORAL, glosario envio programado/horario laboral/cola programados
 - **2026-02-14:** Agregados campos enriquecidos en seguimiento: mensajes_en_hilo, referencia, para, cc, cco, interlocutor, cuerpo
 - **2026-02-14:** Agregadas entidades PLANTILLA_RESPUESTA, EXPORTACION_PLANTILLAS, STORAGE_KEYS

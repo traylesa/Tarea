@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>TareaLog — Resumen</title>
+  <link rel="stylesheet" href="alert-summary.css">
+</head>
+<body>
+  <header>
+    <h1>TareaLog — Resumen</h1>
+    <span id="fecha-hora"></span>
+  </header>
+
+  <main>
+    <div id="categorias"></div>
+    <div id="kpis"></div>
+  </main>
+
+  <footer>
+    <button id="btn-posponer" class="btn-secundario">Posponer 1h</button>
+    <button id="btn-panel" class="btn-primario">Abrir Panel</button>
+    <button id="btn-cerrar" class="btn-cerrar">Cerrar</button>
+  </footer>
+
+  <script src="alerts.js"></script>
+  <script src="alert-summary.js"></script>
+  <script>
+    document.getElementById('fecha-hora').textContent =
+      new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  </script>
+</body>
+</html>

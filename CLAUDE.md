@@ -26,6 +26,7 @@
 | **Instalación** | `README.md` | Setup, quick start |
 | **Plans activos** | `docs/plans/` | Implementación features |
 | **Decisiones (ADR)** | `docs/adr/` | Arquitectura, trade-offs |
+| **Skills especializadas** | `.claude/skills/` | Guias tecnicas por area |
 
 ---
 
@@ -84,6 +85,16 @@ PruebaInicializa4/
 
 **Arquitectura completa:** `docs/ARCHITECTURE.md`
 **Stack:** JavaScript (Chrome Extension MV3 + Google Apps Script)
+
+### Skills Especializadas (`.claude/skills/`)
+
+| Skill | Area | Contenido |
+|-------|------|-----------|
+| `gas-deploy.md` | Backend | Despliegue clasp, endpoints, PropertiesService |
+| `chrome-extension-mv3.md` | Extension | MV3 patterns, service worker, storage, ventanas |
+| `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest |
+| `sheets-database.md` | Backend | CRUD Sheets, auto-sync headers, limitaciones |
+| `alertas-proactivas.md` | Dominio | Motor de reglas, niveles, notificaciones, resumen |
 
 ---
 

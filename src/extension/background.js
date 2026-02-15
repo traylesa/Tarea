@@ -1,4 +1,11 @@
+// Importar modulos de logica pura en service worker
+importScripts('alerts.js');
+importScripts('alert-summary.js');
+importScripts('reminders.js');
+
 const ALARM_NAME = 'tarealog-barrido';
+const ALARM_MATUTINO = 'tarealog-resumen-matutino';
+const ALARM_RECORDATORIOS = 'tarealog-recordatorios';
 const STORAGE_KEY_CONFIG = 'tarealog_config';
 
 let panelWindowId = null;
@@ -73,6 +80,15 @@ async function guardarEstadoVentana(windowId) {
   }
 }
 
+async function abrirVentanaResumen() {
+  await chrome.windows.create({
+    url: 'alert-summary.html',
+    type: 'popup',
+    width: 450,
+    height: 500
+  });
+}
+
 chrome.action.onClicked.addListener(() => {
   abrirOEnfocarVentana();
 });
@@ -94,11 +110,29 @@ chrome.runtime.onInstalled.addListener(async () => {
   chrome.alarms.create(ALARM_NAME, {
     periodInMinutes: config.intervaloMinutos
   });
+  // Alarma matutina: verificar cada 60 minutos
+  chrome.alarms.create(ALARM_MATUTINO, {
+    periodInMinutes: 60
+  });
+  // Alarma recordatorios: verificar cada 1 minuto
+  chrome.alarms.create(ALARM_RECORDATORIOS, {
+    periodInMinutes: 1
+  });
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== ALARM_NAME) return;
-  await ejecutarBarridoPeriodico();
+  if (alarm.name === ALARM_NAME) {
+    await ejecutarBarridoPeriodico();
+    return;
+  }
+  if (alarm.name === ALARM_MATUTINO) {
+    await verificarResumenMatutino();
+    return;
+  }
+  if (alarm.name === ALARM_RECORDATORIOS) {
+    await verificarRecordatorios();
+    return;
+  }
 });
 
 chrome.runtime.onMessage.addListener((msg) => {
@@ -109,7 +143,42 @@ chrome.runtime.onMessage.addListener((msg) => {
       });
     });
   }
+  if (msg.tipo === 'ABRIR_RESUMEN') {
+    abrirVentanaResumen();
+  }
+  if (msg.tipo === 'ABRIR_PANEL_FILTRADO') {
+    chrome.storage.local.set({ tarealog_filtro_pendiente: { filtros: msg.filtros } }, () => {
+      abrirOEnfocarVentana();
+    });
+  }
+  if (msg.tipo === 'ABRIR_RESUMEN_PANEL') {
+    abrirOEnfocarVentana();
+  }
+  if (msg.tipo === 'RECORDATORIO_CREADO') {
+    // Forzar verificacion inmediata si se crea recordatorio cercano
+    verificarRecordatorios();
+  }
 });
+
+async function verificarResumenMatutino() {
+  const config = await cargarConfig();
+  if (!config.resumenMatutino || !config.resumenMatutino.activado) return;
+
+  const ahora = new Date();
+  const stored = await chrome.storage.local.get(['tarealog_resumen_flag', 'tarealog_alertas']);
+  const flag = stored.tarealog_resumen_flag || null;
+  const alertas = stored.tarealog_alertas || [];
+
+  if (typeof debeMostrarMatutino !== 'function') return;
+  if (!debeMostrarMatutino(flag, config.resumenMatutino, ahora)) return;
+  if (alertas.length === 0) return;
+
+  // Marcar como mostrado
+  const nuevoFlag = crearFlagMostrado(ahora);
+  await chrome.storage.local.set({ tarealog_resumen_flag: nuevoFlag });
+
+  await abrirVentanaResumen();
+}
 
 async function ejecutarBarridoPeriodico() {
   const config = await cargarConfig();
@@ -118,24 +187,105 @@ async function ejecutarBarridoPeriodico() {
   try {
     const response = await fetch(config.gasUrl + '?action=procesarCorreos', { method: 'POST' });
     const data = await response.json();
-
-    if (data.alertas && data.alertas.length > 0) {
-      for (const alerta of data.alertas) {
-        chrome.notifications.create(`sla-${alerta.codCar}`, {
-          type: 'basic',
-          iconUrl: 'icons/icon128.png',
-          title: 'URGENTE: Carga por vencer',
-          message: `Carga ${alerta.codCar} a punto de vencer (${alerta.horasRestantes.toFixed(1)}h restantes)`,
-          priority: 2
-        });
-      }
-    }
+    const registros = data.registros || [];
 
     await chrome.storage.local.set({
-      registros: data.registros || [],
+      registros: registros,
       ultimoBarrido: new Date().toISOString()
     });
+
+    // Evaluar alertas proactivas sobre registros
+    await _evaluarYNotificarAlertas(registros, config);
   } catch (error) {
     console.error('Error en barrido periodico:', error);
+  }
+}
+
+async function verificarRecordatorios() {
+  if (typeof evaluarPendientes !== 'function') return;
+
+  try {
+    var stored = await chrome.storage.local.get('tarealog_recordatorios');
+    var lista = stored.tarealog_recordatorios || [];
+    if (lista.length === 0) return;
+
+    var ahora = new Date();
+    var vencidos = evaluarPendientes(lista, ahora);
+    if (vencidos.length === 0) return;
+
+    for (var i = 0; i < vencidos.length; i++) {
+      var rec = vencidos[i];
+      chrome.notifications.create('rec_' + rec.id, {
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'Recordatorio' + (rec.codCar ? ' — Carga ' + rec.codCar : ''),
+        message: rec.texto,
+        buttons: [
+          { title: 'Snooze 15min' },
+          { title: 'Hecho' }
+        ],
+        requireInteraction: true,
+        priority: 2
+      });
+    }
+
+    // Eliminar vencidos de la lista (se recrean con snooze si el usuario elige)
+    var idsVencidos = vencidos.map(function(r) { return r.id; });
+    var restantes = lista.filter(function(r) { return idsVencidos.indexOf(r.id) === -1; });
+    // Guardar vencidos en key temporal para snooze
+    await chrome.storage.local.set({
+      tarealog_recordatorios: restantes,
+      tarealog_recordatorios_vencidos: vencidos
+    });
+  } catch (error) {
+    console.error('Error verificando recordatorios:', error);
+  }
+}
+
+chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
+  if (!notifId.startsWith('rec_')) return;
+  var recId = notifId.replace('rec_', '');
+
+  var stored = await chrome.storage.local.get(['tarealog_recordatorios', 'tarealog_recordatorios_vencidos']);
+  var lista = stored.tarealog_recordatorios || [];
+  var vencidos = stored.tarealog_recordatorios_vencidos || [];
+  var rec = vencidos.find(function(r) { return r.id === recId; });
+
+  if (btnIdx === 0 && rec) {
+    // Snooze 15min: re-agregar con nueva fecha
+    var nuevaLista = lista.concat([rec]);
+    nuevaLista = aplicarSnooze(recId, '15min', nuevaLista, new Date());
+    await chrome.storage.local.set({ tarealog_recordatorios: nuevaLista });
+  }
+  // btnIdx === 1 = Hecho: ya fue eliminado de la lista
+
+  chrome.notifications.clear(notifId);
+});
+
+async function _evaluarYNotificarAlertas(registros, config) {
+  if (!config.alertas || !config.alertas.activado) return;
+  if (typeof evaluarAlertas !== 'function') return;
+
+  try {
+    const stored = await chrome.storage.local.get('tarealog_alertas');
+    const previas = stored.tarealog_alertas || [];
+
+    const alertas = evaluarAlertas(registros, config, previas, new Date());
+
+    // Badge
+    const badge = calcularBadge(alertas);
+    chrome.action.setBadgeText({ text: badge.texto });
+    chrome.action.setBadgeBackgroundColor({ color: badge.color });
+
+    // Notificaciones Chrome
+    const notifs = generarNotificaciones(alertas);
+    for (const n of notifs) {
+      chrome.notifications.create(n.id, n.opciones);
+    }
+
+    // Persistir alertas activas
+    await chrome.storage.local.set({ tarealog_alertas: alertas });
+  } catch (error) {
+    console.error('Error evaluando alertas:', error);
   }
 }
