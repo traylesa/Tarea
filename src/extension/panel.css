@@ -331,6 +331,23 @@ footer {
   color: white;
 }
 
+/* --- Fila cursor (navegacion teclado) --- */
+
+.tabulator-row.fila-cursor {
+  outline: 2px solid #1a73e8;
+  outline-offset: -2px;
+  background: #e8eef7 !important;
+}
+
+.tabulator-row.fila-cursor.tabulator-selected {
+  outline: 2px solid #1557b0;
+  background: #d0ddf0 !important;
+}
+
+#tabla-seguimiento:focus {
+  outline: none;
+}
+
 /* --- Checkbox sin fecha --- */
 
 .chk-sin-fecha {
@@ -350,6 +367,8 @@ footer {
   border-bottom: 1px solid #d0d8e8;
   padding: 8px 12px;
   flex-shrink: 0;
+  max-height: 50vh;
+  overflow-y: auto;
 }
 
 .panel-filtros-header {
@@ -362,7 +381,65 @@ footer {
   color: #1a73e8;
 }
 
-.baterias { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+/* --- Secciones colapsables --- */
+
+.filtro-seccion {
+  background: white;
+  border: 1px solid #e0e4ea;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.filtro-seccion-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(to bottom, #f8fafe, #f0f3f9);
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s;
+}
+
+.filtro-seccion-header:hover {
+  background: linear-gradient(to bottom, #edf2fc, #e6ecf7);
+}
+
+.filtro-seccion-header.abierta {
+  border-bottom-color: #e0e4ea;
+}
+
+.filtro-seccion-icono::before {
+  content: '\25B6';
+  display: inline-block;
+  font-size: 8px;
+  color: #888;
+  transition: transform 0.2s;
+}
+
+.filtro-seccion-header.abierta .filtro-seccion-icono::before {
+  transform: rotate(90deg);
+}
+
+.filtro-seccion-titulo {
+  font-weight: 600;
+  font-size: 11px;
+  color: #4a5568;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.filtro-seccion-cuerpo {
+  padding: 6px 10px;
+}
+
+.filtro-seccion-cuerpo.colapsado {
+  display: none;
+}
+
+.baterias { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .btn-bateria {
   padding: 3px 10px;
@@ -374,6 +451,7 @@ footer {
   font-size: 11px;
 }
 .btn-bateria:hover { background: #e8eef7; }
+.btn-bateria.active { background: #1a73e8; color: white; border-color: #1a73e8; }
 
 .filtro-fila {
   display: flex;
@@ -389,9 +467,12 @@ footer {
   font-size: 11px;
 }
 
-.filtro-fila .filtro-campo { width: 120px; }
-.filtro-fila .filtro-operador { width: 110px; }
+.filtro-fila .filtro-campo { width: 150px; }
+.filtro-fila .filtro-operador { width: 140px; }
 .filtro-fila .filtro-valor { flex: 1; }
+
+.filtro-fila .filtro-campo optgroup { font-weight: 600; font-size: 10px; color: #1a73e8; }
+.filtro-fila .filtro-campo option { font-weight: 400; color: #333; }
 
 .btn-quitar-filtro {
   padding: 2px 6px;
@@ -458,6 +539,53 @@ footer {
 }
 
 .plantillas-lista h3 { font-size: 14px; margin-bottom: 8px; color: #1a73e8; }
+
+.pie-comun-container {
+  background: #f0f4ff;
+  border: 1px solid #d0d8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.pie-comun-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 4px;
+}
+
+.pie-comun-container textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d0d8e8;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Consolas', monospace;
+  margin-bottom: 4px;
+  resize: vertical;
+}
+
+.pie-comun-container .btn-secundario { font-size: 11px; padding: 3px 10px; }
+
+.plantillas-export-import {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.plantillas-export-import .btn-secundario { font-size: 11px; padding: 3px 10px; flex: 1; }
+
+#plantillas-import-resultado {
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+#plantillas-import-resultado.exito { background: #e6f4ea; border: 1px solid #0d7c3d; color: #0d7c3d; }
+#plantillas-import-resultado.error { background: #fce8e6; border: 1px solid #d93025; color: #d93025; }
 
 .plantilla-item {
   display: flex;
@@ -544,6 +672,63 @@ footer {
 
 .servicio-nuevo input { flex: 1; padding: 4px 8px; border: 1px solid #d0d8e8; border-radius: 3px; font-size: 12px; }
 
+/* --- Gmail Query --- */
+
+.gmail-query-selector {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.gmail-query-selector input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #d0d8e8;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.gmail-query-ejemplos {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.gmail-query-ejemplos small {
+  color: #666;
+  font-size: 11px;
+}
+
+.btn-ejemplo-query {
+  background: #e8eef7;
+  border: 1px solid #c0cfe0;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #3367d6;
+}
+
+.btn-ejemplo-query:hover {
+  background: #d0ddf0;
+}
+
+#gmail-query-info {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #e6f4ea;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #137333;
+}
+
+#gmail-query-error {
+  margin-top: 6px;
+}
+
 /* --- Tab Ayuda --- */
 
 #panel-ayuda { padding: 16px; }
@@ -613,6 +798,16 @@ footer {
   border-radius: 4px;
   font-size: 12px;
   margin-bottom: 8px;
+}
+
+.respuesta-pie-preview {
+  background: #f8f9fa;
+  border: 1px dashed #d0d8e8;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
 }
 
 /* --- Active state for buttons --- */
@@ -702,19 +897,9 @@ footer {
   font-size: 11px;
 }
 
-.bulk-fecha-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.bulk-fecha-label input[type="date"] {
-  padding: 2px 4px;
-  border: 1px solid #d0d8e8;
-  border-radius: 3px;
-  font-size: 11px;
+.panel-bulk select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* --- Cards de fases --- */
@@ -807,16 +992,6 @@ footer {
   color: #999;
 }
 
-/* --- Selector firma --- */
-
-#respuesta-firma-selector {
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #d0d8e8;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
 
 /* --- Fases config UI --- */
 
@@ -908,13 +1083,65 @@ footer {
 
 /* --- Modal fase --- */
 
-#modal-fase .modal-content label {
+#modal-fase .modal-content label,
+#modal-estado .modal-content label {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-#modal-fase select {
+/* --- Envios programados --- */
+
+.programar-container {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f0f4ff;
+  border: 1px solid #d0d8e8;
+  border-radius: 4px;
+}
+
+.programar-check-label {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+#programar-campos { margin-top: 6px; }
+
+.tabla-prog {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.tabla-prog th {
+  background: #e8eef7;
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  border-bottom: 1px solid #d0d8e8;
+}
+
+.tabla-prog td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.tabla-prog tr:hover td { background: #f0f4ff; }
+
+.prog-pendiente { color: #ea8600; font-weight: 600; }
+.prog-enviado { color: #0d7c3d; }
+.prog-error { color: #d93025; font-weight: 600; }
+.prog-cancelado { color: #999; }
+
+#modal-fase select,
+#modal-estado select {
   width: 100%;
   padding: 6px 10px;
   border: 1px solid #d0d8e8;

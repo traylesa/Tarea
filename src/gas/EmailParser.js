@@ -40,4 +40,4 @@ function extractMetadata(message) {
   return { codCar: null, nif: null, tipo: 'SIN_CLASIFICAR' };
 }
 
-module.exports = { extractCodCarFromFilename, isAdministrative, extractNif, extractMetadata };
+if (typeof module !== 'undefined') module.exports = { extractCodCarFromFilename, isAdministrative, extractNif, extractMetadata };

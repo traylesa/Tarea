@@ -1,7 +1,13 @@
 # PruebaInicializa4
 
-**Estado:** Inicial | **Fase:** Setup | **Versión:** 0.1.0
-**Última actualización:** 2026-02-13
+**Estado:** Activo | **Fase:** Desarrollo | **Versión:** 0.2.0
+**Última actualización:** 2026-02-14
+
+---
+
+## REGLAS PRINCIPALES
+
+- **Idioma**: Responder y mostrar pensamiento SIEMPRE en español
 
 ---
 
@@ -39,20 +45,25 @@ just diagnostico        # Diagnóstico completo
 
 ## 🎯 ESTADO ACTUAL
 
-### Versión: 0.1.0 (Inicial)
+### Versión: 0.2.0 (Backend GAS + UI completa)
 
-**Sistemas implementados:**
-- ✅ Fábrica agéntica completa
-- ✅ Sistema de buzones operativo
-- ✅ Desarrollo paralelo (worktrees)
-- ✅ Gestores de skills y worktrees
-- ⏳ Código fuente pendiente
+**Extension Chrome (Manifest V3):**
+- ✅ Panel con tabs: Datos, Plantillas, Config, Ayuda
+- ✅ Tabla Tabulator con 20+ columnas, edicion inline, agrupacion por hilo
+- ✅ Filtros avanzados con tarjetas colapsables (fechas, fases, baterias, personalizados)
+- ✅ Plantillas de respuesta con pie comun global + export/import JSON
+- ✅ Edicion masiva (fase + estado a seleccionados)
+- ✅ Respuesta masiva (reply-all excluyendo email propio)
+- ✅ Selector de spreadsheet dinamico
 
-**Métricas:**
-- Archivos generados: 16
-- Documentación: 8 docs
-- Scripts Python: 5
-- Comandos disponibles: ~15
+**Backend GAS (Web App):**
+- ✅ 11 archivos desplegados via clasp (6 adaptadores + 5 logica pura)
+- ✅ Endpoints: getRegistros, procesarCorreos, actualizarCampo, vincularManual, enviarRespuesta, configurarSpreadsheet
+- ✅ SPREADSHEET_ID dinamico via PropertiesService
+- ✅ Auto-sync headers en hojas SEGUIMIENTO y DB_HILOS
+- ✅ Interlocutor calculado (from+to minus email propio via Session.getEffectiveUser)
+
+**Tests:** 67+ Jest pasando (logica pura dual-compatible GAS/Node)
 
 **Ver detalle:** `just diagnostico`
 
@@ -62,14 +73,17 @@ just diagnostico        # Diagnóstico completo
 
 ```
 PruebaInicializa4/
+├── src/
+│   ├── extension/     # Chrome Extension (panel.js, config-ui.js, filters.js, etc.)
+│   └── gas/           # Google Apps Script (Codigo.js, Adaptadores, logica pura)
+├── tests/TDD/unit/    # Tests Jest (67+)
+├── docs/              # Documentación (diccionario, arquitectura, guias)
 ├── fabrica/           # Fábrica agéntica
-├── docs/              # Documentación
-├── .claude/           # Skills y comandos
-└── src/               # Código fuente
+└── .claude/           # Skills y comandos
 ```
 
 **Arquitectura completa:** `docs/ARCHITECTURE.md`
-**Stack:** generic
+**Stack:** JavaScript (Chrome Extension MV3 + Google Apps Script)
 
 ---
 

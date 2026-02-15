@@ -168,6 +168,13 @@ main { padding: 8px; }
 .modal-actions button { padding: 6px 16px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
 .modal-actions button:first-child { background: #1a73e8; color: white; border-color: #1a73e8; }
 
+/* --- Estados programados --- */
+.prog-pendiente { color: #ea8600; font-weight: 600; }
+.prog-enviado { color: #0d7c3d; }
+.prog-error { color: #d93025; font-weight: 600; }
+.prog-cancelado { color: #999; }
+.hidden { display: none !important; }
+
 footer {
   padding: 8px 16px;
   background: #e8eef7;

@@ -133,6 +133,18 @@ function obtenerBaterias() {
     {
       nombre: 'Sin fecha carga',
       filtros: [{ field: 'fCarga', type: '=', value: '' }]
+    },
+    {
+      nombre: 'Incidencias',
+      filtros: [{ field: 'fase', func: (data) => ['05', '25'].includes(data.fase || '') }]
+    },
+    {
+      nombre: 'En proceso',
+      filtros: [{ field: 'fase', func: (data) => ['11', '12', '21', '22'].includes(data.fase || '') }]
+    },
+    {
+      nombre: 'Completados',
+      filtros: [{ field: 'fase', func: (data) => ['19', '29', '30'].includes(data.fase || '') }]
     }
   ];
 }

@@ -1,5 +1,5 @@
 {
-  "name": "logitask-orchestrator",
+  "name": "tarealog",
   "version": "0.1.0",
   "description": "Sistema de seguimiento logistico automatizado - Extension Chrome + Google Apps Script",
   "private": true,

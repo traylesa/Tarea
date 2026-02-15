@@ -15,12 +15,19 @@ const ESTADO_ICONS = {
   DEFAULT: '\u26AA'
 };
 
-// Fases se cargan desde config dinamicamente
+// Fases se cargan desde config (storage) dinamicamente
 let fasesActualesPopup = [];
 let FASES_TRANSPORTE = {};
 
-function actualizarFasesPopup() {
-  if (typeof getDefaultFases === 'function') {
+async function actualizarFasesPopup() {
+  if (typeof cargar === 'function') {
+    const config = await cargar();
+    if (config && config.fases && config.fases.length > 0) {
+      fasesActualesPopup = config.fases;
+    } else if (typeof getDefaultFases === 'function') {
+      fasesActualesPopup = getDefaultFases();
+    }
+  } else if (typeof getDefaultFases === 'function') {
     fasesActualesPopup = getDefaultFases();
   }
   if (typeof fasesAMapaLegacy === 'function') {
@@ -157,7 +164,11 @@ function crearColumnas() {
     },
     {
       title: 'Fecha', field: 'fechaCorreo', width: 110,
-      sorter: 'datetime',
+      sorter: function(a, b) {
+        var da = a ? new Date(a).getTime() : 0;
+        var db = b ? new Date(b).getTime() : 0;
+        return da - db;
+      },
       formatter: cell => {
         const v = cell.getValue();
         return v ? new Date(v).toLocaleString('es-ES') : '--';
@@ -391,13 +402,126 @@ function actualizarFooter(timestamp) {
   }
 }
 
+// --- Programados popup ---
+
+let programadosCachePopup = [];
+
+function obtenerUrlPopup() {
+  // Usa GAS_URL o intenta desde storage
+  return GAS_URL || '';
+}
+
+function togglePanelProgramadosPopup() {
+  var panel = document.getElementById('panel-programados-popup');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) cargarProgramadosPopup();
+}
+
+async function cargarProgramadosPopup() {
+  var url = obtenerUrlPopup();
+  if (!url) {
+    // Intentar obtener URL desde storage (servicios GAS)
+    try {
+      var result = await chrome.storage.local.get('tarealog_gas_services');
+      var servicios = result['tarealog_gas_services'];
+      if (servicios && servicios.services && servicios.services.length > 0) {
+        var activo = servicios.services.find(function(s) { return s.id === servicios.activeServiceId; });
+        url = activo ? activo.url : servicios.services[0].url;
+      }
+    } catch (e) { return; }
+  }
+  if (!url) return;
+
+  try {
+    var response = await fetch(url + '?action=getProgramados');
+    var data = await response.json();
+    programadosCachePopup = data.programados || [];
+  } catch (e) {
+    programadosCachePopup = [];
+  }
+  renderTablaProgramadosPopup();
+}
+
+function renderTablaProgramadosPopup() {
+  var filtro = document.getElementById('filtro-programados-popup').value;
+  var lista = filtrarProgramados(programadosCachePopup, filtro);
+  lista = ordenarPorFechaProgramada(lista);
+
+  var tbody = document.querySelector('#tabla-programados-popup tbody');
+  var vacio = document.getElementById('programados-vacio-popup');
+  tbody.innerHTML = '';
+
+  if (lista.length === 0) {
+    vacio.classList.remove('hidden');
+    return;
+  }
+  vacio.classList.add('hidden');
+
+  lista.forEach(function(p) {
+    var estado = formatearEstadoProgramado(p.estado);
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #eee';
+    tr.innerHTML =
+      '<td style="padding:3px 6px" class="' + estado.clase + '">' + estado.html + '</td>' +
+      '<td style="padding:3px 6px">' + (p.interlocutor || '--') + '</td>' +
+      '<td style="padding:3px 6px">' + (p.asunto || '--').substring(0, 30) + '</td>' +
+      '<td style="padding:3px 6px">' + formatearFechaCorta(p.fechaProgramada) + '</td>' +
+      '<td style="padding:3px 6px"></td>';
+
+    if (p.estado === 'PENDIENTE') {
+      var btn = document.createElement('button');
+      btn.textContent = 'Cancelar';
+      btn.style.cssText = 'font-size:10px;padding:1px 6px;border:1px solid #d93025;border-radius:3px;background:white;color:#d93025;cursor:pointer';
+      btn.addEventListener('click', function() { cancelarProgramadoPopup(p.id); });
+      tr.lastChild.appendChild(btn);
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  // Actualizar badge
+  var conteo = contarPorEstado(programadosCachePopup);
+  var btn = document.getElementById('btn-toggle-programados-popup');
+  btn.textContent = conteo.PENDIENTE > 0 ? 'Programados (' + conteo.PENDIENTE + ')' : 'Programados';
+}
+
+async function cancelarProgramadoPopup(id) {
+  var url = obtenerUrlPopup();
+  if (!url) {
+    try {
+      var result = await chrome.storage.local.get('tarealog_gas_services');
+      var servicios = result['tarealog_gas_services'];
+      if (servicios && servicios.services && servicios.services.length > 0) {
+        var activo = servicios.services.find(function(s) { return s.id === servicios.activeServiceId; });
+        url = activo ? activo.url : servicios.services[0].url;
+      }
+    } catch (e) { return; }
+  }
+  if (!url) return;
+
+  try {
+    await fetch(url + '?action=cancelarProgramado', {
+      method: 'POST',
+      body: JSON.stringify({ id: id })
+    });
+    await cargarProgramadosPopup();
+  } catch (e) {
+    // silencioso
+  }
+}
+
 // --- Init ---
 
-document.addEventListener('DOMContentLoaded', () => {
-  actualizarFasesPopup();
+document.addEventListener('DOMContentLoaded', async () => {
+  await actualizarFasesPopup();
   cargarDatos();
   document.getElementById('btn-refresh').addEventListener('click', ejecutarBarrido);
   document.getElementById('filter-tipo').addEventListener('change', aplicarFiltroGlobal);
   document.getElementById('btn-confirmar-vincular').addEventListener('click', confirmarVinculacion);
   document.getElementById('btn-cancelar-vincular').addEventListener('click', cerrarModal);
+
+  // Programados
+  document.getElementById('btn-toggle-programados-popup').addEventListener('click', togglePanelProgramadosPopup);
+  document.getElementById('btn-actualizar-programados-popup').addEventListener('click', cargarProgramadosPopup);
+  document.getElementById('filtro-programados-popup').addEventListener('change', renderTablaProgramadosPopup);
 });

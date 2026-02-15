@@ -1,8 +1,8 @@
-# 📁 PROYECTO: LogiTask Orchestrator (Sistema de Seguimiento Logístico Automatizado)
+# 📁 PROYECTO: TareaLog (Sistema de Seguimiento Logístico Automatizado)
 
 ## 1. RESUMEN EJECUTIVO
 
-**LogiTask Orchestrator** es una herramienta híbrida (Extensión de Chrome + Google Apps Script) diseñada para reconciliar la **realidad operativa** (datos del ERP) con la **realidad comunicativa** (correos electrónicos).
+**TareaLog** es una herramienta híbrida (Extensión de Chrome + Google Apps Script) diseñada para reconciliar la **realidad operativa** (datos del ERP) con la **realidad comunicativa** (correos electrónicos).
 
 Su objetivo es automatizar el seguimiento de Órdenes de Carga, detectar desviaciones en los envíos (emails incorrectos), gestionar documentación administrativa (Certificados, AEAT 347) y proporcionar un panel de control para el equipo de tráfico.
 

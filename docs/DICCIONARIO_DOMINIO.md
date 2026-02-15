@@ -57,10 +57,11 @@ Registro principal de correos procesados con vinculacion a cargas.
 | id | number | PK, AUTO | ID autoincremental |
 | message_id | string | UNIQUE | ID mensaje Gmail |
 | thread_id | string | | ID hilo Gmail |
+| mensajes_en_hilo | number | DEFAULT 1 | Cantidad de mensajes en el hilo Gmail |
 | cod_car | number | NULLABLE | Codigo carga |
 | cod_tra | string | NULLABLE | Codigo transportista |
 | nombre_transportista | string | NULLABLE | Nombre del ERP |
-| email_remitente | string | NOT NULL | Email real |
+| email_remitente | string | NOT NULL | Email real del remitente |
 | email_erp | string | NULLABLE | Email registrado en ERP |
 | asunto | string | | Asunto del correo |
 | fecha_correo | datetime | | Fecha del correo |
@@ -68,7 +69,13 @@ Registro principal de correos procesados con vinculacion a cargas.
 | estado | enum(ESTADO_REGISTRO) | | Estado del registro |
 | alerta | string | NULLABLE | Tipo de alerta |
 | vinculacion | enum(TIPO_VINCULACION) | | Metodo de vinculacion |
+| referencia | string | NULLABLE | Referencia de la carga (PEDCLI.REFERENCIA) |
 | fase | enum(FASE_TRANSPORTE) | NULLABLE | Fase logistica del transporte (codigo 00-30) |
+| para | string | NULLABLE | Destinatarios TO del correo (separados por coma) |
+| cc | string | NULLABLE | Destinatarios CC del correo |
+| cco | string | NULLABLE | Destinatarios BCC del correo |
+| interlocutor | string | NULLABLE | Emails de/para excluyendo email propio (calculado) |
+| cuerpo | string | NULLABLE | Cuerpo del mensaje en texto plano |
 | procesado_at | datetime | | Fecha procesamiento |
 | f_carga | string (date) | NULLABLE | Fecha de salida/carga (PEDCLI.FECSAL) |
 | h_carga | string (time) | NULLABLE | Hora de salida/carga (PEDCLI.FECHORSAL) |
@@ -76,6 +83,8 @@ Registro principal de correos procesados con vinculacion a cargas.
 | h_entrega | string (time) | NULLABLE | Hora de llegada/entrega (PEDCLI.FECHORLLE) |
 | zona | string | NULLABLE | Zona de origen (PEDCLI.ZONA) |
 | z_dest | string | NULLABLE | Zona de destino (PEDCLI.ZONADES) |
+
+**Campo calculado `interlocutor`:** Se obtiene uniendo `from` + `to`, extrayendo emails limpios, eliminando el email propio (cuenta GAS desplegada via `Session.getEffectiveUser()`) y deduplicando.
 
 ---
 
@@ -139,10 +148,84 @@ Estructura del archivo JSON de exportacion/importacion de configuracion.
 | `fecha_exportacion` | string (ISO) | Timestamp de la exportacion |
 | `config` | object | Configuracion completa de la extension |
 
+### PLANTILLA_RESPUESTA
+Plantilla reutilizable para respuestas masivas a correos.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `id` | string | ID unico generado (tpl_timestamp_counter) |
+| `alias` | string | Nombre descriptivo de la plantilla |
+| `asunto` | string | Asunto con variables interpolables (ej: `Re: {{asunto}}`) |
+| `cuerpo` | string (HTML) | Cuerpo HTML con variables interpolables |
+| `firma` | string (HTML) | Obsoleto — reemplazado por pie comun global |
+| `created_at` | string (ISO) | Fecha de creacion |
+| `updated_at` | string (ISO) | Fecha de ultima modificacion |
+
+**Plantillas predefinidas (3):** Consulta hora carga, Solicitud docs descarga, Recordatorio docs pendientes.
+
+### EXPORTACION_PLANTILLAS
+Estructura del archivo JSON de exportacion/importacion de plantillas.
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `version` | number | Version del formato (1) |
+| `plantillas` | array(PLANTILLA_RESPUESTA) | Lista de plantillas |
+| `pieComun` | string (HTML) | OPCIONAL — Pie comun si el usuario elige incluirlo |
+
+### STORAGE_KEYS
+Claves usadas en `chrome.storage.local` para persistencia de la extension.
+
+| Clave | Tipo | Descripcion |
+|-------|------|-------------|
+| `tabulatorPrefs` | object | Preferencias tabla (columnas, orden, visibilidad) |
+| `tarealog_gas_services` | object | Servicios GAS configurados y activo |
+| `tarealog_plantillas` | object | `{ plantillas: PLANTILLA_RESPUESTA[] }` |
+| `tarealog_pie_comun` | string (HTML) | Pie comun global para todas las plantillas |
+| `tarealog_config` | object | Configuracion general de la extension |
+| `tarealog_ayuda_estado` | object | Ultima seccion de ayuda visitada |
+| `tarealog_spreadsheet` | string | ID del spreadsheet configurado |
+| `registros` | array | Cache local de registros de seguimiento |
+| `ultimoBarrido` | string (ISO) | Timestamp del ultimo barrido |
+
 ### TIPO_ALERTA
 - `ALERTA_CONTACTO_NO_REGISTRADO` - Email no coincide con ERP
 - `ALERTA_SIN_CONTACTO_ERP` - Transportista sin email en ERP
 - `ALERTA_SLA_VENCIMIENTO` - Carga proxima a vencer sin correo
+
+### ESTADO_PROGRAMADO
+Estado del envio en la cola de programados.
+- `PENDIENTE` - Envio programado, esperando que el trigger lo procese
+- `ENVIADO` - Correo enviado exitosamente por el trigger
+- `ERROR` - Fallo al enviar (detalle en campo errorDetalle)
+- `CANCELADO` - Cancelado por usuario antes de ser enviado
+
+### programados
+Cola de envios programados de email (hoja PROGRAMADOS en Sheets).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|-------------|-------------|
+| id | string | PK | ID unico (prog_timestamp_random) |
+| thread_id | string | NOT NULL | ID del hilo Gmail al que responder |
+| interlocutor | string | | Emails destinatarios principales |
+| asunto | string | | Asunto del correo |
+| cuerpo | string (HTML) | NOT NULL | Cuerpo HTML del mensaje |
+| cc | string | | Destinatarios CC |
+| bcc | string | | Destinatarios BCC |
+| fecha_programada | string (ISO) | NOT NULL | Fecha/hora programada para envio |
+| estado | enum(ESTADO_PROGRAMADO) | NOT NULL | Estado actual del envio |
+| fecha_envio | string (ISO) | | Fecha/hora real de envio (si enviado) |
+| error_detalle | string | | Mensaje de error (si fallo) |
+| creado_por | string | | Email del usuario que programo |
+| created_at | string (ISO) | | Timestamp de creacion |
+
+### HORARIO_LABORAL
+Configuracion de horario en que el trigger procesa envios programados (almacenado en PropertiesService).
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| dias | array(number) | Dias de la semana (0=dom, 1=lun...6=sab) |
+| horaInicio | number | Hora inicio (0-23) |
+| horaFin | number | Hora fin (1-24) |
 
 ---
 
@@ -166,19 +249,32 @@ Estructura del archivo JSON de exportacion/importacion de configuracion.
 - **SLA:** Service Level Agreement - acuerdo de nivel de servicio (2h antes de FECHOR)
 - **Barrido:** Ejecucion periodica del procesamiento de correos
 - **Vinculacion:** Asociacion entre un correo y un codigo de carga
+- **Interlocutor:** Persona(s) con quien se interactua en un correo, calculado como todos los emails de "de" y "para" excluyendo el email propio de la cuenta GAS
+- **Pie comun:** Firma/despedida HTML compartida que se anade automaticamente a todas las plantillas de respuesta
+- **Referencia:** Codigo de referencia del cliente asociado a una carga (viene de PEDCLI)
+- **Plantilla de respuesta:** Modelo reutilizable de email con variables interpolables ({{codCar}}, {{asunto}}, etc.)
+- **Respuesta masiva:** Envio de un mismo mensaje a multiples hilos seleccionados, incluyendo todos los participantes (to, cc, cco) excepto email propio
+- **Envio programado:** Correo configurado para enviarse automaticamente en una fecha/hora futura via trigger periodico
+- **Horario laboral:** Ventana de dias y horas en que el trigger procesa envios programados (configurable desde UI)
+- **Cola de programados:** Hoja PROGRAMADOS en Sheets que almacena envios pendientes, enviados, con error o cancelados
 
 ---
 
 ## 6. Historial de Cambios
 
-- **2026-02-13:** Diccionario inicial creado por /inicializa
+- **2026-02-15:** Agregada entidad programados (cola envios), enum ESTADO_PROGRAMADO, config HORARIO_LABORAL, glosario envio programado/horario laboral/cola programados
+- **2026-02-14:** Agregados campos enriquecidos en seguimiento: mensajes_en_hilo, referencia, para, cc, cco, interlocutor, cuerpo
+- **2026-02-14:** Agregadas entidades PLANTILLA_RESPUESTA, EXPORTACION_PLANTILLAS, STORAGE_KEYS
+- **2026-02-14:** Agregados conceptos glosario: interlocutor, pie comun, referencia, plantilla de respuesta, respuesta masiva
+- **2026-02-14:** Documentada logica campo calculado `interlocutor` (from+to minus email propio)
 - **2026-02-14:** Agregados tipos CONFIG_FASE_TRANSPORTE y CONFIG_EXPORTACION (fases configurables + export/import)
-- **2026-02-14:** Agregados campos logisticos en seguimiento: f_carga, h_carga, f_entrega, h_entrega, zona, z_dest (expediente MasCampoyOpt_filtros)
+- **2026-02-14:** Agregados campos logisticos en seguimiento: f_carga, h_carga, f_entrega, h_entrega, zona, z_dest
 - **2026-02-14:** Agregado campo `fase` en tabla `seguimiento` y enum `FASE_TRANSPORTE` (12 valores, codigos 00-30)
-- **2026-02-13:** Agregadas entidades db_hilos, seguimiento, enums TIPO_TAREA, ESTADO_REGISTRO, TIPO_VINCULACION, TIPO_ALERTA, validaciones y glosario completo (expediente boceto_proyecto_20260213_213008)
+- **2026-02-13:** Agregadas entidades db_hilos, seguimiento, enums TIPO_TAREA, ESTADO_REGISTRO, TIPO_VINCULACION, TIPO_ALERTA, validaciones y glosario completo
+- **2026-02-13:** Diccionario inicial creado por /inicializa
 
 ---
 
-**Ultima actualizacion:** 2026-02-14
+**Ultima actualizacion:** 2026-02-15
 **Mantenido por:** Coordinacion entre expedientes
 **Consultas:** Antes de crear CUALQUIER nombre nuevo en codigo/diseno

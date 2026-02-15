@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "LogiTask Orchestrator",
+  "name": "TareaLog",
   "version": "0.2.0",
   "description": "Sistema de seguimiento logistico automatizado para ordenes de carga",
   "permissions": [
     "alarms",
     "notifications",
     "storage"
+  ],
+  "host_permissions": [
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*"
   ],
   "action": {
     "default_icon": {

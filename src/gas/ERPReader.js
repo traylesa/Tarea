@@ -52,4 +52,4 @@ function createERPReader({ pedcli = '', transpor = '', viatelef = '' } = {}) {
   return { findCarga, findTransportista, findEmailContacto };
 }
 
-module.exports = { parseCsv, createERPReader };
+if (typeof module !== 'undefined') module.exports = { parseCsv, createERPReader };

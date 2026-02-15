@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LogiTask Orchestrator</title>
+  <title>TareaLog</title>
   <link rel="stylesheet" href="lib/tabulator/tabulator_semanticui.min.css">
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <header>
-    <h1>LogiTask Orchestrator</h1>
+    <h1>TareaLog</h1>
     <nav id="tabs">
       <button class="tab active" data-tab="datos">Datos</button>
       <button class="tab" data-tab="plantillas">Plantillas</button>
@@ -29,25 +29,17 @@
         <button id="btn-toggle-filtros" title="Mostrar/ocultar filtros avanzados">Filtros</button>
         <button id="btn-toggle-agrupar" title="Agrupar por hilo">Agrupar por hilo</button>
         <button id="btn-responder-seleccionados" title="Responder a los correos seleccionados" disabled>Responder seleccionados</button>
+        <button id="btn-toggle-programados" title="Ver envios programados">Programados</button>
         <button id="btn-limpiar-todo" title="Limpiar todos los filtros" class="btn-secundario hidden">Limpiar todo</button>
         <span id="badge-filtros" class="badge-filtros hidden">0 filtros</span>
       </div>
 
       <!-- Panel edicion masiva -->
-      <div id="panel-bulk" class="panel-bulk">
+      <div id="panel-bulk" class="panel-bulk hidden">
         <label><input type="checkbox" id="chk-bulk-fase"> Fase:</label>
-        <select id="bulk-fase"></select>
+        <select id="bulk-fase" disabled></select>
         <label><input type="checkbox" id="chk-bulk-estado"> Estado:</label>
-        <select id="bulk-estado">
-          <option value="">--</option>
-          <option value="ENVIADO">ENVIADO</option>
-          <option value="RECIBIDO">RECIBIDO</option>
-          <option value="GESTIONADO">GESTIONADO</option>
-          <option value="ALERTA">ALERTA</option>
-        </select>
-        <label class="bulk-fecha-label">Correo Desde: <input type="date" id="filtro-fecha-inicio"></label>
-        <label class="bulk-fecha-label">Hasta: <input type="date" id="filtro-fecha-fin"></label>
-        <label class="chk-sin-fecha"><input type="checkbox" id="chk-correo-sin-fecha"> Incl. sin fecha</label>
+        <select id="bulk-estado" disabled></select>
         <button id="btn-bulk-aplicar" class="btn-primario" disabled>Aplicar a seleccionados</button>
       </div>
 
@@ -58,65 +50,146 @@
           <button id="btn-limpiar-filtros" class="btn-secundario">Limpiar filtros</button>
         </div>
 
-        <!-- Filtros temporales -->
-        <div class="filtros-temporales">
-          <label class="filtro-temporal">
-            <input type="checkbox" id="chk-rango-carga"> Rango Carga:
-            <input type="date" id="filtro-carga-desde" disabled>
-            <span>a</span>
-            <input type="date" id="filtro-carga-hasta" disabled>
-            <label class="chk-sin-fecha"><input type="checkbox" id="chk-carga-sin-fecha"> Incl. sin fecha</label>
-          </label>
-          <label class="filtro-temporal">
-            <input type="checkbox" id="chk-rango-descarga"> Rango Descarga:
-            <input type="date" id="filtro-descarga-desde" disabled>
-            <span>a</span>
-            <input type="date" id="filtro-descarga-hasta" disabled>
-            <label class="chk-sin-fecha"><input type="checkbox" id="chk-descarga-sin-fecha"> Incl. sin fecha</label>
-          </label>
-        </div>
-
-        <!-- Cards de fases -->
-        <div id="fase-cards-container" class="fase-cards"></div>
-
-        <!-- Baterias predefinidas -->
-        <div id="baterias-filtros" class="baterias"></div>
-
-        <!-- Filtros personalizados -->
-        <div id="filtros-personalizados">
-          <div class="filtro-fila" id="plantilla-filtro">
-            <select class="filtro-campo">
-              <option value="">-- Campo --</option>
-              <option value="estado">Estado</option>
-              <option value="fase">Fase</option>
-              <option value="codCar">CODCAR</option>
-              <option value="nombreTransportista">Transportista</option>
-              <option value="emailRemitente">Email</option>
-              <option value="tipoTarea">Tipo</option>
-              <option value="vinculacion">Vinculacion</option>
-              <option value="fCarga">FCarga</option>
-              <option value="fEntrega">FEntrega</option>
-              <option value="zona">Zona</option>
-              <option value="zDest">ZDest</option>
-            </select>
-            <select class="filtro-operador">
-              <option value="contiene">Contiene</option>
-              <option value="no_contiene">No contiene</option>
-              <option value="igual">Igual a</option>
-              <option value="<">Menor que (&lt;)</option>
-              <option value="<=">Menor o igual (&le;)</option>
-              <option value=">">Mayor que (&gt;)</option>
-              <option value=">=">Mayor o igual (&ge;)</option>
-            </select>
-            <input type="text" class="filtro-valor" placeholder="Valor...">
-            <button class="btn-quitar-filtro" title="Quitar este filtro">X</button>
+        <!-- Seccion: Fechas (siempre abierta) -->
+        <div class="filtro-seccion" data-seccion="fechas">
+          <div class="filtro-seccion-header abierta">
+            <span class="filtro-seccion-icono"></span>
+            <span class="filtro-seccion-titulo">Fechas</span>
+          </div>
+          <div class="filtro-seccion-cuerpo">
+            <div class="filtros-temporales">
+              <label class="filtro-temporal">
+                <input type="checkbox" id="chk-rango-correo"> Correo:
+                <input type="date" id="filtro-correo-desde" disabled>
+                <span>a</span>
+                <input type="date" id="filtro-correo-hasta" disabled>
+                <label class="chk-sin-fecha"><input type="checkbox" id="chk-correo-sin-fecha"> Sin fecha</label>
+              </label>
+              <label class="filtro-temporal">
+                <input type="checkbox" id="chk-rango-carga"> Carga:
+                <input type="date" id="filtro-carga-desde" disabled>
+                <span>a</span>
+                <input type="date" id="filtro-carga-hasta" disabled>
+                <label class="chk-sin-fecha"><input type="checkbox" id="chk-carga-sin-fecha"> Sin fecha</label>
+              </label>
+              <label class="filtro-temporal">
+                <input type="checkbox" id="chk-rango-descarga"> Entrega:
+                <input type="date" id="filtro-descarga-desde" disabled>
+                <span>a</span>
+                <input type="date" id="filtro-descarga-hasta" disabled>
+                <label class="chk-sin-fecha"><input type="checkbox" id="chk-descarga-sin-fecha"> Sin fecha</label>
+              </label>
+            </div>
           </div>
         </div>
-        <div class="filtro-acciones">
-          <button id="btn-agregar-filtro" class="btn-secundario">+ Agregar filtro</button>
+
+        <!-- Seccion: Fases -->
+        <div class="filtro-seccion" data-seccion="fases">
+          <div class="filtro-seccion-header abierta" data-toggle="fases">
+            <span class="filtro-seccion-icono"></span>
+            <span class="filtro-seccion-titulo">Fases</span>
+          </div>
+          <div class="filtro-seccion-cuerpo">
+            <div id="fase-cards-container" class="fase-cards"></div>
+          </div>
+        </div>
+
+        <!-- Seccion: Baterias rapidas -->
+        <div class="filtro-seccion" data-seccion="baterias">
+          <div class="filtro-seccion-header abierta" data-toggle="baterias">
+            <span class="filtro-seccion-icono"></span>
+            <span class="filtro-seccion-titulo">Filtros rapidos</span>
+          </div>
+          <div class="filtro-seccion-cuerpo">
+            <div id="baterias-filtros" class="baterias"></div>
+          </div>
+        </div>
+
+        <!-- Seccion: Filtros personalizados -->
+        <div class="filtro-seccion" data-seccion="personalizados">
+          <div class="filtro-seccion-header abierta" data-toggle="personalizados">
+            <span class="filtro-seccion-icono"></span>
+            <span class="filtro-seccion-titulo">Filtros personalizados</span>
+          </div>
+          <div class="filtro-seccion-cuerpo">
+            <div id="filtros-personalizados">
+              <div class="filtro-fila" id="plantilla-filtro">
+                <select class="filtro-campo">
+                  <option value="">-- Campo --</option>
+                  <optgroup label="Identificacion">
+                    <option value="codCar">CODCAR</option>
+                    <option value="referencia">Referencia</option>
+                    <option value="nombreTransportista">Transportista</option>
+                  </optgroup>
+                  <optgroup label="Estado">
+                    <option value="estado">Estado</option>
+                    <option value="fase">Fase</option>
+                    <option value="vinculacion">Vinculacion</option>
+                    <option value="tipoTarea">Tipo tarea</option>
+                  </optgroup>
+                  <optgroup label="Correo">
+                    <option value="emailRemitente">Email remitente</option>
+                    <option value="interlocutor">Interlocutor</option>
+                    <option value="mensajesEnHilo">Msgs en hilo</option>
+                  </optgroup>
+                  <optgroup label="Fechas / Ubicacion">
+                    <option value="fCarga">FCarga</option>
+                    <option value="fEntrega">FEntrega</option>
+                    <option value="zona">Zona</option>
+                    <option value="zDest">ZDest</option>
+                  </optgroup>
+                </select>
+                <select class="filtro-operador">
+                  <option value="contiene">Contiene</option>
+                  <option value="no_contiene">No contiene</option>
+                  <option value="igual">Igual a</option>
+                  <option value="<">Menor que (&lt;)</option>
+                  <option value="<=">Menor o igual (&le;)</option>
+                  <option value=">">Mayor que (&gt;)</option>
+                  <option value=">=">Mayor o igual (&ge;)</option>
+                </select>
+                <input type="text" class="filtro-valor" placeholder="Valor...">
+                <button class="btn-quitar-filtro" title="Quitar este filtro">X</button>
+              </div>
+            </div>
+            <div class="filtro-acciones">
+              <button id="btn-agregar-filtro" class="btn-secundario">+ Agregar filtro</button>
+            </div>
+          </div>
         </div>
 
         <button id="btn-aplicar-filtros" class="btn-primario">Aplicar Filtros</button>
+      </div>
+
+      <!-- Panel envios programados (colapsable) -->
+      <div id="panel-programados" class="panel-colapsable hidden">
+        <div class="panel-filtros-header">
+          <span>Envios Programados</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="filtro-programados">
+              <option value="TODOS">Todos</option>
+              <option value="PENDIENTE">Pendientes</option>
+              <option value="ENVIADO">Enviados</option>
+              <option value="ERROR">Errores</option>
+              <option value="CANCELADO">Cancelados</option>
+            </select>
+            <button id="btn-actualizar-programados" class="btn-secundario">Actualizar</button>
+          </div>
+        </div>
+        <table class="tabla-prog" id="tabla-programados">
+          <thead>
+            <tr>
+              <th>Estado</th>
+              <th>Interlocutor</th>
+              <th>Asunto</th>
+              <th>Programado para</th>
+              <th>Enviado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="programados-vacio" class="hidden" style="text-align:center;color:#999;padding:12px;">Sin envios programados</div>
       </div>
 
       <div id="tabla-seguimiento"></div>
@@ -127,6 +200,17 @@
       <div class="plantillas-layout">
         <div class="plantillas-lista">
           <h3>Plantillas de Respuesta</h3>
+          <div class="pie-comun-container">
+            <label class="pie-comun-label">Pie comun (se anade a todas las plantillas):</label>
+            <textarea id="pie-comun" rows="3" placeholder="<p>--<br>Departamento de Trafico<br>TRAYLESA<br>Tel: XXX XXX XXX</p>"></textarea>
+            <button id="btn-guardar-pie" class="btn-secundario">Guardar pie</button>
+          </div>
+          <div class="plantillas-export-import">
+            <button id="btn-exportar-plantillas" class="btn-secundario" title="Exportar plantillas a JSON">Exportar</button>
+            <button id="btn-importar-plantillas" class="btn-secundario" title="Importar plantillas desde JSON">Importar</button>
+            <input type="file" id="input-importar-plantillas" accept=".json" class="hidden">
+          </div>
+          <div id="plantillas-import-resultado" class="hidden"></div>
           <button id="btn-nueva-plantilla" class="btn-primario">+ Nueva Plantilla</button>
           <div id="lista-plantillas"></div>
         </div>
@@ -136,8 +220,6 @@
             <label>Asunto: <input type="text" id="tpl-asunto" placeholder="Re: {{asunto}}"></label>
             <label>Cuerpo (HTML):</label>
             <textarea id="tpl-cuerpo" rows="8" placeholder="<p>Estimado {{nombreTransportista}},</p>"></textarea>
-            <label>Firma (HTML):</label>
-            <textarea id="tpl-firma" rows="3" placeholder="<p>--<br>Departamento Logistica</p>"></textarea>
 
             <div class="editor-acciones">
               <button id="btn-guardar-plantilla" class="btn-primario">Guardar</button>
@@ -173,9 +255,83 @@
         </fieldset>
 
         <fieldset>
+          <legend>Hoja de Calculo Destino</legend>
+          <p class="info-texto">Pega la URL de tu Google Sheet o introduce el ID directamente.</p>
+          <div class="spreadsheet-selector">
+            <input type="text" id="cfg-spreadsheet-url" placeholder="https://docs.google.com/spreadsheets/d/...  o ID directo">
+            <button type="button" id="btn-detectar-spreadsheet" class="btn-primario">Detectar</button>
+          </div>
+          <div id="spreadsheet-info" class="hidden">
+            <span id="spreadsheet-nombre"></span>
+            <span id="spreadsheet-id-display" class="texto-secundario"></span>
+          </div>
+          <div id="spreadsheet-error" class="error hidden"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Busqueda Gmail</legend>
+          <p class="info-texto">Query de busqueda que determina que correos procesar. Usa sintaxis de Gmail.</p>
+          <div class="gmail-query-selector">
+            <input type="text" id="cfg-gmail-query" placeholder="(in:inbox OR in:sent) newer_than:7d">
+            <button type="button" id="btn-guardar-gmail-query" class="btn-primario">Aplicar</button>
+          </div>
+          <div class="gmail-query-ejemplos">
+            <small>Ejemplos:</small>
+            <button type="button" class="btn-ejemplo-query" data-query="(in:inbox OR in:sent) newer_than:7d">Inbox + Enviados 7d</button>
+            <button type="button" class="btn-ejemplo-query" data-query="in:inbox newer_than:7d">Solo Inbox 7d</button>
+            <button type="button" class="btn-ejemplo-query" data-query="in:inbox is:unread">Inbox no leidos</button>
+            <button type="button" class="btn-ejemplo-query" data-query="(in:inbox OR in:sent) newer_than:30d">Inbox + Enviados 30d</button>
+          </div>
+          <div id="gmail-query-info" class="hidden"></div>
+          <div id="gmail-query-error" class="error hidden"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Horario laboral (envios programados)</legend>
+          <p class="info-texto">El trigger solo envia correos programados dentro de este horario.</p>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="1" checked> Lun
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="2" checked> Mar
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="3" checked> Mie
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="4" checked> Jue
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="5" checked> Vie
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="6"> Sab
+            </label>
+            <label style="display:flex;gap:4px;align-items:center">
+              <input type="checkbox" class="chk-dia-laboral" data-dia="0"> Dom
+            </label>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:6px;align-items:center">
+            <label>De: <input type="number" id="cfg-hora-inicio" min="0" max="23" value="7" style="width:60px"></label>
+            <label>a: <input type="number" id="cfg-hora-fin" min="0" max="24" value="21" style="width:60px"></label>
+            <span style="font-size:11px;color:#888">horas (0-24)</span>
+            <button type="button" id="btn-guardar-horario" class="btn-primario">Guardar horario</button>
+          </div>
+          <div id="horario-info" class="hidden" style="margin-top:4px"></div>
+        </fieldset>
+
+        <fieldset>
           <legend>Barrido</legend>
           <label for="cfg-intervalo">Intervalo de barrido (minutos)</label>
           <input type="number" id="cfg-intervalo" min="1" max="1440" value="15">
+        </fieldset>
+
+        <fieldset>
+          <legend>Limite de envio</legend>
+          <label for="cfg-emails-por-minuto">Emails por minuto (max 30)</label>
+          <input type="number" id="cfg-emails-por-minuto" min="1" max="30" value="10">
+          <small style="color:#666;">Velocidad de envio masivo para evitar bloqueos de Google</small>
         </fieldset>
 
         <fieldset>
@@ -198,6 +354,13 @@
           <p class="info-texto">Configura las fases logisticas. Las fases criticas se destacan en rojo.</p>
           <div id="lista-fases-config"></div>
           <button type="button" id="btn-nueva-fase" class="btn-primario">+ Nueva Fase</button>
+        </fieldset>
+
+        <fieldset>
+          <legend>Estados</legend>
+          <p class="info-texto">Configura los estados del seguimiento. Cada estado tiene icono y clase CSS.</p>
+          <div id="lista-estados-config"></div>
+          <button type="button" id="btn-nuevo-estado" class="btn-primario">+ Nuevo Estado</button>
         </fieldset>
 
         <fieldset>
@@ -224,7 +387,7 @@
     <!-- Tab Ayuda -->
     <section id="tab-ayuda" class="tab-content">
       <div id="panel-ayuda">
-        <h2>Ayuda - LogiTask Orchestrator</h2>
+        <h2>Ayuda - TareaLog</h2>
         <nav id="ayuda-nav"></nav>
         <div id="ayuda-contenido"></div>
       </div>
@@ -255,13 +418,17 @@
       <label>Asunto: <input type="text" id="respuesta-asunto" class="input-full"></label>
       <label>Mensaje:</label>
       <textarea id="respuesta-cuerpo" rows="6"></textarea>
-      <label>Firma:
-        <select id="respuesta-firma-selector">
-          <option value="">Sin firma</option>
-          <option value="__custom__">Personalizada</option>
-        </select>
-      </label>
-      <textarea id="respuesta-firma" rows="2" class="hidden" placeholder="Escriba su firma personalizada..."></textarea>
+      <div id="respuesta-pie-preview" class="respuesta-pie-preview"></div>
+      <div class="programar-container">
+        <label class="programar-check-label">
+          <input type="checkbox" id="chk-programar-envio"> Programar envio
+        </label>
+        <div id="programar-campos" class="hidden">
+          <label>Fecha y hora de envio:
+            <input type="datetime-local" id="programar-fecha" class="input-full">
+          </label>
+        </div>
+      </div>
       <div id="respuesta-error" class="errores hidden"></div>
       <div class="modal-actions">
         <button id="btn-preview-respuesta" class="btn-secundario">Previsualizar</button>
@@ -301,6 +468,34 @@
     </div>
   </div>
 
+  <!-- Modal Editar Estado -->
+  <div id="modal-estado" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="modal-estado-titulo">Nuevo Estado</h2>
+      <label for="estado-codigo">Codigo (identificador unico):</label>
+      <input type="text" id="estado-codigo" placeholder="PENDIENTE">
+      <label for="estado-nombre">Nombre visible:</label>
+      <input type="text" id="estado-nombre" placeholder="Pendiente">
+      <label for="estado-icono">Icono (emoji):</label>
+      <input type="text" id="estado-icono" placeholder="&#x1F7E2;" maxlength="4">
+      <label for="estado-orden">Orden:</label>
+      <input type="number" id="estado-orden" min="0" max="99" placeholder="1">
+      <label for="estado-clase-css">Clase CSS:</label>
+      <select id="estado-clase-css">
+        <option value="">(ninguna)</option>
+        <option value="estado-ok">estado-ok (verde)</option>
+        <option value="estado-alerta">estado-alerta (rojo)</option>
+        <option value="estado-admin">estado-admin (gris)</option>
+      </select>
+      <label><input type="checkbox" id="estado-activo" checked> Activo</label>
+      <div id="modal-estado-error" class="errores hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-guardar-estado">Guardar</button>
+        <button type="button" id="btn-cancelar-estado">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <span id="ultimo-barrido">Ultimo barrido: --</span>
     <span>
@@ -312,12 +507,14 @@
 
   <script src="lib/tabulator/tabulator.min.js"></script>
   <script src="fases-config.js"></script>
+  <script src="estados-config.js"></script>
   <script src="config.js"></script>
   <script src="filters.js"></script>
   <script src="templates.js"></script>
   <script src="gas-services.js"></script>
   <script src="thread-grouping.js"></script>
   <script src="bulk-reply.js"></script>
+  <script src="scheduled.js"></script>
   <script src="help-content.js"></script>
   <script src="panel.js"></script>
   <script src="config-ui.js"></script>

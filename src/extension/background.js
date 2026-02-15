@@ -1,5 +1,5 @@
-const ALARM_NAME = 'logitask-barrido';
-const STORAGE_KEY_CONFIG = 'logitask_config';
+const ALARM_NAME = 'tarealog-barrido';
+const STORAGE_KEY_CONFIG = 'tarealog_config';
 
 let panelWindowId = null;
 

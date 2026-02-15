@@ -50,6 +50,8 @@ function obtenerVariablesDisponibles() {
     { nombre: 'nombreTransportista', descripcion: 'Nombre del transportista' },
     { nombre: 'codTra', descripcion: 'Codigo transportista' },
     { nombre: 'emailRemitente', descripcion: 'Email del remitente' },
+    { nombre: 'interlocutor', descripcion: 'Interlocutor (de/para sin email propio)' },
+    { nombre: 'referencia', descripcion: 'Referencia de la carga' },
     { nombre: 'asunto', descripcion: 'Asunto del correo original' },
     { nombre: 'fechaCorreo', descripcion: 'Fecha del correo' },
     { nombre: 'estado', descripcion: 'Estado del registro' },

@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LogiTask Orchestrator</title>
+  <title>TareaLog</title>
   <link rel="stylesheet" href="lib/tabulator/tabulator_semanticui.min.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <header>
-    <h1>LogiTask Orchestrator</h1>
+    <h1>TareaLog</h1>
     <div id="controls">
       <button id="btn-refresh" title="Ejecutar barrido ahora">Ejecutar Ahora</button>
+      <button id="btn-toggle-programados-popup" title="Ver envios programados">Programados</button>
       <select id="filter-tipo">
         <option value="">Todos</option>
         <option value="OPERATIVO">Operativo</option>
@@ -22,6 +23,36 @@
   </header>
 
   <main>
+    <!-- Panel envios programados (colapsable) -->
+    <div id="panel-programados-popup" class="hidden" style="padding:8px;background:#f8f9fa;border-bottom:1px solid #d0d8e8;max-height:200px;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <strong style="font-size:12px;color:#1a73e8">Programados</strong>
+        <div style="display:flex;gap:4px;align-items:center">
+          <select id="filtro-programados-popup" style="font-size:11px;padding:2px 4px;border:1px solid #d0d8e8;border-radius:3px">
+            <option value="TODOS">Todos</option>
+            <option value="PENDIENTE">Pendientes</option>
+            <option value="ENVIADO">Enviados</option>
+            <option value="ERROR">Errores</option>
+            <option value="CANCELADO">Cancelados</option>
+          </select>
+          <button id="btn-actualizar-programados-popup" style="font-size:11px;padding:2px 8px;border:1px solid #d0d8e8;border-radius:3px;background:white;cursor:pointer">Actualizar</button>
+        </div>
+      </div>
+      <table id="tabla-programados-popup" style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:#e8eef7">
+            <th style="padding:3px 6px;text-align:left">Estado</th>
+            <th style="padding:3px 6px;text-align:left">Interlocutor</th>
+            <th style="padding:3px 6px;text-align:left">Asunto</th>
+            <th style="padding:3px 6px;text-align:left">Programado</th>
+            <th style="padding:3px 6px;text-align:left">Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="programados-vacio-popup" class="hidden" style="text-align:center;color:#999;padding:8px;font-size:11px">Sin envios programados</div>
+    </div>
+
     <div id="tabla-seguimiento"></div>
   </main>
 
@@ -44,6 +75,8 @@
 
   <script src="lib/tabulator/tabulator.min.js"></script>
   <script src="fases-config.js"></script>
+  <script src="config.js"></script>
+  <script src="scheduled.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

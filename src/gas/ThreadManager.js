@@ -24,4 +24,4 @@ function createThreadManager() {
   return { mapThreadToLoad, getLoadFromThread, hasThread, getAllMappings };
 }
 
-module.exports = { createThreadManager };
+if (typeof module !== 'undefined') module.exports = { createThreadManager };

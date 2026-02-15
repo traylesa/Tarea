@@ -19,4 +19,4 @@ function checkSLA(cargas, registros, umbralHoras = 2, ahora = new Date()) {
     }));
 }
 
-module.exports = { checkSLA };
+if (typeof module !== 'undefined') module.exports = { checkSLA };

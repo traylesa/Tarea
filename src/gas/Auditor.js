@@ -13,4 +13,4 @@ function auditEmail(emailReal, codVia, findEmailFn) {
   };
 }
 
-module.exports = { auditEmail };
+if (typeof module !== 'undefined') module.exports = { auditEmail };

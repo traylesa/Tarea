@@ -3,15 +3,19 @@
  * Logica pura sin dependencias DOM. Testeable unitariamente.
  */
 
-const STORAGE_KEY_CONFIG = 'logitask_config';
+const STORAGE_KEY_CONFIG = 'tarealog_config';
 const MIN_INTERVALO = 1;
 const MAX_INTERVALO = 1440;
-const CONFIG_VERSION = '1.0.0';
+const MIN_EMAILS_POR_MINUTO = 1;
+const MAX_EMAILS_POR_MINUTO = 30;
+const CONFIG_VERSION = '1.2.0';
 
-// Importar fases si estamos en Node (tests)
+// Importar fases/estados si estamos en Node (tests)
 let _fasesConfig;
+let _estadosConfig;
 if (typeof require !== 'undefined') {
   try { _fasesConfig = require('./fases-config.js'); } catch { _fasesConfig = null; }
+  try { _estadosConfig = require('./estados-config.js'); } catch { _estadosConfig = null; }
 }
 
 function _getDefaultFases() {
@@ -23,6 +27,18 @@ function _getDefaultFases() {
 function _validarFases(fases) {
   if (_fasesConfig) return _fasesConfig.validarFases(fases);
   if (typeof validarFases === 'function') return validarFases(fases);
+  return { valido: true, errores: [] };
+}
+
+function _getDefaultEstados() {
+  if (_estadosConfig) return _estadosConfig.getDefaultEstados();
+  if (typeof getDefaultEstados === 'function') return getDefaultEstados();
+  return [];
+}
+
+function _validarEstados(estados) {
+  if (_estadosConfig) return _estadosConfig.validarEstados(estados);
+  if (typeof validarEstados === 'function') return validarEstados(estados);
   return { valido: true, errores: [] };
 }
 
@@ -41,7 +57,9 @@ function getDefaults() {
       left: null,
       top: null
     },
-    fases: _getDefaultFases()
+    emailsPorMinuto: 10,
+    fases: _getDefaultFases(),
+    estados: _getDefaultEstados()
   };
 }
 
@@ -55,6 +73,13 @@ function validar(config) {
   const intervalo = config.intervaloMinutos;
   if (!Number.isInteger(intervalo) || intervalo < MIN_INTERVALO || intervalo > MAX_INTERVALO) {
     errores.push(`El intervalo debe ser entero entre ${MIN_INTERVALO} y ${MAX_INTERVALO} minutos`);
+  }
+
+  if (config.emailsPorMinuto !== undefined) {
+    const epm = config.emailsPorMinuto;
+    if (!Number.isInteger(epm) || epm < MIN_EMAILS_POR_MINUTO || epm > MAX_EMAILS_POR_MINUTO) {
+      errores.push(`Emails/minuto debe ser entero entre ${MIN_EMAILS_POR_MINUTO} y ${MAX_EMAILS_POR_MINUTO}`);
+    }
   }
 
   if (config.patrones) {
@@ -71,6 +96,13 @@ function validar(config) {
     const resFases = _validarFases(config.fases);
     if (!resFases.valido) {
       errores.push(...resFases.errores);
+    }
+  }
+
+  if (config.estados) {
+    const resEstados = _validarEstados(config.estados);
+    if (!resEstados.valido) {
+      errores.push(...resEstados.errores);
     }
   }
 
@@ -91,9 +123,12 @@ async function cargar() {
     ventana: { ...defaults.ventana, ...(guardada.ventana || {}) }
   };
 
-  // Auto-migracion: si config guardada no tiene fases, inyectar defaults
+  // Auto-migracion: si config guardada no tiene fases/estados, inyectar defaults
   if (!guardada.fases) {
     config.fases = defaults.fases;
+  }
+  if (!guardada.estados) {
+    config.estados = defaults.estados;
   }
 
   return config;
@@ -103,12 +138,21 @@ async function guardar(config) {
   await chrome.storage.local.set({ [STORAGE_KEY_CONFIG]: config });
 }
 
-function exportarConfigCompleta(config) {
-  return {
+function exportarConfigCompleta(config, extras) {
+  var exportado = {
     version: CONFIG_VERSION,
     fecha_exportacion: new Date().toISOString(),
-    config
+    config: config
   };
+
+  if (extras) {
+    if (extras.servicios) exportado.servicios = extras.servicios;
+    if (extras.gmailQuery) exportado.gmailQuery = extras.gmailQuery;
+    if (extras.spreadsheet) exportado.spreadsheet = extras.spreadsheet;
+    if (extras.pieComun) exportado.pieComun = extras.pieComun;
+  }
+
+  return exportado;
 }
 
 function validarImportacion(data) {
@@ -140,6 +184,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getDefaults, validar, cargar, guardar,
     exportarConfigCompleta, validarImportacion,
-    STORAGE_KEY_CONFIG, MIN_INTERVALO, MAX_INTERVALO, CONFIG_VERSION
+    STORAGE_KEY_CONFIG, MIN_INTERVALO, MAX_INTERVALO,
+    MIN_EMAILS_POR_MINUTO, MAX_EMAILS_POR_MINUTO, CONFIG_VERSION
   };
 }

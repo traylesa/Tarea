@@ -1,8 +1,31 @@
-const { extractMetadata } = require('./EmailParser');
-const { createThreadManager } = require('./ThreadManager');
-const { createERPReader } = require('./ERPReader');
-const { auditEmail } = require('./Auditor');
-const { checkSLA } = require('./SLAChecker');
+function _extraerEmail(texto) {
+  if (!texto) return '';
+  var match = texto.match(/<([^>]+)>/);
+  return match ? match[1].toLowerCase() : texto.toLowerCase().trim();
+}
+
+function _esEmailPropio(email) {
+  var limpio = _extraerEmail(email);
+  var propio = (typeof obtenerEmailPropio === 'function')
+    ? obtenerEmailPropio()
+    : '';
+  return limpio === propio;
+}
+
+function calcularInterlocutor(message) {
+  var todos = (message.from || '') + ',' + (message.to || '');
+  var emails = todos.split(',')
+    .map(function(e) { return e.trim(); })
+    .filter(function(e) { return e && !_esEmailPropio(e); })
+    .map(function(e) { return _extraerEmail(e); })
+    .filter(function(e) { return e; });
+
+  var unicos = [];
+  emails.forEach(function(e) {
+    if (unicos.indexOf(e) === -1) unicos.push(e);
+  });
+  return unicos.join(', ');
+}
 
 function processMessage(message, threadManager, erpReader) {
   const metadata = extractMetadata(message);
@@ -39,6 +62,7 @@ function processMessage(message, threadManager, erpReader) {
   return {
     messageId: message.messageId,
     threadId: message.threadId,
+    mensajesEnHilo: message.mensajesEnHilo || 1,
     codCar,
     codTra: cargaData?.codTra || null,
     nombreTransportista: transportistaData?.nombre || null,
@@ -50,8 +74,14 @@ function processMessage(message, threadManager, erpReader) {
     estado: auditResult.alerta ? 'ALERTA' : 'RECIBIDO',
     alerta: auditResult.alerta,
     vinculacion,
+    referencia: cargaData?.referencia || null,
+    para: message.to || '',
+    cc: message.cc || '',
+    cco: message.bcc || '',
+    interlocutor: calcularInterlocutor(message),
+    cuerpo: message.body || '',
     procesadoAt: new Date().toISOString()
   };
 }
 
-module.exports = { processMessage };
+if (typeof module !== 'undefined') module.exports = { processMessage, calcularInterlocutor, _extraerEmail, _esEmailPropio };

@@ -1,17 +1,17 @@
-const ESTADO_CLASSES = {
-  ENVIADO: 'estado-ok',
-  RECIBIDO: 'estado-ok',
-  GESTIONADO: 'estado-ok',
-  ALERTA: 'estado-alerta'
-};
+// Estados se cargan desde config (ver cargarDatos -> configActual.estados)
+let estadosActuales = [];
+let ESTADO_EDITOR_MAP = {};
+let ESTADO_FILTER_LIST = [''];
 
-const ESTADO_ICONS = {
-  ENVIADO: '\u{1F7E2}',
-  RECIBIDO: '\u{1F7E2}',
-  GESTIONADO: '\u{1F7E2}',
-  ALERTA: '\u{1F534}',
-  DEFAULT: '\u26AA'
-};
+function actualizarEstadosDesdeConfig() {
+  if (configActual && configActual.estados) {
+    estadosActuales = configActual.estados;
+  } else {
+    estadosActuales = getDefaultEstados();
+  }
+  ESTADO_EDITOR_MAP = estadosAMapaEditor(estadosActuales);
+  ESTADO_FILTER_LIST = estadosAListaHeaderFilter(estadosActuales);
+}
 
 // Fases se cargan desde config (ver cargarDatos -> configActual.fases)
 let fasesActuales = [];
@@ -27,9 +27,10 @@ function actualizarFasesDesdeConfig() {
 }
 
 const STORAGE_KEY_PREFS = 'tabulatorPrefs';
-const STORAGE_KEY_SERVICES = 'logitask_gas_services';
-const STORAGE_KEY_PLANTILLAS = 'logitask_plantillas';
-const STORAGE_KEY_AYUDA = 'logitask_ayuda_estado';
+const STORAGE_KEY_SERVICES = 'tarealog_gas_services';
+const STORAGE_KEY_PLANTILLAS = 'tarealog_plantillas';
+const STORAGE_KEY_AYUDA = 'tarealog_ayuda_estado';
+const STORAGE_KEY_PIE = 'tarealog_pie_comun';
 
 let registros = [];
 let threadIdSeleccionado = null;
@@ -39,9 +40,11 @@ let agrupacionActiva = false;
 let serviciosGas = { services: [], activeServiceId: null };
 let plantillasGuardadas = [];
 let plantillaEditandoId = null;
+let pieComun = '';
 let filtroGlobalActivo = false;
-const CAMPOS_BUSCABLES = ['estado', 'fase', 'codCar', 'nombreTransportista', 'emailRemitente', 'asunto', 'tipoTarea', 'vinculacion', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega', 'zona', 'zDest'];
+const CAMPOS_BUSCABLES = ['estado', 'fase', 'codCar', 'nombreTransportista', 'emailRemitente', 'interlocutor', 'asunto', 'tipoTarea', 'vinculacion', 'fechaCorreo', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega', 'zona', 'zDest'];
 let fasesCardActivas = null;
+let filtroCorreoActivo = false;
 let filtroCargaActivo = false;
 let filtroDescargaActivo = false;
 let filtroInvertido = false;
@@ -55,11 +58,14 @@ function debounce(fn, ms) {
 }
 
 function formatearEstado(cell) {
-  const val = cell.getValue() || 'SIN';
-  const clase = ESTADO_CLASSES[val] || 'estado-sin';
-  const icono = ESTADO_ICONS[val] || ESTADO_ICONS.DEFAULT;
-  cell.getElement().classList.add(clase);
-  return `${icono} ${val}`;
+  const val = cell.getValue() || '';
+  const estado = obtenerEstadoPorCodigo(estadosActuales, val);
+  if (estado) {
+    if (estado.clase_css) cell.getElement().classList.add(estado.clase_css);
+    return estado.icono + ' ' + estado.nombre;
+  }
+  cell.getElement().classList.add('estado-sin');
+  return '\u26AA ' + (val || 'SIN');
 }
 
 function formatearFase(cell) {
@@ -108,23 +114,29 @@ function columnVisibilityMenu() {
 function crearColumnas() {
   return [
     {
-      formatter: 'rowSelection', titleFormatter: 'rowSelection',
+      formatter: 'rowSelection',
+      titleFormatter: function(cell) {
+        var chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.addEventListener('change', function() {
+          if (!tabla) return;
+          if (chk.checked) {
+            tabla.selectRow(tabla.getRows('active'));
+          } else {
+            tabla.deselectRow();
+          }
+        });
+        return chk;
+      },
       hozAlign: 'center', headerSort: false, width: 30
     },
     {
       title: 'Estado', field: 'estado', width: 100,
       formatter: formatearEstado,
       editor: 'list',
-      editorParams: {
-        values: {
-          ENVIADO: '\u{1F7E2} ENVIADO',
-          RECIBIDO: '\u{1F7E2} RECIBIDO',
-          GESTIONADO: '\u{1F7E2} GESTIONADO',
-          ALERTA: '\u{1F534} ALERTA'
-        }
-      },
+      editorParams: { values: ESTADO_EDITOR_MAP },
       headerFilter: 'list',
-      headerFilterParams: { values: ['', 'ENVIADO', 'RECIBIDO', 'GESTIONADO', 'ALERTA'] },
+      headerFilterParams: { values: ESTADO_FILTER_LIST },
       headerMenu: columnVisibilityMenu
     },
     {
@@ -133,7 +145,26 @@ function crearColumnas() {
       editor: 'list',
       editorParams: { values: FASES_TRANSPORTE },
       headerFilter: 'list',
-      headerFilterParams: { values: Object.keys(FASES_TRANSPORTE) },
+      headerFilterParams: { values: FASES_TRANSPORTE },
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Msgs', field: 'mensajesEnHilo', width: 55,
+      hozAlign: 'center',
+      sorter: 'number',
+      headerFilter: 'number',
+      headerFilterPlaceholder: '=',
+      headerFilterFunc: function(headerValue, rowValue) {
+        if (!headerValue) return true;
+        return parseInt(rowValue, 10) === parseInt(headerValue, 10);
+      },
+      formatter: cell => {
+        const v = cell.getValue();
+        if (!v || v <= 1) return '1';
+        cell.getElement().style.fontWeight = 'bold';
+        cell.getElement().style.color = '#2563eb';
+        return String(v);
+      },
       headerMenu: columnVisibilityMenu
     },
     {
@@ -173,7 +204,11 @@ function crearColumnas() {
     },
     {
       title: 'Fecha', field: 'fechaCorreo', width: 110,
-      sorter: 'datetime',
+      sorter: function(a, b) {
+        var da = a ? new Date(a).getTime() : 0;
+        var db = b ? new Date(b).getTime() : 0;
+        return da - db;
+      },
       formatter: cell => {
         const v = cell.getValue();
         return v ? new Date(v).toLocaleString('es-ES') : '--';
@@ -224,6 +259,46 @@ function crearColumnas() {
       title: 'ZDest', field: 'zDest', width: 80,
       headerFilter: 'input',
       formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Referencia', field: 'referencia', width: 100,
+      headerFilter: 'input',
+      formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Interlocutor', field: 'interlocutor', width: 150,
+      headerFilter: 'input',
+      formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Para', field: 'para', width: 150,
+      headerFilter: 'input',
+      visible: false,
+      formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'CC', field: 'cc', width: 120,
+      visible: false,
+      formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'CCO', field: 'cco', width: 120,
+      visible: false,
+      formatter: cell => cell.getValue() || '--',
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Cuerpo', field: 'cuerpo', width: 200,
+      visible: false,
+      formatter: cell => {
+        const v = cell.getValue() || '';
+        return v.length > 100 ? v.substring(0, 100) + '...' : v || '--';
+      },
       headerMenu: columnVisibilityMenu
     },
     {
@@ -284,13 +359,15 @@ function conectarPersistencia(t) {
 function calcularAlturaTabla() {
   const header = document.querySelector('header');
   const controls = document.getElementById('controls');
+  const panelBulk = document.getElementById('panel-bulk');
   const panelFiltros = document.getElementById('panel-filtros');
   const footer = document.querySelector('footer');
   const hHeader = header ? header.offsetHeight : 0;
   const hControls = controls ? controls.offsetHeight : 0;
+  const hBulk = (panelBulk && !panelBulk.classList.contains('hidden')) ? panelBulk.offsetHeight : 0;
   const hFiltros = (panelFiltros && !panelFiltros.classList.contains('hidden')) ? panelFiltros.offsetHeight : 0;
   const hFooter = footer ? footer.offsetHeight : 0;
-  return window.innerHeight - hHeader - hControls - hFiltros - hFooter - 32;
+  return window.innerHeight - hHeader - hControls - hBulk - hFiltros - hFooter - 32;
 }
 
 async function persistirCambio(cell) {
@@ -345,6 +422,8 @@ async function inicializarTabla(datos) {
   tabla.on('cellEdited', persistirCambio);
   tabla.on('rowSelectionChanged', () => { actualizarBotonResponder(); actualizarBulkPanel(); });
   conectarPersistencia(tabla);
+  vincularCursorConClicks();
+  filaCursorPos = -1;
 }
 
 const redimensionarTabla = debounce(() => {
@@ -396,15 +475,13 @@ function mostrarExcluidos() {
     const visibles = new Set(tabla.getData('active').map(r => r.messageId));
     tabla.clearFilter();
     tabla.clearHeaderFilter();
-    tabla.addFilter((data) => !visibles.has(data.messageId));
+    tabla.addFilter(function(data) { return !visibles.has(data.messageId); });
     btn.textContent = 'Volver a filtros';
     btn.classList.add('active');
     btn.classList.remove('hidden');
   } else {
-    tabla.clearFilter();
-    aplicarFiltroFases();
-    aplicarFiltrosTemporales();
-    if (filtroGlobalFn) tabla.addFilter(filtroGlobalFn);
+    // Restaurar todos los filtros normales
+    aplicarTodosFiltros();
     btn.textContent = 'Mostrar ocultos';
     btn.classList.remove('active');
   }
@@ -468,9 +545,25 @@ function poblarSelectFases() {
   });
 }
 
-async function aplicarConfigFasesSesion() {
+function poblarSelectEstados() {
+  const select = document.getElementById('bulk-estado');
+  if (!select) return;
+  select.innerHTML = '<option value="">--</option>';
+  obtenerEstadosOrdenados(estadosActuales)
+    .filter(function(e) { return e.activo; })
+    .forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e.codigo;
+      opt.textContent = e.icono + ' ' + e.nombre;
+      select.appendChild(opt);
+    });
+}
+
+async function aplicarConfigSesion() {
   actualizarFasesDesdeConfig();
+  actualizarEstadosDesdeConfig();
   poblarSelectFases();
+  poblarSelectEstados();
   renderFaseCards();
 
   if (tabla) {
@@ -480,10 +573,15 @@ async function aplicarConfigFasesSesion() {
   }
 }
 
+// Alias para compatibilidad
+var aplicarConfigFasesSesion = aplicarConfigSesion;
+
 async function cargarDatos() {
   configActual = await cargar();
   actualizarFasesDesdeConfig();
+  actualizarEstadosDesdeConfig();
   poblarSelectFases();
+  poblarSelectEstados();
   await cargarServicios();
 
   try {
@@ -531,6 +629,22 @@ function togglePanelFiltros() {
   setTimeout(() => { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
 }
 
+function toggleSeccionFiltro(header) {
+  const cuerpo = header.nextElementSibling;
+  if (!cuerpo) return;
+  header.classList.toggle('abierta');
+  cuerpo.classList.toggle('colapsado');
+  setTimeout(() => { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
+}
+
+function inicializarSeccionesFiltros() {
+  document.querySelectorAll('.filtro-seccion-header[data-toggle]').forEach(header => {
+    header.addEventListener('click', () => toggleSeccionFiltro(header));
+  });
+}
+
+let filtrosBateriaActivos = null;
+
 function renderBaterias() {
   const container = document.getElementById('baterias-filtros');
   const baterias = obtenerBaterias();
@@ -541,8 +655,19 @@ function renderBaterias() {
     btn.textContent = b.nombre;
     btn.addEventListener('click', () => {
       if (!tabla) return;
-      tabla.setFilter(b.filtros);
-      actualizarConteo();
+
+      // Toggle: si la misma batería está activa, desactivar
+      if (filtrosBateriaActivos === b.nombre) {
+        filtrosBateriaActivos = null;
+      } else {
+        filtrosBateriaActivos = b.nombre;
+      }
+
+      // Actualizar visual
+      container.querySelectorAll('.btn-bateria').forEach(x => x.classList.remove('active'));
+      if (filtrosBateriaActivos) btn.classList.add('active');
+
+      aplicarTodosFiltros();
     });
     container.appendChild(btn);
   });
@@ -558,60 +683,142 @@ function agregarFilaFiltro() {
   container.appendChild(clon);
 }
 
-function aplicarFiltrosAvanzados() {
+// === FUNCION CENTRAL DE FILTROS ===
+// Reconstruye TODOS los filtros desde el estado actual de la UI.
+// Todos los tipos se combinan con AND.
+
+function aplicarTodosFiltros() {
   if (!tabla) return;
-
-  const filas = document.querySelectorAll('#filtros-personalizados .filtro-fila');
-  const definiciones = [];
-
-  filas.forEach(fila => {
-    const campo = fila.querySelector('.filtro-campo').value;
-    const operador = fila.querySelector('.filtro-operador').value;
-    const valor = fila.querySelector('.filtro-valor').value;
-    if (campo && valor) {
-      definiciones.push({ campo, operador, valor });
-    }
-  });
-
-  const filtros = construirFiltros(definiciones);
-  const fechaInicio = document.getElementById('filtro-fecha-inicio').value || null;
-  const fechaFin = document.getElementById('filtro-fecha-fin').value || null;
 
   tabla.clearFilter();
 
-  if (filtros.length > 0) {
-    const filtrosSinCustom = filtros.filter(f => !f.func);
-    const filtrosCustom = filtros.filter(f => f.func);
+  // 1. Filtro global (buscar en todos los campos)
+  if (filtroGlobalActivo && filtroGlobalFn) {
+    tabla.addFilter(filtroGlobalFn);
+  }
 
-    if (filtrosSinCustom.length) tabla.setFilter(filtrosSinCustom);
-    filtrosCustom.forEach(f => {
+  // 2. Filtro de fases (cards)
+  if (fasesCardActivas !== null && filtroFasesFn) {
+    tabla.addFilter(filtroFasesFn);
+  }
+
+  // 3. Filtros temporales (correo, carga, descarga)
+  if (filtroCorreoActivo) {
+    var correoDesde = document.getElementById('filtro-correo-desde').value;
+    var correoHasta = document.getElementById('filtro-correo-hasta').value;
+    var correoSinFecha = document.getElementById('chk-correo-sin-fecha').checked;
+    var fnCorreo = filtroRangoFechas(correoDesde, correoHasta, correoSinFecha);
+    filtroCorreoFn = function(data) { return fnCorreo(data.fechaCorreo); };
+    tabla.addFilter(filtroCorreoFn);
+  }
+
+  if (filtroCargaActivo) {
+    var cargaDesde = document.getElementById('filtro-carga-desde').value;
+    var cargaHasta = document.getElementById('filtro-carga-hasta').value;
+    var cargaSinFecha = document.getElementById('chk-carga-sin-fecha').checked;
+    var fnCarga = filtroRangoFechas(cargaDesde, cargaHasta, cargaSinFecha);
+    filtroCargaFn = function(data) { return fnCarga(data.fCarga); };
+    tabla.addFilter(filtroCargaFn);
+  }
+
+  if (filtroDescargaActivo) {
+    var descargaDesde = document.getElementById('filtro-descarga-desde').value;
+    var descargaHasta = document.getElementById('filtro-descarga-hasta').value;
+    var descargaSinFecha = document.getElementById('chk-descarga-sin-fecha').checked;
+    var fnDescarga = filtroRangoFechas(descargaDesde, descargaHasta, descargaSinFecha);
+    filtroDescargaFn = function(data) { return fnDescarga(data.fEntrega); };
+    tabla.addFilter(filtroDescargaFn);
+  }
+
+  // 4. Batería rápida activa
+  if (filtrosBateriaActivos) {
+    var baterias = obtenerBaterias();
+    var bat = baterias.find(function(b) { return b.nombre === filtrosBateriaActivos; });
+    if (bat) {
+      var batEstandar = bat.filtros.filter(function(f) { return !f.func; });
+      var batCustom = bat.filtros.filter(function(f) { return f.func; });
+      batEstandar.forEach(function(f) { tabla.addFilter(f.field, f.type, f.value); });
+      batCustom.forEach(function(f) { tabla.addFilter(f.func); });
+    }
+  }
+
+  // 5. Filtros personalizados (campo/operador/valor)
+  var filas = document.querySelectorAll('#filtros-personalizados .filtro-fila');
+  var definiciones = [];
+  filas.forEach(function(fila) {
+    var campo = fila.querySelector('.filtro-campo').value;
+    var operador = fila.querySelector('.filtro-operador').value;
+    var valor = fila.querySelector('.filtro-valor').value;
+    if (campo && valor) {
+      definiciones.push({ campo: campo, operador: operador, valor: valor });
+    }
+  });
+
+  if (definiciones.length > 0) {
+    var filtros = construirFiltros(definiciones);
+    var filtrosSinCustom = filtros.filter(function(f) { return !f.func; });
+    var filtrosCustom = filtros.filter(function(f) { return f.func; });
+
+    filtrosSinCustom.forEach(function(f) {
+      tabla.addFilter(f.field, f.type, f.value);
+    });
+    filtrosCustom.forEach(function(f) {
       tabla.addFilter(f.field, f.func, f.value);
     });
   }
 
-  if (fechaInicio || fechaFin) {
-    const sinFecha = document.getElementById('chk-correo-sin-fecha').checked;
-    const fnFecha = filtroRangoFechas(fechaInicio, fechaFin, sinFecha);
-    tabla.addFilter('fechaCorreo', fnFecha);
-  }
-
   actualizarConteo();
+  actualizarBadgeFiltros();
+}
+
+// Alias: los botones y events llaman a estas, que ahora delegan en aplicarTodosFiltros
+function aplicarFiltrosAvanzados() {
+  aplicarTodosFiltros();
 }
 
 function limpiarTodosFiltros() {
   if (!tabla) return;
-  tabla.clearFilter();
 
-  document.getElementById('filtro-fecha-inicio').value = '';
-  document.getElementById('filtro-fecha-fin').value = '';
+  // Resetear filtros temporales avanzados
+  filtroCorreoActivo = false;
+  filtroCargaActivo = false;
+  filtroDescargaActivo = false;
+  filtroCorreoFn = null;
+  filtroCargaFn = null;
+  filtroDescargaFn = null;
 
+  // Resetear batería activa
+  filtrosBateriaActivos = null;
+  document.querySelectorAll('.btn-bateria').forEach(function(b) { b.classList.remove('active'); });
+
+  var chkCorreo = document.getElementById('chk-rango-correo');
+  var chkCarga = document.getElementById('chk-rango-carga');
+  var chkDescarga = document.getElementById('chk-rango-descarga');
+  if (chkCorreo) { chkCorreo.checked = false; }
+  if (chkCarga) { chkCarga.checked = false; }
+  if (chkDescarga) { chkDescarga.checked = false; }
+
+  ['filtro-correo-desde', 'filtro-correo-hasta',
+   'filtro-carga-desde', 'filtro-carga-hasta',
+   'filtro-descarga-desde', 'filtro-descarga-hasta'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.value = ''; el.disabled = true; }
+  });
+
+  ['chk-correo-sin-fecha', 'chk-carga-sin-fecha', 'chk-descarga-sin-fecha'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+
+  // Resetear filtros personalizados
   const filas = document.querySelectorAll('#filtros-personalizados .filtro-fila');
   filas.forEach(fila => {
     fila.querySelector('.filtro-campo').value = '';
     fila.querySelector('.filtro-valor').value = '';
   });
 
-  actualizarConteo();
+  // Re-aplicar solo los filtros que quedan (global, fases)
+  aplicarTodosFiltros();
 }
 
 // --- Filtro global ---
@@ -620,19 +827,15 @@ const aplicarFiltroGlobalDebounced = debounce(() => {
   if (!tabla) return;
   const texto = document.getElementById('filtro-global').value.trim();
 
-  tabla.removeFilter(filtroGlobalFn);
   if (texto) {
     filtroGlobalActivo = true;
-    const fn = filtroGlobal(texto, CAMPOS_BUSCABLES);
-    filtroGlobalFn = fn;
-    tabla.addFilter(fn);
+    filtroGlobalFn = filtroGlobal(texto, CAMPOS_BUSCABLES);
   } else {
     filtroGlobalActivo = false;
     filtroGlobalFn = null;
   }
 
-  actualizarConteo();
-  actualizarBadgeFiltros();
+  aplicarTodosFiltros();
 }, 300);
 
 let filtroGlobalFn = null;
@@ -643,11 +846,7 @@ function actualizarBadgeFiltros() {
   if (!badge) return;
 
   const filtrosTab = tabla ? tabla.getFilters().length : 0;
-  const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-  const fechaFin = document.getElementById('filtro-fecha-fin').value;
-  const tieneRango = !!(fechaInicio || fechaFin);
-
-  const total = contarFiltrosActivos(filtrosTab, filtroGlobalActivo, tieneRango);
+  const total = contarFiltrosActivos(filtrosTab, filtroGlobalActivo, false);
 
   if (total > 0) {
     badge.textContent = total + ' filtro' + (total !== 1 ? 's' : '');
@@ -662,33 +861,64 @@ function actualizarBadgeFiltros() {
 function limpiarTodoCompleto() {
   if (!tabla) return;
 
-  tabla.clearFilter();
   tabla.clearHeaderFilter();
 
+  // Resetear filtro global
   document.getElementById('filtro-global').value = '';
-  document.getElementById('filtro-fecha-inicio').value = '';
-  document.getElementById('filtro-fecha-fin').value = '';
-  document.getElementById('chk-carga-sin-fecha').checked = false;
-  document.getElementById('chk-descarga-sin-fecha').checked = false;
-  document.getElementById('chk-correo-sin-fecha').checked = false;
-
   filtroGlobalActivo = false;
   filtroGlobalFn = null;
-  filtroInvertido = false;
 
-  const btn = document.getElementById('btn-mostrar-excluidos');
-  if (btn) {
-    btn.textContent = 'Mostrar ocultos';
-    btn.classList.remove('active');
+  // Resetear invertido
+  filtroInvertido = false;
+  const btnExcl = document.getElementById('btn-mostrar-excluidos');
+  if (btnExcl) {
+    btnExcl.textContent = 'Mostrar ocultos';
+    btnExcl.classList.remove('active');
   }
 
+  // Resetear fases (todas activas)
+  fasesCardActivas = null;
+  filtroFasesFn = null;
+  document.querySelectorAll('.fase-card').forEach(function(c) { c.classList.add('active'); });
+
+  // Resetear baterías
+  filtrosBateriaActivos = null;
+  document.querySelectorAll('.btn-bateria').forEach(function(b) { b.classList.remove('active'); });
+
+  // Resetear temporales
+  filtroCorreoActivo = false;
+  filtroCargaActivo = false;
+  filtroDescargaActivo = false;
+  filtroCorreoFn = null;
+  filtroCargaFn = null;
+  filtroDescargaFn = null;
+
+  ['chk-rango-correo', 'chk-rango-carga', 'chk-rango-descarga'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+
+  ['filtro-correo-desde', 'filtro-correo-hasta',
+   'filtro-carga-desde', 'filtro-carga-hasta',
+   'filtro-descarga-desde', 'filtro-descarga-hasta'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.value = ''; el.disabled = true; }
+  });
+
+  ['chk-correo-sin-fecha', 'chk-carga-sin-fecha', 'chk-descarga-sin-fecha'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+
+  // Resetear filtros personalizados
   const filas = document.querySelectorAll('#filtros-personalizados .filtro-fila');
   filas.forEach(fila => {
     fila.querySelector('.filtro-campo').value = '';
     fila.querySelector('.filtro-valor').value = '';
   });
 
-  actualizarConteo();
+  // Reconstruir (sin filtros, quedará vacío = todo visible)
+  aplicarTodosFiltros();
   actualizarBadgeFiltros();
 }
 
@@ -709,8 +939,62 @@ async function toggleAgrupar() {
 // --- Respuesta masiva ---
 
 async function cargarPlantillasGuardadas() {
-  const result = await chrome.storage.local.get(STORAGE_KEY_PLANTILLAS);
+  const result = await chrome.storage.local.get([STORAGE_KEY_PLANTILLAS, STORAGE_KEY_PIE]);
   plantillasGuardadas = (result[STORAGE_KEY_PLANTILLAS] || {}).plantillas || [];
+  pieComun = result[STORAGE_KEY_PIE] || '';
+
+  if (plantillasGuardadas.length === 0) {
+    plantillasGuardadas = crearPlantillasPredefinidas();
+    await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
+  }
+}
+
+async function guardarPieComun() {
+  pieComun = document.getElementById('pie-comun').value;
+  await chrome.storage.local.set({ [STORAGE_KEY_PIE]: pieComun });
+}
+
+function obtenerPieComun() {
+  return pieComun || '';
+}
+
+function crearPlantillasPredefinidas() {
+  return [
+    crearPlantilla(
+      'Consulta hora carga',
+      'Re: {{asunto}}',
+      '<div style="font-family: Arial, sans-serif; line-height: 1.8; color: #333;">' +
+        '<p style="margin-bottom: 20px;">Estimad@ compañer@,</p>' +
+        '<p style="margin-bottom: 20px;">Respecto a la <b>carga del asunto</b>: ¿Cuál es su <b>hora prevista de llegada</b> al punto de carga?</p>' +
+        '<p style="margin-bottom: 20px;">Su reporte nos ayuda a mejorar la <b>planificación operativa</b>. Gracias por su <b>pronta respuesta</b>.</p>' +
+      '</div>',
+      ''
+    ),
+    crearPlantilla(
+      'Solicitud docs descarga',
+      'Re: {{asunto}}',
+      '<div style="font-family: Arial, sans-serif; line-height: 2.0; color: #333;">' +
+        '<p style="margin-bottom: 25px;">Estimad@ compañer@:</p>' +
+        '<p style="margin-bottom: 25px;">Esperamos que la entrega de la carga <b>referida al asunto</b> se haya realizado con éxito. ¿Podría confirmarnos si la descarga finalizó <b>sin incidencias ni diferencias</b>? En caso de cualquier novedad, le agradecemos que nos lo comunique.</p>' +
+        '<p style="margin-bottom: 25px;">Por ello, le solicitamos nos adelante por este medio los <b>documentos justificantes de la entrega</b> a la mayor brevedad. Si aún no dispone de los originales, las <b>fotografías</b> son válidas como adelanto.</p>' +
+        '<p style="margin-bottom: 25px;">Le recordamos que también debe remitirnos la <b>factura</b> y los <b>documentos de entrega originales</b> de forma física a nuestra oficina a la mayor brevedad posible.</p>' +
+        '<p>Gracias por su colaboración. Quedamos a su entera disposición.</p>' +
+      '</div>',
+      ''
+    ),
+    crearPlantilla(
+      'Recordatorio docs pendientes',
+      'Re: {{asunto}}',
+      '<div style="font-family: Arial, sans-serif; line-height: 2.0; color: #333;">' +
+        '<p style="margin-bottom: 14px;">Estimad@ compañer@:</p>' +
+        '<p style="margin-bottom: 14px;">Esperamos que se encuentre bien. Le escribimos en relación a la carga <b>referido al asunto</b>.</p>' +
+        '<p style="margin-bottom: 14px;">Salvo error u omisión, a fecha de hoy, todavía no hemos recibido los <b>documentos justificativos de la entrega</b>. Entendemos que los plazos pueden complicarse, pero le agradeceríamos enormemente que pudiera adelantárnoslos a la mayor brevedad.</p>' +
+        '<p style="margin-bottom: 25px;">Le recordamos que también debe remitirnos la <b>factura</b> y los <b>documentos de entrega originales</b> de forma física a nuestra oficina a la mayor brevedad posible.</p>' +
+        '<p>Agradecidos sinceramente por su gestión y atención, quedamos a su entera disposición.</p>' +
+      '</div>',
+      ''
+    )
+  ];
 }
 
 function abrirModalRespuesta() {
@@ -720,8 +1004,9 @@ function abrirModalRespuesta() {
   if (!resultado.valido) return;
 
   const destContainer = document.getElementById('respuesta-destinatarios');
-  destContainer.innerHTML = '<strong>Destinatarios:</strong> ' +
-    seleccionados.map(r => r.emailRemitente).join(', ');
+  const interlocutores = seleccionados.map(r => r.interlocutor || r.emailRemitente).filter(Boolean);
+  const unicos = [...new Set(interlocutores)];
+  destContainer.innerHTML = '<strong>Destinatarios:</strong> ' + unicos.join(', ');
 
   const selectPlantilla = document.getElementById('respuesta-plantilla');
   selectPlantilla.innerHTML = '<option value="">-- Sin plantilla --</option>';
@@ -734,10 +1019,17 @@ function abrirModalRespuesta() {
 
   document.getElementById('respuesta-asunto').value = '';
   document.getElementById('respuesta-cuerpo').value = '';
-  document.getElementById('respuesta-firma').value = '';
   document.getElementById('respuesta-error').classList.add('hidden');
   document.getElementById('preview-respuesta').classList.add('hidden');
-  inicializarSelectorFirma();
+
+  const piePreview = document.getElementById('respuesta-pie-preview');
+  if (pieComun) {
+    piePreview.innerHTML = '<small>Pie comun:</small> ' + sanitizarHtml(pieComun);
+    piePreview.style.display = '';
+  } else {
+    piePreview.style.display = 'none';
+  }
+
   document.getElementById('modal-respuesta').classList.remove('hidden');
 }
 
@@ -750,7 +1042,6 @@ function alSeleccionarPlantillaRespuesta() {
 
   document.getElementById('respuesta-asunto').value = plantilla.asunto;
   document.getElementById('respuesta-cuerpo').value = plantilla.cuerpo;
-  document.getElementById('respuesta-firma').value = plantilla.firma || '';
 }
 
 async function enviarRespuestaMasiva() {
@@ -758,10 +1049,18 @@ async function enviarRespuestaMasiva() {
   const plantilla = {
     asunto: document.getElementById('respuesta-asunto').value,
     cuerpo: document.getElementById('respuesta-cuerpo').value,
-    firma: document.getElementById('respuesta-firma').value
+    firma: obtenerPieComun()
   };
 
   const payload = construirPayload(seleccionados, plantilla);
+  // Enriquecer cada destinatario con campos para/cc/cco del registro
+  payload.destinatarios.forEach(function(dest, i) {
+    var reg = seleccionados[i];
+    dest.para = reg.para || '';
+    dest.cc = reg.cc || '';
+    dest.cco = reg.cco || '';
+  });
+  payload.emailsPorMinuto = (configActual && configActual.emailsPorMinuto) || 10;
   const url = obtenerUrlActiva();
   if (!url) return;
 
@@ -804,7 +1103,7 @@ function previsualizarRespuesta() {
   const plantilla = {
     asunto: document.getElementById('respuesta-asunto').value,
     cuerpo: document.getElementById('respuesta-cuerpo').value,
-    firma: document.getElementById('respuesta-firma').value
+    firma: obtenerPieComun()
   };
 
   const result = generarPrevisualizacion(seleccionados, plantilla, sanitizarHtml);
@@ -813,34 +1112,9 @@ function previsualizarRespuesta() {
   document.getElementById('preview-respuesta').classList.remove('hidden');
 }
 
-function inicializarSelectorFirma() {
-  const select = document.getElementById('respuesta-firma-selector');
-  const textarea = document.getElementById('respuesta-firma');
-
-  select.innerHTML = '<option value="">Sin firma</option><option value="__custom__">Personalizada</option>';
-
-  const firmas = obtenerFirmasDisponibles(plantillasGuardadas);
-  firmas.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f.id;
-    opt.textContent = f.alias;
-    select.appendChild(opt);
-  });
-
-  select.addEventListener('change', () => {
-    const val = select.value;
-    if (val === '__custom__') {
-      textarea.classList.remove('hidden');
-      textarea.value = '';
-    } else if (val === '') {
-      textarea.classList.add('hidden');
-      textarea.value = '';
-    } else {
-      const firma = firmas.find(f => f.id === val);
-      textarea.classList.add('hidden');
-      textarea.value = firma ? firma.firma : '';
-    }
-  });
+function cargarPieEnUI() {
+  const textarea = document.getElementById('pie-comun');
+  if (textarea) textarea.value = pieComun || '';
 }
 
 // --- Plantillas UI ---
@@ -872,7 +1146,6 @@ function nuevaPlantillaUI() {
   document.getElementById('tpl-alias').value = '';
   document.getElementById('tpl-asunto').value = '';
   document.getElementById('tpl-cuerpo').value = '';
-  document.getElementById('tpl-firma').value = '';
   document.getElementById('editor-plantilla').classList.remove('hidden');
   document.getElementById('preview-plantilla').classList.add('hidden');
   document.getElementById('panel-variables').classList.add('hidden');
@@ -886,7 +1159,6 @@ function editarPlantillaUI(id) {
   document.getElementById('tpl-alias').value = p.alias;
   document.getElementById('tpl-asunto').value = p.asunto;
   document.getElementById('tpl-cuerpo').value = p.cuerpo;
-  document.getElementById('tpl-firma').value = p.firma || '';
   document.getElementById('editor-plantilla').classList.remove('hidden');
 }
 
@@ -894,23 +1166,22 @@ async function guardarPlantillaUI() {
   const alias = document.getElementById('tpl-alias').value.trim();
   const asunto = document.getElementById('tpl-asunto').value.trim();
   const cuerpo = document.getElementById('tpl-cuerpo').value;
-  const firma = document.getElementById('tpl-firma').value;
 
   if (!alias) return;
 
   if (plantillaEditandoId) {
     const idx = plantillasGuardadas.findIndex(p => p.id === plantillaEditandoId);
     if (idx >= 0) {
-      plantillasGuardadas[idx] = editarPlantilla(plantillasGuardadas[idx], { alias, asunto, cuerpo, firma });
+      plantillasGuardadas[idx] = editarPlantilla(plantillasGuardadas[idx], { alias, asunto, cuerpo });
     }
   } else {
-    const nueva = crearPlantilla(alias, asunto, cuerpo, firma);
+    const nueva = crearPlantilla(alias, asunto, cuerpo, '');
     plantillasGuardadas.push(nueva);
+    plantillaEditandoId = nueva.id;
   }
 
   await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
   renderListaPlantillas();
-  plantillaEditandoId = null;
 }
 
 async function eliminarPlantillaUI(id) {
@@ -919,9 +1190,87 @@ async function eliminarPlantillaUI(id) {
   renderListaPlantillas();
 }
 
+function exportarPlantillas() {
+  const datos = { version: 1, plantillas: plantillasGuardadas };
+
+  if (pieComun) {
+    const incluirPie = confirm('Se ha detectado un pie comun configurado.\n\nPulse Aceptar para INCLUIR el pie en la exportacion.\nPulse Cancelar para exportar SOLO las plantillas (sin pie).');
+    if (incluirPie) datos.pieComun = pieComun;
+  }
+
+  const json = JSON.stringify(datos, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tarealog_plantillas_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarPlantillas() {
+  document.getElementById('input-importar-plantillas').click();
+}
+
+async function procesarImportPlantillas(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const resultado = document.getElementById('plantillas-import-resultado');
+
+  try {
+    const texto = await file.text();
+    const datos = JSON.parse(texto);
+
+    if (!datos.plantillas || !Array.isArray(datos.plantillas)) {
+      resultado.textContent = 'Archivo no valido: no contiene plantillas';
+      resultado.className = 'error';
+      resultado.classList.remove('hidden');
+      return;
+    }
+
+    const tienePie = datos.pieComun !== undefined;
+    let importarPie = false;
+    if (tienePie) {
+      importarPie = confirm('El archivo incluye un pie comun. ¿Desea importarlo tambien?\n\nPie: ' + datos.pieComun.substring(0, 80) + '...');
+    }
+
+    const modo = confirm('¿Reemplazar todas las plantillas actuales?\n\nAceptar = Reemplazar\nCancelar = Agregar a las existentes');
+
+    if (modo) {
+      plantillasGuardadas = datos.plantillas;
+    } else {
+      datos.plantillas.forEach(p => {
+        p.id = 'tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        plantillasGuardadas.push(p);
+      });
+    }
+
+    await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
+
+    if (importarPie) {
+      pieComun = datos.pieComun;
+      await chrome.storage.local.set({ [STORAGE_KEY_PIE]: pieComun });
+      cargarPieEnUI();
+    }
+
+    renderListaPlantillas();
+    const count = datos.plantillas.length;
+    resultado.textContent = count + ' plantilla' + (count !== 1 ? 's' : '') + ' importada' + (count !== 1 ? 's' : '') + (importarPie ? ' + pie comun' : '');
+    resultado.className = 'exito';
+    resultado.classList.remove('hidden');
+  } catch (e) {
+    resultado.textContent = 'Error al leer archivo: ' + e.message;
+    resultado.className = 'error';
+    resultado.classList.remove('hidden');
+  }
+
+  event.target.value = '';
+}
+
 function previsualizarPlantilla() {
   const cuerpo = document.getElementById('tpl-cuerpo').value;
-  const firma = document.getElementById('tpl-firma').value;
+  const pie = obtenerPieComun();
 
   const datosPrueba = {
     codCar: '168345', nombreTransportista: 'Transportes Garcia SL',
@@ -931,8 +1280,8 @@ function previsualizarPlantilla() {
   };
 
   const cuerpoInterpolado = interpolar(cuerpo, datosPrueba);
-  const firmaInterpolada = interpolar(firma, datosPrueba);
-  const htmlFinal = sanitizarHtml(cuerpoInterpolado + firmaInterpolada);
+  const pieInterpolado = pie ? '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">' + interpolar(pie, datosPrueba) : '';
+  const htmlFinal = sanitizarHtml(cuerpoInterpolado + pieInterpolado);
 
   document.getElementById('preview-contenido').innerHTML = htmlFinal;
   document.getElementById('preview-plantilla').classList.remove('hidden');
@@ -1112,23 +1461,36 @@ let filtroFasesFn = null;
 function aplicarFiltroFases() {
   if (!tabla) return;
 
-  if (filtroFasesFn) tabla.removeFilter(filtroFasesFn);
+  var fn = filtroFases(fasesCardActivas);
+  filtroFasesFn = function(data) { return fn(data.fase); };
 
-  const fn = filtroFases(fasesCardActivas);
-  filtroFasesFn = (data) => fn(data.fase);
-
-  if (fasesCardActivas !== null) {
-    tabla.addFilter(filtroFasesFn);
-  }
-
-  actualizarConteo();
-  actualizarBadgeFiltros();
+  aplicarTodosFiltros();
 }
 
 // --- Filtros temporales ---
 
 function formatearFechaInput(date) {
   return date.toISOString().split('T')[0];
+}
+
+function toggleFiltroCorreo() {
+  const checkbox = document.getElementById('chk-rango-correo');
+  const inputDesde = document.getElementById('filtro-correo-desde');
+  const inputHasta = document.getElementById('filtro-correo-hasta');
+
+  filtroCorreoActivo = checkbox.checked;
+  inputDesde.disabled = !filtroCorreoActivo;
+  inputHasta.disabled = !filtroCorreoActivo;
+
+  if (filtroCorreoActivo) {
+    const hoy = new Date();
+    const hace7 = new Date(hoy);
+    hace7.setDate(hace7.getDate() - 7);
+    if (!inputDesde.value) inputDesde.value = formatearFechaInput(hace7);
+    if (!inputHasta.value) inputHasta.value = formatearFechaInput(hoy);
+  }
+
+  aplicarFiltrosTemporales();
 }
 
 function toggleFiltroCarga() {
@@ -1171,35 +1533,122 @@ function toggleFiltroDescarga() {
   aplicarFiltrosTemporales();
 }
 
+let filtroCorreoFn = null;
 let filtroCargaFn = null;
 let filtroDescargaFn = null;
 
 function aplicarFiltrosTemporales() {
+  aplicarTodosFiltros();
+}
+
+// --- Navegacion por teclado ---
+
+let filaCursorPos = -1;
+
+function inicializarNavegacionTeclado() {
+  var contenedor = document.getElementById('tabla-seguimiento');
+  contenedor.setAttribute('tabindex', '0');
+
+  contenedor.addEventListener('keydown', function(e) {
+    if (!tabla) return;
+    // No interferir con inputs de edicion/filtros
+    if (e.target.matches('input, select, textarea')) return;
+
+    var rows = tabla.getRows('active');
+    if (rows.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        navegarFila(1, rows);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        navegarFila(-1, rows);
+        break;
+      case ' ':
+        e.preventDefault();
+        toggleSeleccionCursor(rows);
+        break;
+      case 'Home':
+        e.preventDefault();
+        navegarAFila(0, rows);
+        break;
+      case 'End':
+        e.preventDefault();
+        navegarAFila(rows.length - 1, rows);
+        break;
+      case 'PageDown':
+        e.preventDefault();
+        navegarFila(15, rows);
+        break;
+      case 'PageUp':
+        e.preventDefault();
+        navegarFila(-15, rows);
+        break;
+      case 'a':
+        if (e.ctrlKey) {
+          e.preventDefault();
+          tabla.selectRow(tabla.getRows('active'));
+        }
+        break;
+      case 'Escape':
+        tabla.deselectRow();
+        break;
+    }
+  });
+}
+
+function navegarFila(delta, rows) {
+  var newPos = filaCursorPos + delta;
+  newPos = Math.max(0, Math.min(rows.length - 1, newPos));
+  setCursorPos(newPos, rows);
+}
+
+function navegarAFila(pos, rows) {
+  setCursorPos(Math.max(0, Math.min(rows.length - 1, pos)), rows);
+}
+
+function setCursorPos(pos, rows) {
+  // Quitar cursor anterior
+  document.querySelectorAll('.tabulator-row.fila-cursor').forEach(function(el) {
+    el.classList.remove('fila-cursor');
+  });
+
+  filaCursorPos = pos;
+  var row = rows[filaCursorPos];
+
+  // scrollToRow garantiza que la fila esta renderizada en el DOM virtual
+  tabla.scrollToRow(row, 'nearest', false)
+    .then(function() {
+      var el = row.getElement();
+      if (el) el.classList.add('fila-cursor');
+    })
+    .catch(function() {
+      var el = row.getElement();
+      if (el) el.classList.add('fila-cursor');
+    });
+}
+
+function toggleSeleccionCursor(rows) {
+  if (filaCursorPos < 0 || filaCursorPos >= rows.length) return;
+  rows[filaCursorPos].toggleSelect();
+}
+
+function vincularCursorConClicks() {
   if (!tabla) return;
-
-  if (filtroCargaFn) { tabla.removeFilter(filtroCargaFn); filtroCargaFn = null; }
-  if (filtroDescargaFn) { tabla.removeFilter(filtroDescargaFn); filtroDescargaFn = null; }
-
-  if (filtroCargaActivo) {
-    const desde = document.getElementById('filtro-carga-desde').value;
-    const hasta = document.getElementById('filtro-carga-hasta').value;
-    const sinFecha = document.getElementById('chk-carga-sin-fecha').checked;
-    const fn = filtroRangoFechas(desde, hasta, sinFecha);
-    filtroCargaFn = (data) => fn(data.fCarga);
-    tabla.addFilter(filtroCargaFn);
-  }
-
-  if (filtroDescargaActivo) {
-    const desde = document.getElementById('filtro-descarga-desde').value;
-    const hasta = document.getElementById('filtro-descarga-hasta').value;
-    const sinFecha = document.getElementById('chk-descarga-sin-fecha').checked;
-    const fn = filtroRangoFechas(desde, hasta, sinFecha);
-    filtroDescargaFn = (data) => fn(data.fEntrega);
-    tabla.addFilter(filtroDescargaFn);
-  }
-
-  actualizarConteo();
-  actualizarBadgeFiltros();
+  tabla.on('rowClick', function(e, row) {
+    var rows = tabla.getRows('active');
+    var idx = rows.indexOf(row);
+    if (idx >= 0) {
+      filaCursorPos = idx;
+      document.querySelectorAll('.tabulator-row.fila-cursor').forEach(function(el) {
+        el.classList.remove('fila-cursor');
+      });
+      var el = row.getElement();
+      if (el) el.classList.add('fila-cursor');
+    }
+  });
 }
 
 // --- Edicion masiva ---
@@ -1208,9 +1657,30 @@ function actualizarBulkPanel() {
   if (!tabla) return;
   const seleccionados = tabla.getSelectedData();
   const count = seleccionados.length;
+  const panel = document.getElementById('panel-bulk');
   const btn = document.getElementById('btn-bulk-aplicar');
+
+  const eraVisible = !panel.classList.contains('hidden');
+  const debeSerVisible = count > 0;
+
+  if (debeSerVisible) {
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
+
   btn.disabled = count === 0;
   btn.textContent = count > 0 ? `Aplicar a seleccionados (${count})` : 'Aplicar a seleccionados';
+
+  // Solo recalcular altura si cambio la visibilidad del panel
+  if (eraVisible !== debeSerVisible) {
+    var holder = document.querySelector('.tabulator-tableholder');
+    var scrollPos = holder ? holder.scrollTop : 0;
+    setTimeout(function() {
+      if (tabla) tabla.setHeight(calcularAlturaTabla());
+      if (holder) holder.scrollTop = scrollPos;
+    }, 50);
+  }
 }
 
 async function ejecutarCambioMasivo() {
@@ -1234,6 +1704,7 @@ async function ejecutarCambioMasivo() {
 
   await chrome.storage.local.set({ registros });
   await renderTabla();
+  tabla.deselectRow();
 
   const url = obtenerUrlActiva();
   if (url) {
@@ -1289,6 +1760,269 @@ async function confirmarVinculacion() {
   }
 }
 
+// --- Envios programados ---
+
+let programadosCache = [];
+
+function togglePanelProgramados() {
+  var panel = document.getElementById('panel-programados');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) cargarProgramados();
+  setTimeout(function() { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
+}
+
+async function cargarProgramados() {
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  try {
+    var response = await fetch(url + '?action=getProgramados');
+    var data = await response.json();
+    programadosCache = data.programados || [];
+  } catch (e) {
+    programadosCache = [];
+  }
+  renderTablaProgramados();
+}
+
+function renderTablaProgramados() {
+  var filtro = document.getElementById('filtro-programados').value;
+  var lista = filtrarProgramados(programadosCache, filtro);
+  lista = ordenarPorFechaProgramada(lista);
+
+  var tbody = document.querySelector('#tabla-programados tbody');
+  var vacio = document.getElementById('programados-vacio');
+  tbody.innerHTML = '';
+
+  if (lista.length === 0) {
+    vacio.classList.remove('hidden');
+    return;
+  }
+  vacio.classList.add('hidden');
+
+  lista.forEach(function(p) {
+    var estado = formatearEstadoProgramado(p.estado);
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="' + estado.clase + '">' + estado.html + '</td>' +
+      '<td>' + (p.interlocutor || '--') + '</td>' +
+      '<td>' + (p.asunto || '--') + '</td>' +
+      '<td>' + formatearFechaCorta(p.fechaProgramada) + '</td>' +
+      '<td>' + formatearFechaCorta(p.fechaEnvio) + '</td>' +
+      '<td></td>';
+
+    if (p.estado === 'PENDIENTE') {
+      var btn = document.createElement('button');
+      btn.className = 'btn-secundario';
+      btn.textContent = 'Cancelar';
+      btn.style.fontSize = '11px';
+      btn.style.padding = '2px 8px';
+      btn.addEventListener('click', function() { cancelarProgramado(p.id); });
+      tr.lastChild.appendChild(btn);
+    } else if (p.estado === 'ERROR' && p.errorDetalle) {
+      tr.lastChild.textContent = p.errorDetalle.substring(0, 40);
+      tr.lastChild.title = p.errorDetalle;
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  // Actualizar badge en boton
+  var conteo = contarPorEstado(programadosCache);
+  var btn = document.getElementById('btn-toggle-programados');
+  btn.textContent = conteo.PENDIENTE > 0 ? 'Programados (' + conteo.PENDIENTE + ')' : 'Programados';
+}
+
+async function cancelarProgramado(id) {
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  try {
+    await fetch(url + '?action=cancelarProgramado', {
+      method: 'POST',
+      body: JSON.stringify({ id: id })
+    });
+    await cargarProgramados();
+  } catch (e) {
+    // silencioso
+  }
+}
+
+async function programarEnvioMasivo() {
+  var fecha = document.getElementById('programar-fecha').value;
+  if (!fecha) {
+    document.getElementById('respuesta-error').textContent = 'Selecciona fecha y hora para programar';
+    document.getElementById('respuesta-error').classList.remove('hidden');
+    return;
+  }
+
+  var fechaProg = new Date(fecha);
+  if (fechaProg <= new Date()) {
+    document.getElementById('respuesta-error').textContent = 'La fecha debe ser futura';
+    document.getElementById('respuesta-error').classList.remove('hidden');
+    return;
+  }
+
+  var seleccionados = tabla.getSelectedData();
+  var plantilla = {
+    asunto: document.getElementById('respuesta-asunto').value,
+    cuerpo: document.getElementById('respuesta-cuerpo').value,
+    firma: obtenerPieComun()
+  };
+
+  var payload = construirPayload(seleccionados, plantilla);
+  payload.destinatarios.forEach(function(dest, i) {
+    var reg = seleccionados[i];
+    dest.para = reg.para || '';
+    dest.cc = reg.cc || '';
+    dest.cco = reg.cco || '';
+  });
+
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  var btnEnviar = document.getElementById('btn-enviar-respuesta');
+  btnEnviar.disabled = true;
+  btnEnviar.textContent = 'Programando...';
+
+  var errores = [];
+  var exitos = 0;
+
+  try {
+    for (var i = 0; i < payload.destinatarios.length; i++) {
+      var dest = payload.destinatarios[i];
+      var cuerpoFinal = dest.cuerpo;
+      if (plantilla.firma) {
+        cuerpoFinal += '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">' + plantilla.firma;
+      }
+
+      var body = {
+        threadId: dest.threadId,
+        interlocutor: dest.email || dest.emailRemitente || '',
+        asunto: dest.asunto,
+        cuerpo: cuerpoFinal,
+        cc: dest.cc || '',
+        bcc: dest.cco || '',
+        fechaProgramada: fechaProg.toISOString()
+      };
+
+      try {
+        var response = await fetch(url + '?action=programarEnvio', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+        var data = await response.json();
+        if (data.ok) exitos++;
+        else errores.push(data.error || 'Error desconocido');
+      } catch (e) {
+        errores.push(e.message);
+      }
+    }
+
+    if (errores.length > 0) {
+      document.getElementById('respuesta-error').textContent = errores.join('; ');
+      document.getElementById('respuesta-error').classList.remove('hidden');
+    } else {
+      cerrarModalRespuesta();
+      // Refrescar panel programados si visible
+      var panel = document.getElementById('panel-programados');
+      if (!panel.classList.contains('hidden')) cargarProgramados();
+    }
+  } finally {
+    btnEnviar.disabled = false;
+    btnEnviar.textContent = 'Enviar';
+    document.getElementById('chk-programar-envio').checked = false;
+    document.getElementById('programar-campos').classList.add('hidden');
+  }
+}
+
+function toggleCheckboxProgramar() {
+  var checked = document.getElementById('chk-programar-envio').checked;
+  var campos = document.getElementById('programar-campos');
+  var btnEnviar = document.getElementById('btn-enviar-respuesta');
+
+  if (checked) {
+    campos.classList.remove('hidden');
+    btnEnviar.textContent = 'Programar envio';
+    // Pre-rellenar con +1 hora
+    var ahora = new Date();
+    ahora.setHours(ahora.getHours() + 1);
+    ahora.setMinutes(0);
+    var local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
+    document.getElementById('programar-fecha').value = local.toISOString().slice(0, 16);
+  } else {
+    campos.classList.add('hidden');
+    btnEnviar.textContent = 'Enviar';
+  }
+}
+
+function despacharEnvio() {
+  if (document.getElementById('chk-programar-envio').checked) {
+    programarEnvioMasivo();
+  } else {
+    enviarRespuestaMasiva();
+  }
+}
+
+// --- Horario laboral UI ---
+
+async function cargarHorarioLaboral() {
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  try {
+    var response = await fetch(url + '?action=getHorarioLaboral');
+    var data = await response.json();
+    if (data.ok && data.horario) {
+      var h = data.horario;
+      document.querySelectorAll('.chk-dia-laboral').forEach(function(chk) {
+        chk.checked = h.dias.indexOf(parseInt(chk.dataset.dia, 10)) !== -1;
+      });
+      document.getElementById('cfg-hora-inicio').value = h.horaInicio;
+      document.getElementById('cfg-hora-fin').value = h.horaFin;
+    }
+  } catch (e) {
+    // usar defaults del HTML
+  }
+}
+
+async function guardarHorarioLaboralUI() {
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  var dias = [];
+  document.querySelectorAll('.chk-dia-laboral').forEach(function(chk) {
+    if (chk.checked) dias.push(parseInt(chk.dataset.dia, 10));
+  });
+
+  var horario = {
+    dias: dias,
+    horaInicio: parseInt(document.getElementById('cfg-hora-inicio').value, 10) || 7,
+    horaFin: parseInt(document.getElementById('cfg-hora-fin').value, 10) || 21
+  };
+
+  try {
+    var response = await fetch(url + '?action=guardarHorarioLaboral', {
+      method: 'POST',
+      body: JSON.stringify({ horario: horario })
+    });
+    var data = await response.json();
+    var info = document.getElementById('horario-info');
+    if (data.ok) {
+      info.textContent = 'Horario guardado correctamente';
+      info.className = 'exito';
+      info.classList.remove('hidden');
+    } else {
+      info.textContent = data.error || 'Error al guardar';
+      info.className = 'errores';
+      info.classList.remove('hidden');
+    }
+    setTimeout(function() { info.classList.add('hidden'); }, 3000);
+  } catch (e) {
+    // silencioso
+  }
+}
+
 function actualizarFooter(timestamp) {
   if (timestamp) {
     const fecha = new Date(timestamp).toLocaleString('es-ES');
@@ -1312,6 +2046,7 @@ function inicializarTabs() {
       }
       if (tab.dataset.tab === 'config') {
         renderListaServicios();
+        cargarHorarioLaboral();
       }
       if (tab.dataset.tab === 'ayuda') {
         inicializarAyuda();
@@ -1322,6 +2057,7 @@ function inicializarTabs() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   inicializarTabs();
+  inicializarNavegacionTeclado();
   await cargarPlantillasGuardadas();
   await cargarDatos();
   renderBaterias();
@@ -1339,6 +2075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-limpiar-todo').addEventListener('click', limpiarTodoCompleto);
 
   // Filtros avanzados
+  inicializarSeccionesFiltros();
   document.getElementById('btn-agregar-filtro').addEventListener('click', agregarFilaFiltro);
   document.getElementById('btn-aplicar-filtros').addEventListener('click', () => { aplicarFiltrosAvanzados(); actualizarBadgeFiltros(); });
   document.getElementById('btn-limpiar-filtros').addEventListener('click', () => { limpiarTodosFiltros(); actualizarBadgeFiltros(); });
@@ -1346,6 +2083,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     .addEventListener('click', () => limpiarTodosFiltros());
 
   // Filtros temporales
+  document.getElementById('chk-rango-correo').addEventListener('change', toggleFiltroCorreo);
+  document.getElementById('filtro-correo-desde').addEventListener('change', aplicarFiltrosTemporales);
+  document.getElementById('filtro-correo-hasta').addEventListener('change', aplicarFiltrosTemporales);
+  document.getElementById('chk-correo-sin-fecha').addEventListener('change', aplicarFiltrosTemporales);
   document.getElementById('chk-rango-carga').addEventListener('change', toggleFiltroCarga);
   document.getElementById('chk-rango-descarga').addEventListener('change', toggleFiltroDescarga);
   document.getElementById('filtro-carga-desde').addEventListener('change', aplicarFiltrosTemporales);
@@ -1359,6 +2100,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-mostrar-excluidos').addEventListener('click', mostrarExcluidos);
 
   // Edicion masiva
+  document.getElementById('chk-bulk-fase').addEventListener('change', (e) => {
+    document.getElementById('bulk-fase').disabled = !e.target.checked;
+  });
+  document.getElementById('chk-bulk-estado').addEventListener('change', (e) => {
+    document.getElementById('bulk-estado').disabled = !e.target.checked;
+  });
   document.getElementById('btn-bulk-aplicar').addEventListener('click', ejecutarCambioMasivo);
 
   // Plantillas
@@ -1366,6 +2113,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-guardar-plantilla').addEventListener('click', guardarPlantillaUI);
   document.getElementById('btn-previsualizar-plantilla').addEventListener('click', previsualizarPlantilla);
   document.getElementById('btn-variables-disponibles').addEventListener('click', mostrarVariablesDisponibles);
+  document.getElementById('btn-guardar-pie').addEventListener('click', guardarPieComun);
+  document.getElementById('btn-exportar-plantillas').addEventListener('click', exportarPlantillas);
+  document.getElementById('btn-importar-plantillas').addEventListener('click', importarPlantillas);
+  document.getElementById('input-importar-plantillas').addEventListener('change', procesarImportPlantillas);
+  cargarPieEnUI();
 
   // Servicios GAS
   document.getElementById('btn-agregar-servicio').addEventListener('click', agregarServicioUI);
@@ -1377,8 +2129,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Modal respuesta
   document.getElementById('respuesta-plantilla').addEventListener('change', alSeleccionarPlantillaRespuesta);
   document.getElementById('btn-preview-respuesta').addEventListener('click', previsualizarRespuesta);
-  document.getElementById('btn-enviar-respuesta').addEventListener('click', enviarRespuestaMasiva);
+  document.getElementById('btn-enviar-respuesta').addEventListener('click', despacharEnvio);
   document.getElementById('btn-cancelar-respuesta').addEventListener('click', cerrarModalRespuesta);
+
+  // Programados
+  document.getElementById('btn-toggle-programados').addEventListener('click', togglePanelProgramados);
+  document.getElementById('btn-actualizar-programados').addEventListener('click', cargarProgramados);
+  document.getElementById('filtro-programados').addEventListener('change', renderTablaProgramados);
+  document.getElementById('chk-programar-envio').addEventListener('change', toggleCheckboxProgramar);
+
+  // Horario laboral
+  document.getElementById('btn-guardar-horario').addEventListener('click', guardarHorarioLaboralUI);
 
   window.addEventListener('resize', redimensionarTabla);
 });
