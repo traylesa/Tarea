@@ -12,26 +12,26 @@ const {
   validarRegla,
   generarReglasDefault,
   obtenerAccionesDesdeReglas,
-  TIPOS_ACCION,
-  NOMBRES_ACCION
+  TIPOS_ACCION_REGLA,
+  NOMBRES_ACCION_REGLA
 } = require('../../../src/extension/action-rules.js');
 
 describe('action-rules.js', () => {
 
   // --- Constantes ---
 
-  describe('TIPOS_ACCION', () => {
+  describe('TIPOS_ACCION_REGLA', () => {
     test('contiene los 8 tipos definidos', () => {
-      expect(Object.keys(TIPOS_ACCION)).toHaveLength(8);
-      expect(TIPOS_ACCION.PROPAGAR_HILO).toBe('PROPAGAR_HILO');
-      expect(TIPOS_ACCION.SUGERIR_RECORDATORIO).toBe('SUGERIR_RECORDATORIO');
-      expect(TIPOS_ACCION.MOSTRAR_AVISO).toBe('MOSTRAR_AVISO');
+      expect(Object.keys(TIPOS_ACCION_REGLA)).toHaveLength(8);
+      expect(TIPOS_ACCION_REGLA.PROPAGAR_HILO).toBe('PROPAGAR_HILO');
+      expect(TIPOS_ACCION_REGLA.SUGERIR_RECORDATORIO).toBe('SUGERIR_RECORDATORIO');
+      expect(TIPOS_ACCION_REGLA.MOSTRAR_AVISO).toBe('MOSTRAR_AVISO');
     });
 
-    test('NOMBRES_ACCION tiene entrada para cada tipo', () => {
-      Object.keys(TIPOS_ACCION).forEach(tipo => {
-        expect(NOMBRES_ACCION[tipo]).toBeDefined();
-        expect(typeof NOMBRES_ACCION[tipo]).toBe('string');
+    test('NOMBRES_ACCION_REGLA tiene entrada para cada tipo', () => {
+      Object.keys(TIPOS_ACCION_REGLA).forEach(tipo => {
+        expect(NOMBRES_ACCION_REGLA[tipo]).toBeDefined();
+        expect(typeof NOMBRES_ACCION_REGLA[tipo]).toBe('string');
       });
     });
   });

@@ -35,7 +35,7 @@ async function actualizarFasesPopup() {
   }
 }
 
-const STORAGE_KEY_PREFS = 'tabulatorPrefs';
+// STORAGE_KEY_PREFS definida en constants.js (cargado antes via script tag)
 
 let registros = [];
 let threadIdSeleccionado = null;
@@ -259,6 +259,7 @@ async function persistirCambio(cell) {
   if (GAS_URL) {
     fetch(GAS_URL + '?action=actualizarCampo', {
       method: 'POST',
+      credentials: 'omit',
       body: JSON.stringify({ messageId, campo, valor })
     }).catch(() => {});
   }
@@ -337,7 +338,7 @@ async function cargarDatos() {
       actualizarFooter(cached.ultimoBarrido);
     }
     if (GAS_URL) {
-      const response = await fetch(GAS_URL + '?action=getRegistros');
+      const response = await fetch(GAS_URL + '?action=getRegistros', { credentials: 'omit' });
       const data = await response.json();
       registros = data.registros || [];
       await chrome.storage.local.set({ registros, ultimoBarrido: new Date().toISOString() });
@@ -357,7 +358,7 @@ async function ejecutarBarrido() {
   btn.disabled = true;
   try {
     if (GAS_URL) {
-      await fetch(GAS_URL + '?action=procesarCorreos', { method: 'POST' });
+      await fetch(GAS_URL + '?action=procesarCorreos', { method: 'POST', credentials: 'omit' });
       await cargarDatos();
     }
   } finally {
@@ -386,6 +387,7 @@ async function confirmarVinculacion() {
     if (GAS_URL) {
       await fetch(GAS_URL + '?action=vincularManual', {
         method: 'POST',
+        credentials: 'omit',
         body: JSON.stringify({ threadId: threadIdSeleccionado, codCar })
       });
       await cargarDatos();
@@ -433,7 +435,7 @@ async function cargarProgramadosPopup() {
   if (!url) return;
 
   try {
-    var response = await fetch(url + '?action=getProgramados');
+    var response = await fetch(url + '?action=getProgramados', { credentials: 'omit' });
     var data = await response.json();
     programadosCachePopup = data.programados || [];
   } catch (e) {
@@ -502,6 +504,7 @@ async function cancelarProgramadoPopup(id) {
   try {
     await fetch(url + '?action=cancelarProgramado', {
       method: 'POST',
+      credentials: 'omit',
       body: JSON.stringify({ id: id })
     });
     await cargarProgramadosPopup();

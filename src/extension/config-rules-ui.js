@@ -1,5 +1,5 @@
 // config-rules-ui.js — UI para gestion de reglas de acciones en tab Config
-// Depende de: action-rules.js (TIPOS_ACCION, NOMBRES_ACCION, crearRegla, editarRegla,
+// Depende de: action-rules.js (TIPOS_ACCION_REGLA, NOMBRES_ACCION_REGLA, crearRegla, editarRegla,
 //   eliminarRegla, duplicarRegla, validarRegla, generarReglasDefault)
 // Depende de globals: fasesEditando, estadosEditando (de config-ui.js)
 
@@ -62,7 +62,7 @@ function _descripcionRegla(regla) {
   var texto = 'Cuando ' + cond.campo + ' = ' + valorDesc;
   if (cond.faseOrigen) texto += ' (desde ' + cond.faseOrigen + ')';
   texto += ' → ' + regla.acciones.map(function(a) {
-    return NOMBRES_ACCION[a.tipo] || a.tipo;
+    return NOMBRES_ACCION_REGLA[a.tipo] || a.tipo;
   }).join(', ');
   return texto;
 }
@@ -160,10 +160,10 @@ function _renderAccionesRegla(acciones) {
     var select = document.createElement('select');
     select.className = 'regla-accion-tipo';
     select.style.cssText = 'flex:0 0 160px';
-    Object.keys(TIPOS_ACCION).forEach(function(tipo) {
+    Object.keys(TIPOS_ACCION_REGLA).forEach(function(tipo) {
       var opt = document.createElement('option');
       opt.value = tipo;
-      opt.textContent = NOMBRES_ACCION[tipo];
+      opt.textContent = NOMBRES_ACCION_REGLA[tipo];
       select.appendChild(opt);
     });
     select.value = acc.tipo;
@@ -282,10 +282,10 @@ function _agregarAccionRegla() {
   var select = document.createElement('select');
   select.className = 'regla-accion-tipo';
   select.style.cssText = 'flex:0 0 160px';
-  Object.keys(TIPOS_ACCION).forEach(function(tipo) {
+  Object.keys(TIPOS_ACCION_REGLA).forEach(function(tipo) {
     var opt = document.createElement('option');
     opt.value = tipo;
-    opt.textContent = NOMBRES_ACCION[tipo];
+    opt.textContent = NOMBRES_ACCION_REGLA[tipo];
     select.appendChild(opt);
   });
   select.value = 'MOSTRAR_AVISO';

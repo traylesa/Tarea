@@ -26,7 +26,7 @@ function actualizarFasesDesdeConfig() {
   FASES_TRANSPORTE = fasesAMapaLegacy(fasesActuales);
 }
 
-const STORAGE_KEY_PREFS = 'tabulatorPrefs';
+// STORAGE_KEY_PREFS definida en constants.js (cargado antes via script tag)
 const STORAGE_KEY_SERVICES = 'tarealog_gas_services';
 const STORAGE_KEY_PLANTILLAS = 'tarealog_plantillas';
 const STORAGE_KEY_AYUDA = 'tarealog_ayuda_estado';
@@ -672,16 +672,19 @@ async function ejecutarAccionRegla(accion, rowData) {
       break;
 
     case 'CAMBIAR_FASE':
-      // Solo aviso — el cambio real se hace desde acciones contextuales
+      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
       break;
 
     case 'CAMBIAR_ESTADO':
+      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
       break;
 
     case 'PRESELECCIONAR_PLANTILLA':
+      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
       break;
 
     case 'INICIAR_SECUENCIA':
+      // Se procesa en verificarSecuencias (background.js)
       break;
   }
 }

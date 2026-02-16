@@ -3,7 +3,7 @@
  * Logica pura: sin DOM, sin Chrome API. Testeable unitariamente.
  */
 
-var TIPOS_ACCION = {
+var TIPOS_ACCION_REGLA = {
   PROPAGAR_HILO: 'PROPAGAR_HILO',
   SUGERIR_RECORDATORIO: 'SUGERIR_RECORDATORIO',
   CREAR_RECORDATORIO: 'CREAR_RECORDATORIO',
@@ -14,7 +14,7 @@ var TIPOS_ACCION = {
   MOSTRAR_AVISO: 'MOSTRAR_AVISO'
 };
 
-var NOMBRES_ACCION = {
+var NOMBRES_ACCION_REGLA = {
   PROPAGAR_HILO: 'Propagar al hilo',
   SUGERIR_RECORDATORIO: 'Sugerir recordatorio',
   CREAR_RECORDATORIO: 'Crear recordatorio',
@@ -126,7 +126,7 @@ function validarRegla(regla) {
     errores.push('Debe haber al menos una accion');
   } else {
     regla.acciones.forEach(function(a, i) {
-      if (!TIPOS_ACCION[a.tipo]) {
+      if (!TIPOS_ACCION_REGLA[a.tipo]) {
         errores.push('Accion ' + (i + 1) + ': tipo desconocido "' + a.tipo + '"');
       }
     });
@@ -249,7 +249,7 @@ if (typeof module !== 'undefined' && module.exports) {
     validarRegla: validarRegla,
     generarReglasDefault: generarReglasDefault,
     obtenerAccionesDesdeReglas: obtenerAccionesDesdeReglas,
-    TIPOS_ACCION: TIPOS_ACCION,
-    NOMBRES_ACCION: NOMBRES_ACCION
+    TIPOS_ACCION_REGLA: TIPOS_ACCION_REGLA,
+    NOMBRES_ACCION_REGLA: NOMBRES_ACCION_REGLA
   };
 }
