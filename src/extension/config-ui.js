@@ -21,8 +21,12 @@ async function inicializarConfigUI() {
 
   fasesEditando = config.fases ? JSON.parse(JSON.stringify(config.fases)) : getDefaultFases();
   estadosEditando = config.estados ? JSON.parse(JSON.stringify(config.estados)) : getDefaultEstados();
+  reglasEditando = config.reglasAcciones
+    ? JSON.parse(JSON.stringify(config.reglasAcciones))
+    : (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);
   renderListaFasesConfig();
   renderListaEstadosConfig();
+  if (typeof renderListaReglasConfig === 'function') renderListaReglasConfig();
   cargarSpreadsheetInfo();
   cargarGmailQueryInfo();
 }
@@ -49,6 +53,7 @@ function leerFormulario() {
     },
     fases: fasesEditando,
     estados: estadosEditando,
+    reglasAcciones: typeof reglasEditando !== 'undefined' ? reglasEditando : [],
     resumenMatutino: {
       activado: document.getElementById('cfg-resumen-activado').checked,
       hora: document.getElementById('cfg-resumen-hora').value || '08:00'
@@ -403,7 +408,8 @@ async function exportarConfig() {
     STORAGE_KEY_SERVICES,
     'tarealog_gmail_query',
     'tarealog_spreadsheet',
-    STORAGE_KEY_PIE
+    STORAGE_KEY_PIE,
+    STORAGE_KEY_PREFS
   ]);
 
   const extras = {};
@@ -411,6 +417,7 @@ async function exportarConfig() {
   if (storage.tarealog_gmail_query) extras.gmailQuery = storage.tarealog_gmail_query;
   if (storage.tarealog_spreadsheet) extras.spreadsheet = storage.tarealog_spreadsheet;
   if (storage[STORAGE_KEY_PIE]) extras.pieComun = storage[STORAGE_KEY_PIE];
+  if (storage[STORAGE_KEY_PREFS]) extras.preferenciasRejilla = storage[STORAGE_KEY_PREFS];
 
   const exportado = exportarConfigCompleta(merged, extras);
   const json = JSON.stringify(exportado, null, 2);
@@ -458,6 +465,15 @@ function procesarImportacion(e) {
       if (data.spreadsheet) extras['tarealog_spreadsheet'] = data.spreadsheet;
       if (data.pieComun) extras[STORAGE_KEY_PIE] = data.pieComun;
 
+      var importarRejilla = false;
+      if (data.preferenciasRejilla) {
+        var nCols = data.preferenciasRejilla.columnas ? data.preferenciasRejilla.columnas.length : 0;
+        importarRejilla = confirm('El archivo incluye preferencias de rejilla (' + nCols + ' columnas: orden, ancho, visibilidad). ¿Desea importarlas?');
+        if (importarRejilla) {
+          extras[STORAGE_KEY_PREFS] = data.preferenciasRejilla;
+        }
+      }
+
       if (Object.keys(extras).length > 0) {
         await chrome.storage.local.set(extras);
       }
@@ -485,6 +501,7 @@ function procesarImportacion(e) {
       if (data.gmailQuery) importados.push('query Gmail');
       if (data.spreadsheet) importados.push('spreadsheet');
       if (data.pieComun) importados.push('pie comun');
+      if (importarRejilla) importados.push('preferencias rejilla');
 
       resultadoEl.className = 'exito';
       resultadoEl.textContent = 'Importado: ' + importados.join(', ');
@@ -530,6 +547,7 @@ async function guardarGmailQueryUI() {
     var url = servicioActivo.url + '?action=configurarGmailQuery';
     var resp = await fetch(url, {
       method: 'POST',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gmailQuery: query })
     });
@@ -569,7 +587,7 @@ async function cargarGmailQueryInfo() {
 
   try {
     var url = servicioActivo.url + '?action=obtenerConfig';
-    var resp = await fetch(url);
+    var resp = await fetch(url, { credentials: 'omit' });
     var data = await resp.json();
     if (data.ok && data.gmailQuery) {
       input.value = data.gmailQuery;
@@ -631,6 +649,7 @@ async function detectarSpreadsheet() {
     const url = servicioActivo.url + '?action=configurarSpreadsheet';
     const resp = await fetch(url, {
       method: 'POST',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ spreadsheetId })
     });
@@ -690,6 +709,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-nuevo-estado').addEventListener('click', function() { abrirModalEstado(null); });
   document.getElementById('btn-guardar-estado').addEventListener('click', guardarEstadoDesdeModal);
   document.getElementById('btn-cancelar-estado').addEventListener('click', cerrarModalEstado);
+
+  // Reglas de acciones
+  document.getElementById('btn-nueva-regla').addEventListener('click', function() { abrirModalRegla(null); });
+  document.getElementById('btn-restaurar-reglas').addEventListener('click', restaurarReglasDefault);
+  document.getElementById('btn-guardar-regla').addEventListener('click', guardarReglaDesdeModal);
+  document.getElementById('btn-cancelar-regla').addEventListener('click', cerrarModalRegla);
+  document.getElementById('btn-agregar-accion-regla').addEventListener('click', _agregarAccionRegla);
+  document.getElementById('regla-campo').addEventListener('change', _poblarSelectValores);
 
   // Gmail Query
   document.getElementById('btn-guardar-gmail-query').addEventListener('click', guardarGmailQueryUI);

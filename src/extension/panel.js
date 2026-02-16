@@ -44,6 +44,10 @@ let pieComun = '';
 let filtroGlobalActivo = false;
 const CAMPOS_BUSCABLES = ['estado', 'fase', 'codCar', 'nombreTransportista', 'emailRemitente', 'interlocutor', 'asunto', 'tipoTarea', 'vinculacion', 'fechaCorreo', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega', 'zona', 'zDest'];
 let fasesCardActivas = null;
+let almacenNotas = {};
+let almacenHistorial = {};
+const STORAGE_KEY_NOTAS = 'tarealog_notas';
+const STORAGE_KEY_HISTORIAL = 'tarealog_historial';
 let filtroCorreoActivo = false;
 let filtroCargaActivo = false;
 let filtroDescargaActivo = false;
@@ -166,6 +170,19 @@ function crearColumnas() {
         return String(v);
       },
       headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Ult', field: 'esUltimoHilo', width: 40,
+      hozAlign: 'center',
+      headerFilter: 'list',
+      headerFilterParams: { values: { '': 'Todos', 'true': 'Si', 'false': 'No' } },
+      headerFilterFunc: function(headerValue, rowValue) {
+        if (headerValue === '') return true;
+        return String(!!rowValue) === headerValue;
+      },
+      formatter: function(cell) { return cell.getValue() ? '*' : ''; },
+      headerMenu: columnVisibilityMenu,
+      tooltip: 'Ultimo mensaje del hilo'
     },
     {
       title: 'CODCAR', field: 'codCar', width: 70,
@@ -302,12 +319,117 @@ function crearColumnas() {
       headerMenu: columnVisibilityMenu
     },
     {
+      title: 'Notas', field: '_notas', width: 50,
+      headerSort: false,
+      hozAlign: 'center',
+      formatter: formatearNotasCell,
+      accessorDownload: false,
+      headerMenu: columnVisibilityMenu
+    },
+    {
+      title: 'Rec', field: '_recordatorios', width: 40,
+      headerSort: false,
+      hozAlign: 'center',
+      formatter: formatearRecordatoriosCell,
+      accessorDownload: false,
+      headerMenu: columnVisibilityMenu,
+      tooltip: 'Recordatorios activos'
+    },
+    {
+      title: 'Prog', field: '_programados', width: 40,
+      headerSort: false,
+      hozAlign: 'center',
+      formatter: formatearProgramadosCell,
+      accessorDownload: false,
+      headerMenu: columnVisibilityMenu,
+      tooltip: 'Envios programados pendientes'
+    },
+    {
       title: 'Acciones', field: 'vinculacion', width: 80,
       headerSort: false,
       formatter: formatearAcciones,
       headerMenu: columnVisibilityMenu
     }
   ];
+}
+
+function formatearNotasCell(cell) {
+  var row = cell.getRow().getData();
+  var clave = row.codCar || row.threadId;
+  if (!clave) return '';
+  var etiqueta = row.codCar ? 'Carga ' + row.codCar : 'Hilo';
+  var count = contarNotas(clave, almacenNotas);
+
+  var btn = document.createElement('button');
+  btn.className = 'btn-notas-cell';
+  btn.title = count > 0 ? count + ' nota(s)' : 'Agregar nota';
+  btn.textContent = count > 0 ? '\uD83D\uDCDD' : '\u270F\uFE0F';
+  if (count > 0) {
+    var badge = document.createElement('span');
+    badge.className = 'notas-count-badge';
+    badge.textContent = count;
+    btn.appendChild(badge);
+  }
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    abrirModalNotas(clave, etiqueta);
+  });
+  return btn;
+}
+
+function formatearRecordatoriosCell(cell) {
+  var row = cell.getRow().getData();
+  var codCar = row.codCar;
+  if (!codCar || !recordatoriosCache || recordatoriosCache.length === 0) return '';
+
+  var ahora = new Date();
+  var count = recordatoriosCache.filter(function(r) {
+    return r.codCar === codCar && new Date(r.fechaDisparo).getTime() > ahora.getTime();
+  }).length;
+
+  if (count === 0) return '';
+  var span = document.createElement('span');
+  span.className = 'btn-notas-cell';
+  span.title = count + ' recordatorio(s) activo(s)';
+  span.textContent = '\u23F0';
+  var badge = document.createElement('span');
+  badge.className = 'notas-count-badge';
+  badge.textContent = count;
+  span.appendChild(badge);
+  span.style.cursor = 'pointer';
+  span.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var panel = document.getElementById('panel-recordatorios');
+    if (panel.classList.contains('hidden')) togglePanelRecordatorios();
+  });
+  return span;
+}
+
+function formatearProgramadosCell(cell) {
+  var row = cell.getRow().getData();
+  var threadId = row.threadId;
+  if (!threadId || !programadosCache || programadosCache.length === 0) return '';
+
+  var count = programadosCache.filter(function(p) {
+    return p.threadId === threadId && p.estado === 'PENDIENTE';
+  }).length;
+
+  if (count === 0) return '';
+  var span = document.createElement('span');
+  span.className = 'btn-notas-cell';
+  span.title = count + ' envio(s) programado(s)';
+  span.textContent = '\uD83D\uDCE8';
+  var badge = document.createElement('span');
+  badge.className = 'notas-count-badge';
+  badge.textContent = count;
+  span.appendChild(badge);
+  span.style.cursor = 'pointer';
+  span.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var panel = document.getElementById('panel-programados');
+    if (panel.classList.contains('hidden')) togglePanelProgramados();
+  });
+  return span;
 }
 
 async function guardarPreferencias() {
@@ -361,48 +483,206 @@ function calcularAlturaTabla() {
   const controls = document.getElementById('controls');
   const panelBulk = document.getElementById('panel-bulk');
   const panelFiltros = document.getElementById('panel-filtros');
+  const panelDashboard = document.getElementById('panel-dashboard');
+  const actionBar = document.getElementById('action-bar');
   const footer = document.querySelector('footer');
   const hHeader = header ? header.offsetHeight : 0;
   const hControls = controls ? controls.offsetHeight : 0;
   const hBulk = (panelBulk && !panelBulk.classList.contains('hidden')) ? panelBulk.offsetHeight : 0;
   const hFiltros = (panelFiltros && !panelFiltros.classList.contains('hidden')) ? panelFiltros.offsetHeight : 0;
+  const hDashboard = (panelDashboard && !panelDashboard.classList.contains('hidden')) ? panelDashboard.offsetHeight : 0;
+  const hActionBar = (actionBar && !actionBar.classList.contains('hidden')) ? actionBar.offsetHeight : 0;
   const hFooter = footer ? footer.offsetHeight : 0;
-  return window.innerHeight - hHeader - hControls - hBulk - hFiltros - hFooter - 32;
+  return window.innerHeight - hHeader - hControls - hBulk - hFiltros - hDashboard - hActionBar - hFooter - 32;
 }
 
+function mostrarToast(mensaje, tipo) {
+  var contenedor = document.getElementById('toast-container');
+  if (!contenedor) return;
+  var toast = document.createElement('div');
+  toast.className = 'toast toast-' + (tipo || 'info');
+  toast.textContent = mensaje;
+  contenedor.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 5000);
+}
+
+function marcarCeldaError(cell) {
+  if (!cell || !cell.getElement) return;
+  cell.getElement().classList.add('celda-error');
+}
+
+function limpiarCeldaError(cell) {
+  if (!cell || !cell.getElement) return;
+  cell.getElement().classList.remove('celda-error');
+}
+
+var _propagandoHilo = false;
+
 async function persistirCambio(cell) {
+  // Guard: evitar reentrada cuando fila.update() dispara cellEdited
+  if (_propagandoHilo) return;
+
   const campo = cell.getField();
   const row = cell.getRow().getData();
   const valor = cell.getValue();
+  const valorAnterior = cell.getOldValue ? cell.getOldValue() : '';
   const messageId = row.messageId;
+  const threadId = row.threadId;
 
-  const idx = registros.findIndex(r => r.messageId === messageId);
-  if (idx >= 0) registros[idx][campo] = valor;
+  // Evaluar reglas de accion
+  var reglasConfig = configActual && configActual.reglasAcciones;
+  var resultadosReglas = typeof evaluarReglas === 'function'
+    ? evaluarReglas(reglasConfig, campo, valor, valorAnterior)
+    : [];
+
+  // Determinar si hay que propagar al hilo (desde reglas o fallback)
+  var debePropagarHilo = resultadosReglas.some(function(r) {
+    return r.acciones.some(function(a) { return a.tipo === 'PROPAGAR_HILO'; });
+  });
+
+  // Fallback: si no hay reglas configuradas, propagar por defecto
+  if (!reglasConfig && (campo === 'fase' || campo === 'estado' || campo === 'codCar')) {
+    debePropagarHilo = true;
+  }
+
+  var propagarAlHilo = debePropagarHilo && threadId;
+  if (propagarAlHilo) {
+    var valorPropagar = valor;
+
+    // codCar: nunca propagar vacio — buscar valor existente en el hilo
+    if (campo === 'codCar' && !valor) {
+      var hermano = registros.find(function(r) { return r.threadId === threadId && r.codCar; });
+      if (hermano) {
+        valorPropagar = hermano.codCar;
+      } else {
+        propagarAlHilo = false;
+      }
+    }
+
+    if (propagarAlHilo) {
+      registros.forEach(function(r) {
+        if (r.threadId === threadId) r[campo] = valorPropagar;
+      });
+      if (tabla) {
+        _propagandoHilo = true;
+        try {
+          tabla.getRows().forEach(function(fila) {
+            var d = fila.getData();
+            if (d.threadId === threadId && d.messageId !== messageId) {
+              fila.update({ [campo]: valorPropagar });
+            }
+          });
+        } finally {
+          _propagandoHilo = false;
+        }
+      }
+    }
+  }
+
+  if (!propagarAlHilo) {
+    var idx = registros.findIndex(function(r) { return r.messageId === messageId; });
+    if (idx >= 0) registros[idx][campo] = valor;
+  }
   await chrome.storage.local.set({ registros });
 
   const url = obtenerUrlActiva();
   if (url) {
-    fetch(url + '?action=actualizarCampo', {
-      method: 'POST',
-      body: JSON.stringify({ messageId, campo, valor })
-    }).catch(() => {});
+    var accion = propagarAlHilo ? 'actualizarCampoPorThread' : 'actualizarCampo';
+    var valorBackend = propagarAlHilo ? valorPropagar : valor;
+    var payload = propagarAlHilo
+      ? { threadId: threadId, campo: campo, valor: valorBackend }
+      : { messageId: messageId, campo: campo, valor: valorBackend };
+
+    var resultado = await ejecutarConRetry(async function() {
+      var resp = await fetch(url + '?action=' + accion, {
+        method: 'POST',
+        credentials: 'omit',
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return { ok: true };
+    }, 2);
+
+    if (!resultado.ok) {
+      mostrarToast('Error al guardar "' + campo + '". Comprueba la conexion.', 'error');
+      marcarCeldaError(cell);
+    } else {
+      limpiarCeldaError(cell);
+    }
   }
 
-  // Sugerencias automaticas al cambiar fase
-  if (campo === 'fase' && configActual && typeof generarSugerencia === 'function') {
-    var sug = generarSugerencia(valor, configActual);
-    if (sug) {
-      var aceptar = confirm('Sugerencia: "' + sug.texto + '" en ' + sug.horasAntes + 'h. ¿Crear recordatorio?');
-      if (aceptar) {
-        var rec = aceptarSugerencia(sug, row.codCar || null, new Date());
-        var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
-        var lista = stored[STORAGE_KEY_RECORDATORIOS] || [];
-        lista.push(rec);
-        await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: lista });
-        recordatoriosCache = lista;
-        renderRecordatorios();
+  // Registrar cambio en historial (local + backend)
+  if ((campo === 'fase' || campo === 'estado') && typeof registrarAccion === 'function') {
+    try {
+      var claveH = row.codCar || row.threadId || '0';
+      var desc = campo === 'fase' ? 'Fase -> ' + valor : 'Estado -> ' + valor;
+      almacenHistorial = registrarAccion('FASE', claveH, desc, almacenHistorial, new Date()).almacen;
+      chrome.storage.local.set({ [STORAGE_KEY_HISTORIAL]: almacenHistorial });
+      syncBackend('registrarHistorial', { clave: claveH, tipo: 'FASE', descripcion: desc });
+    } catch (e) { /* silencioso */ }
+  }
+
+  // Ejecutar acciones de reglas (excepto PROPAGAR_HILO, ya procesado arriba)
+  for (var ri = 0; ri < resultadosReglas.length; ri++) {
+    var accReglas = resultadosReglas[ri].acciones;
+    for (var ai = 0; ai < accReglas.length; ai++) {
+      if (accReglas[ai].tipo !== 'PROPAGAR_HILO') {
+        await ejecutarAccionRegla(accReglas[ai], row);
       }
     }
+  }
+}
+
+async function ejecutarAccionRegla(accion, rowData) {
+  var params = accion.params || {};
+
+  switch (accion.tipo) {
+    case 'SUGERIR_RECORDATORIO':
+      if (typeof aceptarSugerencia === 'function') {
+        var aceptar = confirm('Sugerencia: "' + params.texto + '" en ' + params.horas + 'h. ¿Crear recordatorio?');
+        if (aceptar) {
+          var sug = { texto: params.texto, horasAntes: params.horas };
+          var rec = aceptarSugerencia(sug, rowData.codCar || null, new Date());
+          var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
+          var lista = stored[STORAGE_KEY_RECORDATORIOS] || [];
+          lista.push(rec);
+          await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: lista });
+          recordatoriosCache = lista;
+          if (typeof renderRecordatorios === 'function') renderRecordatorios();
+        }
+      }
+      break;
+
+    case 'CREAR_RECORDATORIO':
+      if (typeof aceptarSugerencia === 'function') {
+        var sugAuto = { texto: params.texto, horasAntes: params.horas };
+        var recAuto = aceptarSugerencia(sugAuto, rowData.codCar || null, new Date());
+        var storedAuto = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
+        var listaAuto = storedAuto[STORAGE_KEY_RECORDATORIOS] || [];
+        listaAuto.push(recAuto);
+        await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: listaAuto });
+        recordatoriosCache = listaAuto;
+        if (typeof renderRecordatorios === 'function') renderRecordatorios();
+        mostrarToast('Recordatorio creado: ' + params.texto, 'info');
+      }
+      break;
+
+    case 'MOSTRAR_AVISO':
+      mostrarToast(params.mensaje || 'Aviso', 'info');
+      break;
+
+    case 'CAMBIAR_FASE':
+      // Solo aviso — el cambio real se hace desde acciones contextuales
+      break;
+
+    case 'CAMBIAR_ESTADO':
+      break;
+
+    case 'PRESELECCIONAR_PLANTILLA':
+      break;
+
+    case 'INICIAR_SECUENCIA':
+      break;
   }
 }
 
@@ -437,7 +717,18 @@ async function inicializarTabla(datos) {
   }
 
   tabla.on('cellEdited', persistirCambio);
-  tabla.on('rowSelectionChanged', () => { actualizarBotonResponder(); actualizarBulkPanel(); });
+  tabla.on('rowSelectionChanged', function() {
+    actualizarBotonResponder();
+    actualizarBulkPanel();
+    // Action bar: mostrar solo cuando hay exactamente 1 fila seleccionada
+    var seleccionados = tabla.getSelectedData();
+    if (seleccionados.length === 1) {
+      renderActionBar(seleccionados[0]);
+    } else {
+      renderActionBar(null);
+      setTimeout(function() { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
+    }
+  });
   conectarPersistencia(tabla);
   vincularCursorConClicks();
   filaCursorPos = -1;
@@ -509,12 +800,12 @@ async function renderTabla() {
   if (!tabla) {
     await inicializarTabla(registros);
     tabla.on('tableBuilt', () => {
-      actualizarConteo();
+      aplicarTodosFiltros();
     });
   } else {
     await tabla.replaceData(registros);
+    actualizarConteo();
   }
-  actualizarConteo();
 }
 
 function obtenerUrlActiva() {
@@ -593,6 +884,41 @@ async function aplicarConfigSesion() {
 // Alias para compatibilidad
 var aplicarConfigFasesSesion = aplicarConfigSesion;
 
+function marcarUltimosDelHilo(regs) {
+  // Para cada threadId, guardar el messageId del registro mas reciente
+  var ultimoIdPorHilo = {};
+  var ultimaFechaPorHilo = {};
+  regs.forEach(function(r) {
+    if (!r.threadId) return;
+    var fecha = r.fechaCorreo ? new Date(r.fechaCorreo).getTime() : 0;
+    if (!ultimaFechaPorHilo[r.threadId] || fecha >= ultimaFechaPorHilo[r.threadId]) {
+      ultimaFechaPorHilo[r.threadId] = fecha;
+      ultimoIdPorHilo[r.threadId] = r.messageId;
+    }
+  });
+  regs.forEach(function(r) {
+    if (!r.threadId) { r.esUltimoHilo = true; return; }
+    r.esUltimoHilo = r.messageId === ultimoIdPorHilo[r.threadId];
+  });
+  return regs;
+}
+
+async function cargarCachesParaMarcas() {
+  // Recordatorios desde storage local
+  var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
+  recordatoriosCache = stored[STORAGE_KEY_RECORDATORIOS] || [];
+
+  // Programados desde backend
+  var url = obtenerUrlActiva();
+  if (url) {
+    try {
+      var response = await fetch(url + '?action=getProgramados', { credentials: 'omit' });
+      var data = await response.json();
+      programadosCache = data.programados || [];
+    } catch (e) { /* mantener cache anterior */ }
+  }
+}
+
 async function cargarDatos() {
   configActual = await cargar();
   actualizarFasesDesdeConfig();
@@ -601,18 +927,21 @@ async function cargarDatos() {
   poblarSelectEstados();
   await cargarServicios();
 
+  // Cargar caches para marcas en tabla
+  await cargarCachesParaMarcas();
+
   try {
     const cached = await chrome.storage.local.get(['registros', 'ultimoBarrido']);
     if (cached.registros) {
-      registros = cached.registros;
+      registros = marcarUltimosDelHilo(cached.registros);
       await renderTabla();
       actualizarFooter(cached.ultimoBarrido);
     }
     const url = obtenerUrlActiva();
     if (url) {
-      const response = await fetch(url + '?action=getRegistros');
+      const response = await fetch(url + '?action=getRegistros', { credentials: 'omit' });
       const data = await response.json();
-      registros = data.registros || [];
+      registros = marcarUltimosDelHilo(data.registros || []);
       await chrome.storage.local.set({ registros, ultimoBarrido: new Date().toISOString() });
       await renderTabla();
       actualizarFooter(new Date().toISOString());
@@ -629,7 +958,7 @@ async function ejecutarBarrido() {
   try {
     const url = obtenerUrlActiva();
     if (url) {
-      await fetch(url + '?action=procesarCorreos', { method: 'POST' });
+      await fetch(url + '?action=procesarCorreos', { method: 'POST', credentials: 'omit' });
       await cargarDatos();
     }
   } finally {
@@ -773,14 +1102,15 @@ function aplicarTodosFiltros() {
 
   if (definiciones.length > 0) {
     var filtros = construirFiltros(definiciones);
-    var filtrosSinCustom = filtros.filter(function(f) { return !f.func; });
-    var filtrosCustom = filtros.filter(function(f) { return f.func; });
-
-    filtrosSinCustom.forEach(function(f) {
-      tabla.addFilter(f.field, f.type, f.value);
-    });
-    filtrosCustom.forEach(function(f) {
-      tabla.addFilter(f.field, f.func, f.value);
+    filtros.forEach(function(f) {
+      if (f.func) {
+        // Filtro custom: envolver en función de fila para Tabulator
+        tabla.addFilter(function(data) {
+          return f.func(f.value, data[f.field]);
+        });
+      } else {
+        tabla.addFilter(f.field, f.type, f.value);
+      }
     });
   }
 
@@ -953,365 +1283,7 @@ async function toggleAgrupar() {
   await renderTabla();
 }
 
-// --- Respuesta masiva ---
-
-async function cargarPlantillasGuardadas() {
-  const result = await chrome.storage.local.get([STORAGE_KEY_PLANTILLAS, STORAGE_KEY_PIE]);
-  plantillasGuardadas = (result[STORAGE_KEY_PLANTILLAS] || {}).plantillas || [];
-  pieComun = result[STORAGE_KEY_PIE] || '';
-
-  if (plantillasGuardadas.length === 0) {
-    plantillasGuardadas = crearPlantillasPredefinidas();
-    await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
-  }
-}
-
-async function guardarPieComun() {
-  pieComun = document.getElementById('pie-comun').value;
-  await chrome.storage.local.set({ [STORAGE_KEY_PIE]: pieComun });
-}
-
-function obtenerPieComun() {
-  return pieComun || '';
-}
-
-function crearPlantillasPredefinidas() {
-  return [
-    crearPlantilla(
-      'Consulta hora carga',
-      'Re: {{asunto}}',
-      '<div style="font-family: Arial, sans-serif; line-height: 1.8; color: #333;">' +
-        '<p style="margin-bottom: 20px;">Estimad@ compañer@,</p>' +
-        '<p style="margin-bottom: 20px;">Respecto a la <b>carga del asunto</b>: ¿Cuál es su <b>hora prevista de llegada</b> al punto de carga?</p>' +
-        '<p style="margin-bottom: 20px;">Su reporte nos ayuda a mejorar la <b>planificación operativa</b>. Gracias por su <b>pronta respuesta</b>.</p>' +
-      '</div>',
-      ''
-    ),
-    crearPlantilla(
-      'Solicitud docs descarga',
-      'Re: {{asunto}}',
-      '<div style="font-family: Arial, sans-serif; line-height: 2.0; color: #333;">' +
-        '<p style="margin-bottom: 25px;">Estimad@ compañer@:</p>' +
-        '<p style="margin-bottom: 25px;">Esperamos que la entrega de la carga <b>referida al asunto</b> se haya realizado con éxito. ¿Podría confirmarnos si la descarga finalizó <b>sin incidencias ni diferencias</b>? En caso de cualquier novedad, le agradecemos que nos lo comunique.</p>' +
-        '<p style="margin-bottom: 25px;">Por ello, le solicitamos nos adelante por este medio los <b>documentos justificantes de la entrega</b> a la mayor brevedad. Si aún no dispone de los originales, las <b>fotografías</b> son válidas como adelanto.</p>' +
-        '<p style="margin-bottom: 25px;">Le recordamos que también debe remitirnos la <b>factura</b> y los <b>documentos de entrega originales</b> de forma física a nuestra oficina a la mayor brevedad posible.</p>' +
-        '<p>Gracias por su colaboración. Quedamos a su entera disposición.</p>' +
-      '</div>',
-      ''
-    ),
-    crearPlantilla(
-      'Recordatorio docs pendientes',
-      'Re: {{asunto}}',
-      '<div style="font-family: Arial, sans-serif; line-height: 2.0; color: #333;">' +
-        '<p style="margin-bottom: 14px;">Estimad@ compañer@:</p>' +
-        '<p style="margin-bottom: 14px;">Esperamos que se encuentre bien. Le escribimos en relación a la carga <b>referido al asunto</b>.</p>' +
-        '<p style="margin-bottom: 14px;">Salvo error u omisión, a fecha de hoy, todavía no hemos recibido los <b>documentos justificativos de la entrega</b>. Entendemos que los plazos pueden complicarse, pero le agradeceríamos enormemente que pudiera adelantárnoslos a la mayor brevedad.</p>' +
-        '<p style="margin-bottom: 25px;">Le recordamos que también debe remitirnos la <b>factura</b> y los <b>documentos de entrega originales</b> de forma física a nuestra oficina a la mayor brevedad posible.</p>' +
-        '<p>Agradecidos sinceramente por su gestión y atención, quedamos a su entera disposición.</p>' +
-      '</div>',
-      ''
-    )
-  ];
-}
-
-function abrirModalRespuesta() {
-  if (!tabla) return;
-  const seleccionados = tabla.getSelectedData();
-  const resultado = validarSeleccion(seleccionados);
-  if (!resultado.valido) return;
-
-  const destContainer = document.getElementById('respuesta-destinatarios');
-  const interlocutores = seleccionados.map(r => r.interlocutor || r.emailRemitente).filter(Boolean);
-  const unicos = [...new Set(interlocutores)];
-  destContainer.innerHTML = '<strong>Destinatarios:</strong> ' + unicos.join(', ');
-
-  const selectPlantilla = document.getElementById('respuesta-plantilla');
-  selectPlantilla.innerHTML = '<option value="">-- Sin plantilla --</option>';
-  plantillasGuardadas.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.alias;
-    selectPlantilla.appendChild(opt);
-  });
-
-  document.getElementById('respuesta-asunto').value = '';
-  document.getElementById('respuesta-cuerpo').value = '';
-  document.getElementById('respuesta-error').classList.add('hidden');
-  document.getElementById('preview-respuesta').classList.add('hidden');
-
-  const piePreview = document.getElementById('respuesta-pie-preview');
-  if (pieComun) {
-    piePreview.innerHTML = '<small>Pie comun:</small> ' + sanitizarHtml(pieComun);
-    piePreview.style.display = '';
-  } else {
-    piePreview.style.display = 'none';
-  }
-
-  document.getElementById('modal-respuesta').classList.remove('hidden');
-}
-
-function alSeleccionarPlantillaRespuesta() {
-  const id = document.getElementById('respuesta-plantilla').value;
-  if (!id) return;
-
-  const plantilla = plantillasGuardadas.find(p => p.id === id);
-  if (!plantilla) return;
-
-  document.getElementById('respuesta-asunto').value = plantilla.asunto;
-  document.getElementById('respuesta-cuerpo').value = plantilla.cuerpo;
-}
-
-async function enviarRespuestaMasiva() {
-  const seleccionados = tabla.getSelectedData();
-  const plantilla = {
-    asunto: document.getElementById('respuesta-asunto').value,
-    cuerpo: document.getElementById('respuesta-cuerpo').value,
-    firma: obtenerPieComun()
-  };
-
-  const payload = construirPayload(seleccionados, plantilla);
-  // Enriquecer cada destinatario con campos para/cc/cco del registro
-  payload.destinatarios.forEach(function(dest, i) {
-    var reg = seleccionados[i];
-    dest.para = reg.para || '';
-    dest.cc = reg.cc || '';
-    dest.cco = reg.cco || '';
-  });
-  payload.emailsPorMinuto = (configActual && configActual.emailsPorMinuto) || 10;
-  const url = obtenerUrlActiva();
-  if (!url) return;
-
-  const btnEnviar = document.getElementById('btn-enviar-respuesta');
-  btnEnviar.disabled = true;
-  btnEnviar.textContent = 'Enviando...';
-
-  try {
-    const response = await fetch(url + '?action=enviarRespuesta', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json();
-
-    if (data.error) {
-      document.getElementById('respuesta-error').textContent = data.error;
-      document.getElementById('respuesta-error').classList.remove('hidden');
-      return;
-    }
-
-    cerrarModalRespuesta();
-    await cargarDatos();
-  } catch (err) {
-    document.getElementById('respuesta-error').textContent = 'Error al enviar: ' + err.message;
-    document.getElementById('respuesta-error').classList.remove('hidden');
-  } finally {
-    btnEnviar.disabled = false;
-    btnEnviar.textContent = 'Enviar';
-  }
-}
-
-function cerrarModalRespuesta() {
-  document.getElementById('modal-respuesta').classList.add('hidden');
-  document.getElementById('preview-respuesta').classList.add('hidden');
-}
-
-function previsualizarRespuesta() {
-  if (!tabla) return;
-  const seleccionados = tabla.getSelectedData();
-  const plantilla = {
-    asunto: document.getElementById('respuesta-asunto').value,
-    cuerpo: document.getElementById('respuesta-cuerpo').value,
-    firma: obtenerPieComun()
-  };
-
-  const result = generarPrevisualizacion(seleccionados, plantilla, sanitizarHtml);
-  const container = document.getElementById('preview-respuesta-contenido');
-  container.innerHTML = '<p><strong>Asunto:</strong> ' + (result.asuntoPreview || '') + '</p>' + result.cuerpoPreview;
-  document.getElementById('preview-respuesta').classList.remove('hidden');
-}
-
-function cargarPieEnUI() {
-  const textarea = document.getElementById('pie-comun');
-  if (textarea) textarea.value = pieComun || '';
-}
-
-// --- Plantillas UI ---
-
-function renderListaPlantillas() {
-  const container = document.getElementById('lista-plantillas');
-  container.innerHTML = '';
-
-  plantillasGuardadas.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'plantilla-item';
-    item.innerHTML = `<span class="plantilla-alias">${p.alias}</span>
-      <button class="btn-editar-plantilla btn-secundario" data-id="${p.id}">Editar</button>
-      <button class="btn-eliminar-plantilla btn-secundario" data-id="${p.id}">Eliminar</button>`;
-    container.appendChild(item);
-  });
-
-  container.querySelectorAll('.btn-editar-plantilla').forEach(btn => {
-    btn.addEventListener('click', () => editarPlantillaUI(btn.dataset.id));
-  });
-
-  container.querySelectorAll('.btn-eliminar-plantilla').forEach(btn => {
-    btn.addEventListener('click', () => eliminarPlantillaUI(btn.dataset.id));
-  });
-}
-
-function nuevaPlantillaUI() {
-  plantillaEditandoId = null;
-  document.getElementById('tpl-alias').value = '';
-  document.getElementById('tpl-asunto').value = '';
-  document.getElementById('tpl-cuerpo').value = '';
-  document.getElementById('editor-plantilla').classList.remove('hidden');
-  document.getElementById('preview-plantilla').classList.add('hidden');
-  document.getElementById('panel-variables').classList.add('hidden');
-}
-
-function editarPlantillaUI(id) {
-  const p = plantillasGuardadas.find(x => x.id === id);
-  if (!p) return;
-
-  plantillaEditandoId = id;
-  document.getElementById('tpl-alias').value = p.alias;
-  document.getElementById('tpl-asunto').value = p.asunto;
-  document.getElementById('tpl-cuerpo').value = p.cuerpo;
-  document.getElementById('editor-plantilla').classList.remove('hidden');
-}
-
-async function guardarPlantillaUI() {
-  const alias = document.getElementById('tpl-alias').value.trim();
-  const asunto = document.getElementById('tpl-asunto').value.trim();
-  const cuerpo = document.getElementById('tpl-cuerpo').value;
-
-  if (!alias) return;
-
-  if (plantillaEditandoId) {
-    const idx = plantillasGuardadas.findIndex(p => p.id === plantillaEditandoId);
-    if (idx >= 0) {
-      plantillasGuardadas[idx] = editarPlantilla(plantillasGuardadas[idx], { alias, asunto, cuerpo });
-    }
-  } else {
-    const nueva = crearPlantilla(alias, asunto, cuerpo, '');
-    plantillasGuardadas.push(nueva);
-    plantillaEditandoId = nueva.id;
-  }
-
-  await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
-  renderListaPlantillas();
-}
-
-async function eliminarPlantillaUI(id) {
-  plantillasGuardadas = eliminarPlantilla(id, plantillasGuardadas);
-  await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
-  renderListaPlantillas();
-}
-
-function exportarPlantillas() {
-  const datos = { version: 1, plantillas: plantillasGuardadas };
-
-  if (pieComun) {
-    const incluirPie = confirm('Se ha detectado un pie comun configurado.\n\nPulse Aceptar para INCLUIR el pie en la exportacion.\nPulse Cancelar para exportar SOLO las plantillas (sin pie).');
-    if (incluirPie) datos.pieComun = pieComun;
-  }
-
-  const json = JSON.stringify(datos, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tarealog_plantillas_' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function importarPlantillas() {
-  document.getElementById('input-importar-plantillas').click();
-}
-
-async function procesarImportPlantillas(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const resultado = document.getElementById('plantillas-import-resultado');
-
-  try {
-    const texto = await file.text();
-    const datos = JSON.parse(texto);
-
-    if (!datos.plantillas || !Array.isArray(datos.plantillas)) {
-      resultado.textContent = 'Archivo no valido: no contiene plantillas';
-      resultado.className = 'error';
-      resultado.classList.remove('hidden');
-      return;
-    }
-
-    const tienePie = datos.pieComun !== undefined;
-    let importarPie = false;
-    if (tienePie) {
-      importarPie = confirm('El archivo incluye un pie comun. ¿Desea importarlo tambien?\n\nPie: ' + datos.pieComun.substring(0, 80) + '...');
-    }
-
-    const modo = confirm('¿Reemplazar todas las plantillas actuales?\n\nAceptar = Reemplazar\nCancelar = Agregar a las existentes');
-
-    if (modo) {
-      plantillasGuardadas = datos.plantillas;
-    } else {
-      datos.plantillas.forEach(p => {
-        p.id = 'tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-        plantillasGuardadas.push(p);
-      });
-    }
-
-    await chrome.storage.local.set({ [STORAGE_KEY_PLANTILLAS]: { plantillas: plantillasGuardadas } });
-
-    if (importarPie) {
-      pieComun = datos.pieComun;
-      await chrome.storage.local.set({ [STORAGE_KEY_PIE]: pieComun });
-      cargarPieEnUI();
-    }
-
-    renderListaPlantillas();
-    const count = datos.plantillas.length;
-    resultado.textContent = count + ' plantilla' + (count !== 1 ? 's' : '') + ' importada' + (count !== 1 ? 's' : '') + (importarPie ? ' + pie comun' : '');
-    resultado.className = 'exito';
-    resultado.classList.remove('hidden');
-  } catch (e) {
-    resultado.textContent = 'Error al leer archivo: ' + e.message;
-    resultado.className = 'error';
-    resultado.classList.remove('hidden');
-  }
-
-  event.target.value = '';
-}
-
-function previsualizarPlantilla() {
-  const cuerpo = document.getElementById('tpl-cuerpo').value;
-  const pie = obtenerPieComun();
-
-  const datosPrueba = {
-    codCar: '168345', nombreTransportista: 'Transportes Garcia SL',
-    codTra: 'TRA001', emailRemitente: 'garcia@email.com',
-    asunto: 'Carga 168345', fechaCorreo: '13/02/2026 15:30',
-    estado: 'ENVIADO', tipoTarea: 'OPERATIVO'
-  };
-
-  const cuerpoInterpolado = interpolar(cuerpo, datosPrueba);
-  const pieInterpolado = pie ? '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">' + interpolar(pie, datosPrueba) : '';
-  const htmlFinal = sanitizarHtml(cuerpoInterpolado + pieInterpolado);
-
-  document.getElementById('preview-contenido').innerHTML = htmlFinal;
-  document.getElementById('preview-plantilla').classList.remove('hidden');
-}
-
-function mostrarVariablesDisponibles() {
-  const vars = obtenerVariablesDisponibles();
-  const tabla = document.getElementById('tabla-variables');
-  tabla.innerHTML = '<tr><th>Variable</th><th>Descripcion</th></tr>' +
-    vars.map(v => `<tr><td><code>{{${v.nombre}}}</code></td><td>${v.descripcion}</td></tr>`).join('');
-  document.getElementById('panel-variables').classList.toggle('hidden');
-}
-
+// Respuesta masiva, plantillas -> panel-plantillas.js
 // --- Servicios GAS UI (Config tab) ---
 
 function renderListaServicios() {
@@ -1702,44 +1674,48 @@ function actualizarBulkPanel() {
 
 async function ejecutarCambioMasivo() {
   if (!tabla) return;
-  const seleccionados = tabla.getSelectedData();
+  var seleccionados = tabla.getSelectedData();
   if (seleccionados.length === 0) return;
 
-  const ids = seleccionados.map(r => r.messageId);
-  const chkFase = document.getElementById('chk-bulk-fase');
-  const chkEstado = document.getElementById('chk-bulk-estado');
+  var chkFase = document.getElementById('chk-bulk-fase');
+  var chkEstado = document.getElementById('chk-bulk-estado');
+  var fase = chkFase.checked ? document.getElementById('bulk-fase').value : null;
+  var estado = chkEstado.checked ? document.getElementById('bulk-estado').value : null;
 
-  if (chkFase.checked) {
-    const fase = document.getElementById('bulk-fase').value;
-    registros = aplicarCambioMasivo(registros, ids, 'fase', fase);
-  }
+  // Recopilar threadIds unicos de los seleccionados
+  var threadsAfectados = {};
+  seleccionados.forEach(function(r) {
+    if (r.threadId) threadsAfectados[r.threadId] = true;
+  });
+  var threadIds = Object.keys(threadsAfectados);
 
-  if (chkEstado.checked) {
-    const estado = document.getElementById('bulk-estado').value;
-    registros = aplicarCambioMasivo(registros, ids, 'estado', estado);
-  }
+  // Propagar a todo el hilo (local)
+  registros.forEach(function(r) {
+    if (r.threadId && threadsAfectados[r.threadId]) {
+      if (fase !== null) r.fase = fase;
+      if (estado !== null) r.estado = estado;
+    }
+  });
 
   await chrome.storage.local.set({ registros });
   await renderTabla();
   tabla.deselectRow();
 
-  const url = obtenerUrlActiva();
+  // Backend: un request por threadId (en vez de por messageId)
+  var url = obtenerUrlActiva();
   if (url) {
-    ids.forEach(messageId => {
-      const reg = registros.find(r => r.messageId === messageId);
-      if (reg) {
-        if (chkFase.checked) {
-          fetch(url + '?action=actualizarCampo', {
-            method: 'POST',
-            body: JSON.stringify({ messageId, campo: 'fase', valor: reg.fase })
-          }).catch(() => {});
-        }
-        if (chkEstado.checked) {
-          fetch(url + '?action=actualizarCampo', {
-            method: 'POST',
-            body: JSON.stringify({ messageId, campo: 'estado', valor: reg.estado })
-          }).catch(() => {});
-        }
+    threadIds.forEach(function(threadId) {
+      if (fase !== null) {
+        fetch(url + '?action=actualizarCampoPorThread', {
+          method: 'POST', credentials: 'omit',
+          body: JSON.stringify({ threadId: threadId, campo: 'fase', valor: fase })
+        }).catch(function() {});
+      }
+      if (estado !== null) {
+        fetch(url + '?action=actualizarCampoPorThread', {
+          method: 'POST', credentials: 'omit',
+          body: JSON.stringify({ threadId: threadId, campo: 'estado', valor: estado })
+        }).catch(function() {});
       }
     });
   }
@@ -1768,6 +1744,7 @@ async function confirmarVinculacion() {
     if (url) {
       await fetch(url + '?action=vincularManual', {
         method: 'POST',
+        credentials: 'omit',
         body: JSON.stringify({ threadId: threadIdSeleccionado, codCar })
       });
       await cargarDatos();
@@ -1781,366 +1758,12 @@ async function confirmarVinculacion() {
 
 const STORAGE_KEY_RECORDATORIOS = 'tarealog_recordatorios';
 let recordatoriosCache = [];
-let recordatorioCodCar = null;
 
-function togglePanelRecordatorios() {
-  var panel = document.getElementById('panel-recordatorios');
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) cargarRecordatoriosUI();
-  setTimeout(function() { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
-}
-
-async function cargarRecordatoriosUI() {
-  var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
-  recordatoriosCache = stored[STORAGE_KEY_RECORDATORIOS] || [];
-  renderRecordatorios();
-}
-
-function renderRecordatorios() {
-  var activos = obtenerActivos(recordatoriosCache, new Date());
-  var container = document.getElementById('lista-recordatorios');
-  var vacio = document.getElementById('recordatorios-vacio');
-  var count = document.getElementById('recordatorios-count');
-  container.innerHTML = '';
-
-  if (activos.length === 0) {
-    vacio.classList.remove('hidden');
-    count.textContent = '';
-    return;
-  }
-  vacio.classList.add('hidden');
-  count.textContent = activos.length + ' activo' + (activos.length !== 1 ? 's' : '');
-
-  activos.forEach(function(rec) {
-    var div = document.createElement('div');
-    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid #eee;font-size:12px';
-    var disparo = new Date(rec.fechaDisparo);
-    var ahora = new Date();
-    var diffMin = Math.round((disparo - ahora) / 60000);
-    var countdown = diffMin > 60 ? Math.round(diffMin / 60) + 'h' : diffMin + 'min';
-
-    div.innerHTML =
-      '<div style="flex:1">' +
-        '<strong>' + (rec.codCar ? 'Carga ' + rec.codCar + ' — ' : '') + '</strong>' +
-        rec.texto +
-        ' <span style="color:#999">(' + countdown + ')</span>' +
-        (rec.origen === 'sugerido' ? ' <span style="color:#2196F3;font-size:10px">[sugerido]</span>' : '') +
-      '</div>';
-
-    var btnEliminar = document.createElement('button');
-    btnEliminar.className = 'btn-secundario';
-    btnEliminar.textContent = 'X';
-    btnEliminar.style.cssText = 'font-size:10px;padding:2px 6px;margin-left:8px';
-    btnEliminar.addEventListener('click', function() { eliminarRecordatorioUI(rec.id); });
-    div.appendChild(btnEliminar);
-    container.appendChild(div);
-  });
-
-  // Badge en boton
-  var btn = document.getElementById('btn-toggle-recordatorios');
-  btn.textContent = activos.length > 0 ? 'Recordatorios (' + activos.length + ')' : 'Recordatorios';
-}
-
-async function eliminarRecordatorioUI(id) {
-  recordatoriosCache = eliminarRecordatorio(id, recordatoriosCache);
-  await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
-  renderRecordatorios();
-}
-
-function abrirModalRecordatorio(codCar) {
-  recordatorioCodCar = codCar || null;
-  document.getElementById('recordatorio-texto').value = '';
-  document.getElementById('recordatorio-preset').value = '1h';
-  document.getElementById('recordatorio-error').classList.add('hidden');
-  document.getElementById('recordatorio-carga-info').textContent = codCar ? 'Carga: ' + codCar : 'Sin carga asociada';
-  document.getElementById('modal-recordatorio').classList.remove('hidden');
-  document.getElementById('recordatorio-texto').focus();
-}
-
-async function guardarRecordatorioUI() {
-  var texto = document.getElementById('recordatorio-texto').value;
-  var preset = document.getElementById('recordatorio-preset').value;
-
-  try {
-    var rec = crearRecordatorio(texto, recordatorioCodCar, preset, new Date(), recordatoriosCache);
-    recordatoriosCache.push(rec);
-    await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
-    chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
-    cerrarModalRecordatorio();
-    renderRecordatorios();
-  } catch (e) {
-    document.getElementById('recordatorio-error').textContent = e.message;
-    document.getElementById('recordatorio-error').classList.remove('hidden');
-  }
-}
-
-function cerrarModalRecordatorio() {
-  document.getElementById('modal-recordatorio').classList.add('hidden');
-  recordatorioCodCar = null;
-}
-
-// --- Envios programados ---
+// Recordatorios UI -> panel-recordatorios.js
 
 let programadosCache = [];
 
-function togglePanelProgramados() {
-  var panel = document.getElementById('panel-programados');
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) cargarProgramados();
-  setTimeout(function() { if (tabla) tabla.setHeight(calcularAlturaTabla()); }, 50);
-}
-
-async function cargarProgramados() {
-  var url = obtenerUrlActiva();
-  if (!url) return;
-
-  try {
-    var response = await fetch(url + '?action=getProgramados');
-    var data = await response.json();
-    programadosCache = data.programados || [];
-  } catch (e) {
-    programadosCache = [];
-  }
-  renderTablaProgramados();
-}
-
-function renderTablaProgramados() {
-  var filtro = document.getElementById('filtro-programados').value;
-  var lista = filtrarProgramados(programadosCache, filtro);
-  lista = ordenarPorFechaProgramada(lista);
-
-  var tbody = document.querySelector('#tabla-programados tbody');
-  var vacio = document.getElementById('programados-vacio');
-  tbody.innerHTML = '';
-
-  if (lista.length === 0) {
-    vacio.classList.remove('hidden');
-    return;
-  }
-  vacio.classList.add('hidden');
-
-  lista.forEach(function(p) {
-    var estado = formatearEstadoProgramado(p.estado);
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td class="' + estado.clase + '">' + estado.html + '</td>' +
-      '<td>' + (p.interlocutor || '--') + '</td>' +
-      '<td>' + (p.asunto || '--') + '</td>' +
-      '<td>' + formatearFechaCorta(p.fechaProgramada) + '</td>' +
-      '<td>' + formatearFechaCorta(p.fechaEnvio) + '</td>' +
-      '<td></td>';
-
-    if (p.estado === 'PENDIENTE') {
-      var btn = document.createElement('button');
-      btn.className = 'btn-secundario';
-      btn.textContent = 'Cancelar';
-      btn.style.fontSize = '11px';
-      btn.style.padding = '2px 8px';
-      btn.addEventListener('click', function() { cancelarProgramado(p.id); });
-      tr.lastChild.appendChild(btn);
-    } else if (p.estado === 'ERROR' && p.errorDetalle) {
-      tr.lastChild.textContent = p.errorDetalle.substring(0, 40);
-      tr.lastChild.title = p.errorDetalle;
-    }
-
-    tbody.appendChild(tr);
-  });
-
-  // Actualizar badge en boton
-  var conteo = contarPorEstado(programadosCache);
-  var btn = document.getElementById('btn-toggle-programados');
-  btn.textContent = conteo.PENDIENTE > 0 ? 'Programados (' + conteo.PENDIENTE + ')' : 'Programados';
-}
-
-async function cancelarProgramado(id) {
-  var url = obtenerUrlActiva();
-  if (!url) return;
-
-  try {
-    await fetch(url + '?action=cancelarProgramado', {
-      method: 'POST',
-      body: JSON.stringify({ id: id })
-    });
-    await cargarProgramados();
-  } catch (e) {
-    // silencioso
-  }
-}
-
-async function programarEnvioMasivo() {
-  var fecha = document.getElementById('programar-fecha').value;
-  if (!fecha) {
-    document.getElementById('respuesta-error').textContent = 'Selecciona fecha y hora para programar';
-    document.getElementById('respuesta-error').classList.remove('hidden');
-    return;
-  }
-
-  var fechaProg = new Date(fecha);
-  if (fechaProg <= new Date()) {
-    document.getElementById('respuesta-error').textContent = 'La fecha debe ser futura';
-    document.getElementById('respuesta-error').classList.remove('hidden');
-    return;
-  }
-
-  var seleccionados = tabla.getSelectedData();
-  var plantilla = {
-    asunto: document.getElementById('respuesta-asunto').value,
-    cuerpo: document.getElementById('respuesta-cuerpo').value,
-    firma: obtenerPieComun()
-  };
-
-  var payload = construirPayload(seleccionados, plantilla);
-  payload.destinatarios.forEach(function(dest, i) {
-    var reg = seleccionados[i];
-    dest.para = reg.para || '';
-    dest.cc = reg.cc || '';
-    dest.cco = reg.cco || '';
-  });
-
-  var url = obtenerUrlActiva();
-  if (!url) return;
-
-  var btnEnviar = document.getElementById('btn-enviar-respuesta');
-  btnEnviar.disabled = true;
-  btnEnviar.textContent = 'Programando...';
-
-  var errores = [];
-  var exitos = 0;
-
-  try {
-    for (var i = 0; i < payload.destinatarios.length; i++) {
-      var dest = payload.destinatarios[i];
-      var cuerpoFinal = dest.cuerpo;
-      if (plantilla.firma) {
-        cuerpoFinal += '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">' + plantilla.firma;
-      }
-
-      var body = {
-        threadId: dest.threadId,
-        interlocutor: dest.email || dest.emailRemitente || '',
-        asunto: dest.asunto,
-        cuerpo: cuerpoFinal,
-        cc: dest.cc || '',
-        bcc: dest.cco || '',
-        fechaProgramada: fechaProg.toISOString()
-      };
-
-      try {
-        var response = await fetch(url + '?action=programarEnvio', {
-          method: 'POST',
-          body: JSON.stringify(body)
-        });
-        var data = await response.json();
-        if (data.ok) exitos++;
-        else errores.push(data.error || 'Error desconocido');
-      } catch (e) {
-        errores.push(e.message);
-      }
-    }
-
-    if (errores.length > 0) {
-      document.getElementById('respuesta-error').textContent = errores.join('; ');
-      document.getElementById('respuesta-error').classList.remove('hidden');
-    } else {
-      cerrarModalRespuesta();
-      // Refrescar panel programados si visible
-      var panel = document.getElementById('panel-programados');
-      if (!panel.classList.contains('hidden')) cargarProgramados();
-    }
-  } finally {
-    btnEnviar.disabled = false;
-    btnEnviar.textContent = 'Enviar';
-    document.getElementById('chk-programar-envio').checked = false;
-    document.getElementById('programar-campos').classList.add('hidden');
-  }
-}
-
-function toggleCheckboxProgramar() {
-  var checked = document.getElementById('chk-programar-envio').checked;
-  var campos = document.getElementById('programar-campos');
-  var btnEnviar = document.getElementById('btn-enviar-respuesta');
-
-  if (checked) {
-    campos.classList.remove('hidden');
-    btnEnviar.textContent = 'Programar envio';
-    // Pre-rellenar con +1 hora
-    var ahora = new Date();
-    ahora.setHours(ahora.getHours() + 1);
-    ahora.setMinutes(0);
-    var local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
-    document.getElementById('programar-fecha').value = local.toISOString().slice(0, 16);
-  } else {
-    campos.classList.add('hidden');
-    btnEnviar.textContent = 'Enviar';
-  }
-}
-
-function despacharEnvio() {
-  if (document.getElementById('chk-programar-envio').checked) {
-    programarEnvioMasivo();
-  } else {
-    enviarRespuestaMasiva();
-  }
-}
-
-// --- Horario laboral UI ---
-
-async function cargarHorarioLaboral() {
-  var url = obtenerUrlActiva();
-  if (!url) return;
-
-  try {
-    var response = await fetch(url + '?action=getHorarioLaboral');
-    var data = await response.json();
-    if (data.ok && data.horario) {
-      var h = data.horario;
-      document.querySelectorAll('.chk-dia-laboral').forEach(function(chk) {
-        chk.checked = h.dias.indexOf(parseInt(chk.dataset.dia, 10)) !== -1;
-      });
-      document.getElementById('cfg-hora-inicio').value = h.horaInicio;
-      document.getElementById('cfg-hora-fin').value = h.horaFin;
-    }
-  } catch (e) {
-    // usar defaults del HTML
-  }
-}
-
-async function guardarHorarioLaboralUI() {
-  var url = obtenerUrlActiva();
-  if (!url) return;
-
-  var dias = [];
-  document.querySelectorAll('.chk-dia-laboral').forEach(function(chk) {
-    if (chk.checked) dias.push(parseInt(chk.dataset.dia, 10));
-  });
-
-  var horario = {
-    dias: dias,
-    horaInicio: parseInt(document.getElementById('cfg-hora-inicio').value, 10) || 7,
-    horaFin: parseInt(document.getElementById('cfg-hora-fin').value, 10) || 21
-  };
-
-  try {
-    var response = await fetch(url + '?action=guardarHorarioLaboral', {
-      method: 'POST',
-      body: JSON.stringify({ horario: horario })
-    });
-    var data = await response.json();
-    var info = document.getElementById('horario-info');
-    if (data.ok) {
-      info.textContent = 'Horario guardado correctamente';
-      info.className = 'exito';
-      info.classList.remove('hidden');
-    } else {
-      info.textContent = data.error || 'Error al guardar';
-      info.className = 'errores';
-      info.classList.remove('hidden');
-    }
-    setTimeout(function() { info.classList.add('hidden'); }, 3000);
-  } catch (e) {
-    // silencioso
-  }
-}
+// Programados UI, horario -> panel-programados.js
 
 function actualizarFooter(timestamp) {
   if (timestamp) {
@@ -2173,6 +1796,37 @@ function inicializarTabs() {
     });
   });
 }
+
+// --- Sync backend (fire-and-forget) ---
+
+function syncBackend(action, body) {
+  var url = obtenerUrlActiva();
+  if (!url) { console.warn('syncBackend: sin URL activa para ' + action); return; }
+  fetch(url + '?action=' + action, {
+    method: 'POST',
+    credentials: 'omit',
+    body: JSON.stringify(body)
+  }).then(function(resp) {
+    if (!resp.ok) console.warn('syncBackend ' + action + ': HTTP ' + resp.status);
+    return resp.json();
+  }).then(function(data) {
+    if (data && !data.ok) console.warn('syncBackend ' + action + ': ' + (data.error || 'error'));
+  }).catch(function(e) {
+    console.warn('syncBackend ' + action + ' fallo: ' + e.message);
+  });
+}
+
+function fetchBackend(action) {
+  var url = obtenerUrlActiva();
+  if (!url) return Promise.resolve(null);
+  return fetch(url + '?action=' + action, { credentials: 'omit' })
+    .then(function(r) { return r.json(); })
+    .catch(function() { return null; });
+}
+
+
+// Dashboard, reporte -> panel-dashboard.js
+// Action bar, notas -> panel-acciones.js
 
 document.addEventListener('DOMContentLoaded', async () => {
   inicializarTabs();
@@ -2264,6 +1918,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-toggle-recordatorios').addEventListener('click', togglePanelRecordatorios);
   document.getElementById('btn-guardar-recordatorio').addEventListener('click', guardarRecordatorioUI);
   document.getElementById('btn-cancelar-recordatorio').addEventListener('click', cerrarModalRecordatorio);
+
+  // Dashboard
+  document.getElementById('btn-toggle-dashboard').addEventListener('click', toggleDashboard);
+
+  // Reporte de turno
+  document.getElementById('btn-reporte-turno').addEventListener('click', mostrarReporteTurno);
+  document.getElementById('btn-copiar-reporte').addEventListener('click', copiarReporte);
+  document.getElementById('btn-cerrar-reporte').addEventListener('click', cerrarModalReporte);
+
+  // Notas
+  document.getElementById('btn-agregar-nota').addEventListener('click', agregarNotaUI);
+  document.getElementById('btn-cerrar-notas').addEventListener('click', cerrarModalNotas);
+  document.getElementById('notas-texto').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') agregarNotaUI();
+  });
+
+  // Cargar notas e historial
+  await cargarNotas();
+  chrome.storage.local.get(STORAGE_KEY_HISTORIAL, function(data) {
+    almacenHistorial = data[STORAGE_KEY_HISTORIAL] || {};
+  });
 
   // Resumen de alertas
   document.getElementById('btn-resumen').addEventListener('click', function() {

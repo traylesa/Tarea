@@ -10,12 +10,31 @@ const MIN_EMAILS_POR_MINUTO = 1;
 const MAX_EMAILS_POR_MINUTO = 30;
 const CONFIG_VERSION = '1.2.0';
 
+// Importar constantes en entorno Node (Jest)
+let _constants;
+if (typeof module !== 'undefined' && typeof require === 'function') {
+  try { _constants = require('./constants.js'); } catch { _constants = null; }
+}
+
+// Importar action-rules si estamos en Node (tests)
+let _actionRules;
+if (typeof require !== 'undefined') {
+  try { _actionRules = require('./action-rules.js'); } catch { _actionRules = null; }
+}
+
 // Importar fases/estados si estamos en Node (tests)
 let _fasesConfig;
 let _estadosConfig;
 if (typeof require !== 'undefined') {
   try { _fasesConfig = require('./fases-config.js'); } catch { _fasesConfig = null; }
   try { _estadosConfig = require('./estados-config.js'); } catch { _estadosConfig = null; }
+}
+
+// Helpers para obtener constantes (navegador vs Node)
+function _getConstant(name, fallback) {
+  if (_constants) return _constants[name];
+  if (typeof window !== 'undefined' && window[name] !== undefined) return window[name];
+  return fallback;
 }
 
 function _getDefaultFases() {
@@ -34,6 +53,18 @@ function _getDefaultEstados() {
   if (_estadosConfig) return _estadosConfig.getDefaultEstados();
   if (typeof getDefaultEstados === 'function') return getDefaultEstados();
   return [];
+}
+
+function _generarReglasDefault() {
+  if (_actionRules) return _actionRules.generarReglasDefault();
+  if (typeof generarReglasDefault === 'function') return generarReglasDefault();
+  return [];
+}
+
+function _validarReglaAccion(regla) {
+  if (_actionRules) return _actionRules.validarRegla(regla);
+  if (typeof validarRegla === 'function') return validarRegla(regla);
+  return { valido: true, errores: [] };
 }
 
 function _validarEstados(estados) {
@@ -62,26 +93,32 @@ function getDefaults() {
     estados: _getDefaultEstados(),
     alertas: {
       activado: true,
-      silencioUmbralH: 4,
-      estancamientoMaxH: { '12': 3, '19': 24, '22': 3 },
-      docsUmbralDias: 2,
-      cooldownMs: 3600000
+      silencioUmbralH: _getConstant('UMBRAL_SILENCIO_HORAS', 12),
+      estancamientoMaxH: _getConstant('UMBRAL_ESTANCAMIENTO_HORAS', 48),
+      docsUmbralDias: _getConstant('UMBRAL_DOCS_DIAS', 3),
+      cooldownMs: _getConstant('COOLDOWN_ALERTA_MS', 3600000)
     },
     resumenMatutino: {
       activado: true,
-      hora: '08:00'
+      hora: _getConstant('HORA_MATUTINO_DEFAULT', '08:00')
     },
     recordatorios: {
       sugerenciasActivadas: true
     },
     secuencias: {
       activado: true,
-      evaluacionMinutos: 15
+      evaluacionMinutos: _getConstant('INTERVALO_VERIFICACION_SECUENCIAS_MS', 900000) / _getConstant('MS_POR_MINUTO', 60000)
     },
     reporteTurno: {
       activado: true,
-      hora: '18:00'
-    }
+      hora: _getConstant('HORA_REPORTE_DEFAULT', '18:00')
+    },
+    robustez: {
+      timeoutBarridoMs: _getConstant('TIMEOUT_BARRIDO_MS', 300000),
+      limiteLoteProcesamiento: _getConstant('LIMITE_LOTE_PROCESAMIENTO', 50),
+      tamanoTandaEnvio: _getConstant('TAMANO_TANDA_ENVIO', 15)
+    },
+    reglasAcciones: _generarReglasDefault()
   };
 }
 
@@ -125,6 +162,21 @@ function validar(config) {
     const resEstados = _validarEstados(config.estados);
     if (!resEstados.valido) {
       errores.push(...resEstados.errores);
+    }
+  }
+
+  if (config.reglasAcciones) {
+    if (!Array.isArray(config.reglasAcciones)) {
+      errores.push('reglasAcciones debe ser un array');
+    } else {
+      config.reglasAcciones.forEach(function(regla, i) {
+        var resRegla = _validarReglaAccion(regla);
+        if (!resRegla.valido) {
+          resRegla.errores.forEach(function(e) {
+            errores.push('Regla ' + (i + 1) + ': ' + e);
+          });
+        }
+      });
     }
   }
 
@@ -178,6 +230,16 @@ async function cargar() {
     config.reporteTurno = { ...defaults.reporteTurno, ...guardada.reporteTurno };
   }
 
+  if (!guardada.robustez) {
+    config.robustez = defaults.robustez;
+  } else {
+    config.robustez = { ...defaults.robustez, ...guardada.robustez };
+  }
+
+  if (!guardada.reglasAcciones) {
+    config.reglasAcciones = defaults.reglasAcciones;
+  }
+
   return config;
 }
 
@@ -197,6 +259,7 @@ function exportarConfigCompleta(config, extras) {
     if (extras.gmailQuery) exportado.gmailQuery = extras.gmailQuery;
     if (extras.spreadsheet) exportado.spreadsheet = extras.spreadsheet;
     if (extras.pieComun) exportado.pieComun = extras.pieComun;
+    if (extras.preferenciasRejilla) exportado.preferenciasRejilla = extras.preferenciasRejilla;
   }
 
   return exportado;

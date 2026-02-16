@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
+  <div id="toast-container"></div>
   <header>
     <h1>TareaLog</h1>
     <nav id="tabs">
@@ -32,6 +33,8 @@
         <button id="btn-toggle-programados" title="Ver envios programados">Programados</button>
         <button id="btn-resumen" title="Abrir resumen de alertas">Resumen</button>
         <button id="btn-toggle-recordatorios" title="Ver mis recordatorios">Recordatorios</button>
+        <button id="btn-toggle-dashboard" title="Ver panel de KPIs del turno">Mi Turno</button>
+        <button id="btn-reporte-turno" title="Generar reporte de fin de turno">Reporte</button>
         <button id="btn-limpiar-todo" title="Limpiar todos los filtros" class="btn-secundario hidden">Limpiar todo</button>
         <span id="badge-filtros" class="badge-filtros hidden">0 filtros</span>
       </div>
@@ -202,6 +205,22 @@
         </div>
         <div id="lista-recordatorios" style="max-height:200px;overflow-y:auto"></div>
         <div id="recordatorios-vacio" class="hidden" style="text-align:center;color:#999;padding:12px;font-size:12px">Sin recordatorios activos</div>
+      </div>
+
+      <!-- Panel Dashboard KPIs (colapsable) -->
+      <div id="panel-dashboard" class="panel-colapsable hidden">
+        <div class="panel-filtros-header">
+          <span>Mi Turno</span>
+          <span id="dashboard-hora" style="font-size:11px;color:#666"></span>
+        </div>
+        <div id="dashboard-kpis" class="dashboard-kpis"></div>
+        <div id="dashboard-grupos" class="dashboard-grupos"></div>
+      </div>
+
+      <!-- Barra acciones contextuales -->
+      <div id="action-bar" class="action-bar hidden">
+        <span id="action-bar-label" class="action-bar-label"></span>
+        <div id="action-bar-botones" class="action-bar-botones"></div>
       </div>
 
       <div id="tabla-seguimiento"></div>
@@ -386,6 +405,16 @@
         </fieldset>
 
         <fieldset>
+          <legend>Reglas de Acciones</legend>
+          <p class="info-texto">Define que ocurre al cambiar fase, estado o codCar. Las reglas de sistema se pueden desactivar pero no eliminar.</p>
+          <div id="lista-reglas-config"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button type="button" id="btn-nueva-regla" class="btn-primario">+ Nueva Regla</button>
+            <button type="button" id="btn-restaurar-reglas" class="btn-secundario">Restaurar por defecto</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
           <legend>Exportar / Importar Configuracion</legend>
           <p class="info-texto">Comparte tu configuracion entre instalaciones o como backup.</p>
           <div class="export-import-actions">
@@ -467,7 +496,7 @@
   <!-- Modal Recordatorio -->
   <div id="modal-recordatorio" class="modal hidden">
     <div class="modal-content">
-      <h2>Crear Recordatorio</h2>
+      <h2 id="recordatorio-modal-titulo">Crear Recordatorio</h2>
       <div id="recordatorio-carga-info" style="margin-bottom:8px;color:#666;font-size:12px"></div>
       <label for="recordatorio-texto">Texto:</label>
       <input type="text" id="recordatorio-texto" placeholder="Llamar a Garcia para confirmar hora" style="width:100%">
@@ -489,6 +518,34 @@
   </div>
 
   <!-- Panel Mis Recordatorios (colapsable, antes de tabla) -->
+
+  <!-- Modal Notas -->
+  <div id="modal-notas" class="modal hidden">
+    <div class="modal-content" style="min-width:400px;max-width:500px">
+      <h2>Notas <span id="notas-carga-info" style="font-size:12px;color:#666"></span></h2>
+      <div id="notas-lista" style="max-height:200px;overflow-y:auto;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="notas-texto" placeholder="Escribir nota..." style="flex:1">
+        <button id="btn-agregar-nota" class="btn-primario">Agregar</button>
+      </div>
+      <div id="notas-error" class="errores hidden" style="margin-top:6px"></div>
+      <div class="modal-actions" style="margin-top:8px">
+        <button id="btn-cerrar-notas">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Reporte de Turno -->
+  <div id="modal-reporte" class="modal hidden">
+    <div class="modal-content" style="min-width:400px;max-width:500px">
+      <h2>Reporte de Turno</h2>
+      <div id="reporte-contenido" style="font-size:12px;line-height:1.6"></div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button id="btn-copiar-reporte" class="btn-primario">Copiar</button>
+        <button id="btn-cerrar-reporte">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Editar Fase -->
   <div id="modal-fase" class="modal hidden">
@@ -544,6 +601,49 @@
     </div>
   </div>
 
+  <!-- Modal Editar Regla -->
+  <div id="modal-regla" class="modal hidden">
+    <div class="modal-content" style="min-width:450px;max-width:550px">
+      <h2 id="modal-regla-titulo">Nueva Regla</h2>
+      <label for="regla-nombre">Nombre:</label>
+      <input type="text" id="regla-nombre" placeholder="Sugerir recordatorio al cambiar fase">
+      <label><input type="checkbox" id="regla-activa" checked> Activa</label>
+
+      <fieldset style="margin:8px 0;padding:8px">
+        <legend style="font-size:12px">Condicion</legend>
+        <label for="regla-campo">Cuando cambie:</label>
+        <select id="regla-campo" style="width:100%">
+          <option value="fase">Fase</option>
+          <option value="estado">Estado</option>
+          <option value="codCar">Codigo de Carga</option>
+        </select>
+        <label for="regla-valor">A valor:</label>
+        <select id="regla-valor" style="width:100%">
+          <option value="*">Cualquiera (*)</option>
+        </select>
+        <label for="regla-fase-origen">Solo si viene de (opcional):</label>
+        <select id="regla-fase-origen" style="width:100%">
+          <option value="">(cualquiera)</option>
+        </select>
+      </fieldset>
+
+      <fieldset style="margin:8px 0;padding:8px">
+        <legend style="font-size:12px">Acciones</legend>
+        <div id="regla-acciones-lista"></div>
+        <button type="button" id="btn-agregar-accion-regla" class="btn-secundario" style="margin-top:4px;font-size:11px">+ Agregar accion</button>
+      </fieldset>
+
+      <label for="regla-orden">Orden (prioridad):</label>
+      <input type="number" id="regla-orden" min="1" max="999" value="100" style="width:80px">
+
+      <div id="modal-regla-error" class="errores hidden"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-guardar-regla">Guardar</button>
+        <button type="button" id="btn-cancelar-regla">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <span id="ultimo-barrido">Ultimo barrido: --</span>
     <span>
@@ -557,14 +657,18 @@
   <script src="fases-config.js"></script>
   <script src="estados-config.js"></script>
   <script src="config.js"></script>
+  <script src="constants.js"></script>
+  <script src="date-utils.js"></script>
   <script src="filters.js"></script>
   <script src="templates.js"></script>
   <script src="gas-services.js"></script>
   <script src="thread-grouping.js"></script>
+  <script src="resilience.js"></script>
   <script src="bulk-reply.js"></script>
   <script src="scheduled.js"></script>
   <script src="reminders.js"></script>
   <script src="action-bar.js"></script>
+  <script src="action-rules.js"></script>
   <script src="notes.js"></script>
   <script src="dashboard.js"></script>
   <script src="action-log.js"></script>
@@ -572,6 +676,12 @@
   <script src="shift-report.js"></script>
   <script src="help-content.js"></script>
   <script src="panel.js"></script>
+  <script src="panel-plantillas.js"></script>
+  <script src="panel-recordatorios.js"></script>
+  <script src="panel-programados.js"></script>
+  <script src="panel-acciones.js"></script>
+  <script src="panel-dashboard.js"></script>
+  <script src="config-rules-ui.js"></script>
   <script src="config-ui.js"></script>
 </body>
 </html>
