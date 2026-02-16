@@ -1,0 +1,30 @@
+/* outdoor.css - Modo outdoor: alto contraste para sol directo */
+body.outdoor {
+  font-size: 20px;
+}
+
+body.outdoor .card-codcar { font-size: 24px; }
+body.outdoor .card-transportista { font-size: 16px; }
+body.outdoor .card-indicadores { font-size: 16px; }
+body.outdoor .card-tiempo { font-size: 16px; }
+body.outdoor .card-banner { font-size: 16px; }
+body.outdoor .chip { font-size: 16px; padding: 12px 20px; border-width: 3px; }
+body.outdoor .chip-fase { font-size: 16px; }
+
+body.outdoor .btn {
+  padding: 16px 32px;
+  font-size: 18px;
+  min-height: 56px;
+}
+
+body.outdoor .card { border-width: 2px; }
+body.outdoor .search-bar input { font-size: 20px; }
+body.outdoor .seccion-header { font-size: 20px; }
+body.outdoor .email-cuerpo { font-size: 16px; }
+body.outdoor .nota-texto { font-size: 16px; }
+
+/* Desactivar animaciones */
+body.outdoor * {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}

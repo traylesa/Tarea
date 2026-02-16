@@ -1,0 +1,12 @@
+# PowerShell script para lanzar Claude con prompt automatico
+Set-Location 'Z:\Aplicaciones\Extensiones Chrome\PruebaInicializa4'
+
+Write-Host ""
+Write-Host "=============================================" -ForegroundColor Cyan
+Write-Host "   EXPEDIENTE: PROMPT_DESARROLLO_MOVIL_20260216_004221" -ForegroundColor Yellow
+Write-Host "=============================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Lanzando Claude con prompt automatico..." -ForegroundColor Green
+Write-Host ""
+
+claude --dangerously-skip-permissions 'Lee INSTRUCCIONES_AGENTE.md en fabrica/buzon_agente/taller_activo/PROMPT_DESARROLLO_MOVIL_20260216_004221/ y ejecuta TODAS las fases del expediente de forma automatica y secuencial: 1. 00_ESTRATEGIA: Definir objetivo, alcance y estrategia general. 2. 01_ANALISIS: Analizar requisitos funcionales y no funcionales. 3. 02_INVESTIGACION: Investigar opciones técnicas y decidir enfoque. 4. 03_PLAN: Crear plan detallado de implementación. 5. 04_DISENO: Diseñar arquitectura y modelo de datos. 6. 05_RESULTADO: Implementar código con tests. 7. 06_VALIDACION: Validar requisitos y ejecutar QA. 8. 07_DESPLIEGUE: Desplegar a producción. 9. 08_OPERACION: Monitorear y dar soporte. 10. 09_EVOLUCION: Retrospectiva y mejora continua. IMPORTANTE: (a) Respetar puertas de validacion entre fases (NO avanzar sin cumplir checklist). (b) En fase 05_RESULTADO debes ESCRIBIR CODIGO REAL en src/ siguiendo TDD (test primero, codigo despues). (c) Consulta docs/DICCIONARIO_DOMINIO.md ANTES de crear nombres nuevos. (d) Cada archivo de fase debe tener contenido REAL y completo, no placeholders. (e) Al finalizar todas las fases ejecuta: just concluir PROMPT_DESARROLLO_MOVIL_20260216_004221'

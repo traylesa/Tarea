@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TareaLog Movil</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/outdoor.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Contenido principal -->
+    <div id="app-contenido"></div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a class="bottom-nav-item activo" data-ruta="todo" onclick="App.navegar('todo')">
+        <span style="font-size:20px">&#9776;</span>
+        <span>Todo</span>
+        <span class="nav-badge" id="badge-todo" style="display:none"></span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="programados" onclick="App.navegar('programados')">
+        <span style="font-size:20px">&#128339;</span>
+        <span>Programados</span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="config" onclick="App.navegar('config')">
+        <span style="font-size:20px">&#9881;</span>
+        <span>Config</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Logica pura reutilizada de extension Chrome -->
+  <script src="../extension/constants.js"></script>
+  <script src="../extension/date-utils.js"></script>
+  <script src="../extension/alerts.js"></script>
+  <script src="../extension/templates.js"></script>
+  <script src="../extension/filters.js"></script>
+  <script src="../extension/reminders.js"></script>
+  <script src="../extension/sequences.js"></script>
+  <script src="../extension/notes.js"></script>
+  <script src="../extension/action-bar.js"></script>
+  <script src="../extension/dashboard.js"></script>
+  <script src="../extension/action-log.js"></script>
+  <script src="../extension/shift-report.js"></script>
+  <script src="../extension/alert-summary.js"></script>
+  <script src="../extension/resilience.js"></script>
+
+  <!-- Capa de datos movil -->
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/feedback.js"></script>
+  <script src="js/logic/action-resolver.js"></script>
+
+  <!-- Componentes UI -->
+  <script src="js/components/toast.js"></script>
+  <script src="js/components/bottom-sheet.js"></script>
+  <script src="js/components/card.js"></script>
+
+  <!-- Vistas -->
+  <script src="js/views/todo.js"></script>
+  <script src="js/views/detalle.js"></script>
+  <script src="js/views/programados.js"></script>
+  <script src="js/views/config.js"></script>
+
+  <!-- App principal (ultimo) -->
+  <script src="js/app.js"></script>
+</body>
+</html>
