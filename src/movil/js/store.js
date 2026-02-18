@@ -22,8 +22,9 @@ var Store = {
   },
 
   obtenerRegistrosPorCarga: function(codCar) {
+    var buscar = String(codCar);
     return this.obtenerRegistros().filter(function(r) {
-      return r.codCar === codCar;
+      return String(r.codCar) === buscar;
     });
   },
 

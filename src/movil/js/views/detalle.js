@@ -8,7 +8,7 @@ var VistaDetalle = {
     this._codCar = codCar;
     contenedor.innerHTML = '';
 
-    var registros = Store.obtenerRegistrosPorCarga(Number(codCar));
+    var registros = Store.obtenerRegistrosPorCarga(codCar);
     if (registros.length === 0) {
       contenedor.innerHTML = '<div class="p-16 text-center">Carga no encontrada</div>';
       return;
