@@ -115,11 +115,15 @@ var CardUI = {
 
   _nombreFaseCorto: function(fase) {
     if (!fase) return '--';
+    return fase;
+  },
+
+  _nombreFase: function(fase) {
+    if (!fase) return '';
     var fases = typeof getDefaultFases === 'function' ? getDefaultFases() : [];
     var f = typeof obtenerFasePorCodigo === 'function'
       ? obtenerFasePorCodigo(fases, fase) : null;
-    // Mostrar solo codigo (ej: "19") para ahorrar espacio
-    return fase;
+    return f ? f.nombre : '';
   },
 
   _tiempoRelativo: function(iso) {

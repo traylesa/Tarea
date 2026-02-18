@@ -339,3 +339,108 @@
   font-size: 24px;
   font-weight: bold;
 }
+
+/* Ficha detalle */
+.detalle-ficha {
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+}
+
+.ficha-fila {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid #F5F5F5;
+  font-size: 13px;
+}
+
+.ficha-fila:last-child { border-bottom: none; }
+
+.ficha-fila-badges {
+  flex-wrap: wrap;
+  padding: 6px 0;
+  gap: 8px;
+}
+
+.ficha-icono {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.ficha-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.ficha-valor {
+  flex: 1;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.ficha-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+}
+
+.ficha-estado-enviado { background: #E3F2FD; color: #1565C0; }
+.ficha-estado-recibido { background: #FFF3E0; color: #E65100; }
+.ficha-estado-gestionado { background: #E8F5E9; color: #2E7D32; }
+.ficha-estado-alerta { background: #FFEBEE; color: #C62828; }
+
+/* Cuerpo email expandible */
+.detalle-cuerpo-email {
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+}
+
+.cuerpo-texto {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cuerpo-texto.truncado {
+  max-height: 80px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cuerpo-texto.truncado::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(transparent, white);
+}
+
+.btn-ver-mas {
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 0;
+  cursor: pointer;
+}

@@ -14,6 +14,10 @@ var VistaDetalle = {
       return;
     }
 
+    // Ordenar: mas reciente primero
+    registros.sort(function(a, b) {
+      return new Date(b.fechaCorreo) - new Date(a.fechaCorreo);
+    });
     var principal = registros[0];
 
     // Header sticky
@@ -28,11 +32,12 @@ var VistaDetalle = {
 
     var titulo = document.createElement('div');
     titulo.className = 'detalle-titulo';
-    titulo.textContent = codCar + ' \u2022 ' + (principal.nombreTransportista || '');
+    titulo.textContent = codCar;
     header.appendChild(titulo);
 
     var menuBtn = document.createElement('button');
     menuBtn.className = 'card-menu';
+    menuBtn.style.color = 'white';
     menuBtn.textContent = '\u22EE';
     menuBtn.addEventListener('click', function() {
       VistaDetalle._abrirMenuOpciones(principal);
@@ -41,35 +46,97 @@ var VistaDetalle = {
 
     contenedor.appendChild(header);
 
-    // Chip fase
-    var faseDiv = document.createElement('div');
-    faseDiv.style.cssText = 'padding:8px 16px;background:var(--color-primary-light)';
-    var chipFase = document.createElement('span');
-    chipFase.className = 'chip-fase chip-fase-' + CardUI._claseFase(principal.fase);
-    chipFase.textContent = CardUI._nombreFase(principal.fase);
-    faseDiv.appendChild(chipFase);
-    contenedor.appendChild(faseDiv);
-
     var scrollable = document.createElement('div');
     scrollable.className = 'contenido';
 
-    // Seccion Emails (abierta)
-    this._renderizarSeccion(scrollable, 'Emails (' + registros.length + ')', true, function(cont) {
-      registros.sort(function(a, b) {
-        return new Date(b.fechaCorreo) - new Date(a.fechaCorreo);
-      });
-      registros.forEach(function(r) {
-        var item = document.createElement('div');
-        item.className = 'email-item';
-        item.innerHTML = '<div class="email-remitente">' + (r.interlocutor || r.emailRemitente || '') + '</div>'
-          + '<div class="email-fecha">' + new Date(r.fechaCorreo).toLocaleString('es-ES') + '</div>'
-          + '<div class="email-cuerpo">' + (r.cuerpo || r.asunto || '').substring(0, 200) + '</div>';
-        cont.appendChild(item);
-      });
+    // === FICHA DATOS PRINCIPALES (siempre visible) ===
+    var ficha = document.createElement('div');
+    ficha.className = 'detalle-ficha';
+
+    // Fila fase + estado
+    var faseEstado = document.createElement('div');
+    faseEstado.className = 'ficha-fila ficha-fila-badges';
+    var chipFase = '<span class="chip-fase chip-fase-' + CardUI._claseFase(principal.fase) + '" style="padding:3px 10px;font-size:12px">'
+      + CardUI._nombreFaseCorto(principal.fase) + ' ' + CardUI._nombreFase(principal.fase) + '</span>';
+    var estObj = typeof getDefaultEstados === 'function' ? obtenerEstadoPorCodigo(getDefaultEstados(), principal.estado) : null;
+    var chipEstado = estObj
+      ? '<span class="ficha-estado ficha-estado-' + (estObj.clase_css || '') + '">' + estObj.icono + ' ' + estObj.nombre + '</span>'
+      : '<span class="ficha-estado">' + (principal.estado || '--') + '</span>';
+    faseEstado.innerHTML = chipFase + chipEstado;
+    if (principal.fechaCorreo) {
+      faseEstado.innerHTML += '<span style="margin-left:auto;font-size:11px;color:var(--text-secondary)">'
+        + new Date(principal.fechaCorreo).toLocaleString('es-ES') + '</span>';
+    }
+    ficha.appendChild(faseEstado);
+
+    // Filas de datos
+    var campos = [
+      { label: 'Transportista', valor: principal.nombreTransportista, icono: '\uD83D\uDE9A' },
+      { label: 'Interlocutor', valor: principal.interlocutor || principal.emailRemitente, icono: '\uD83D\uDCE7' },
+      { label: 'Asunto', valor: principal.asunto, icono: '\uD83D\uDCDD' },
+      { label: 'Cod. Transportista', valor: principal.codTra, icono: '#' },
+      { label: 'Referencia', valor: principal.referencia, icono: '\uD83D\uDD17' },
+      { label: 'Tipo tarea', valor: principal.tipoTarea, icono: '\uD83D\uDCCB' },
+      { label: 'Vinculacion', valor: principal.vinculacion, icono: '\uD83D\uDD04' },
+      { label: 'F. Carga', valor: VistaDetalle._formatearFechaHora(principal.fCarga, principal.hCarga), icono: '\uD83D\uDCC5' },
+      { label: 'F. Entrega', valor: VistaDetalle._formatearFechaHora(principal.fEntrega, principal.hEntrega), icono: '\uD83C\uDFC1' },
+      { label: 'Zona', valor: [principal.zona, principal.zDest].filter(Boolean).join(' \u2192 '), icono: '\uD83D\uDCCD' },
+      { label: 'Msgs en hilo', valor: principal.mensajesEnHilo, icono: '\u2709' },
+      { label: 'Alerta', valor: principal.alerta, icono: '\u26A0' }
+    ];
+
+    campos.forEach(function(c) {
+      if (!c.valor) return;
+      var fila = document.createElement('div');
+      fila.className = 'ficha-fila';
+      fila.innerHTML = '<span class="ficha-icono">' + c.icono + '</span>'
+        + '<span class="ficha-label">' + c.label + '</span>'
+        + '<span class="ficha-valor">' + VistaDetalle._escaparHTML(String(c.valor)) + '</span>';
+      ficha.appendChild(fila);
     });
 
-    // Seccion Notas (cerrada)
-    this._renderizarSeccion(scrollable, 'Notas', false, function(cont) {
+    scrollable.appendChild(ficha);
+
+    // === CUERPO ULTIMO EMAIL (expandible) ===
+    if (principal.cuerpo) {
+      var cuerpoDiv = document.createElement('div');
+      cuerpoDiv.className = 'detalle-cuerpo-email';
+      var cuerpoTexto = principal.cuerpo.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      var esLargo = cuerpoTexto.length > 200;
+      cuerpoDiv.innerHTML = '<div class="ficha-label" style="margin-bottom:4px">\uD83D\uDCE8 Ultimo email</div>'
+        + '<div class="cuerpo-texto' + (esLargo ? ' truncado' : '') + '">' + VistaDetalle._escaparHTML(cuerpoTexto) + '</div>';
+      if (esLargo) {
+        var btnVer = document.createElement('button');
+        btnVer.className = 'btn-ver-mas';
+        btnVer.textContent = 'Ver completo';
+        btnVer.addEventListener('click', function() {
+          cuerpoDiv.querySelector('.cuerpo-texto').classList.toggle('truncado');
+          btnVer.textContent = cuerpoDiv.querySelector('.truncado') ? 'Ver completo' : 'Ver menos';
+        });
+        cuerpoDiv.appendChild(btnVer);
+      }
+      scrollable.appendChild(cuerpoDiv);
+    }
+
+    // === SECCIONES COLAPSABLES ===
+
+    // Emails del hilo
+    if (registros.length > 1) {
+      this._renderizarSeccion(scrollable, '\u2709 Emails del hilo (' + registros.length + ')', false, function(cont) {
+        registros.forEach(function(r) {
+          var item = document.createElement('div');
+          item.className = 'email-item';
+          var cuerpoResumen = (r.cuerpo || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 150);
+          item.innerHTML = '<div class="email-remitente">' + VistaDetalle._escaparHTML(r.interlocutor || r.emailRemitente || '') + '</div>'
+            + '<div class="email-fecha">' + new Date(r.fechaCorreo).toLocaleString('es-ES') + '</div>'
+            + '<div class="email-cuerpo">' + VistaDetalle._escaparHTML(cuerpoResumen) + '</div>';
+          cont.appendChild(item);
+        });
+      });
+    }
+
+    // Notas
+    this._renderizarSeccion(scrollable, '\uD83D\uDCCC Notas', false, function(cont) {
       var notasAlmacen = Store._leerJSON('tarealog_notas', {});
       var notas = notasAlmacen[codCar] || [];
       if (notas.length === 0) {
@@ -79,15 +146,15 @@ var VistaDetalle = {
       notas.forEach(function(n) {
         var item = document.createElement('div');
         item.className = 'nota-item';
-        item.innerHTML = '<div><div class="nota-texto">' + n.texto + '</div>'
+        item.innerHTML = '<div><div class="nota-texto">' + VistaDetalle._escaparHTML(n.texto) + '</div>'
           + '<div class="nota-fecha">' + new Date(n.fechaCreacion).toLocaleString('es-ES') + '</div></div>'
           + '<button class="nota-eliminar" data-id="' + n.id + '">&times;</button>';
         cont.appendChild(item);
       });
     });
 
-    // Seccion Historial (cerrada)
-    this._renderizarSeccion(scrollable, 'Historial', false, function(cont) {
+    // Historial
+    this._renderizarSeccion(scrollable, '\uD83D\uDCCA Historial', false, function(cont) {
       var histAlmacen = Store._leerJSON('tarealog_historial', {});
       var hist = histAlmacen[codCar] || [];
       if (hist.length === 0) {
@@ -97,9 +164,9 @@ var VistaDetalle = {
       hist.forEach(function(h) {
         var item = document.createElement('div');
         item.className = 'email-item';
-        item.innerHTML = '<div class="email-remitente">' + h.tipo + '</div>'
+        item.innerHTML = '<div class="email-remitente">' + VistaDetalle._escaparHTML(h.tipo) + '</div>'
           + '<div class="email-fecha">' + new Date(h.fechaCreacion).toLocaleString('es-ES') + '</div>'
-          + '<div class="email-cuerpo">' + h.descripcion + '</div>';
+          + '<div class="email-cuerpo">' + VistaDetalle._escaparHTML(h.descripcion) + '</div>';
         cont.appendChild(item);
       });
     });
@@ -158,6 +225,19 @@ var VistaDetalle = {
     });
     bottomBar.appendChild(btnNota);
     contenedor.appendChild(bottomBar);
+  },
+
+  _formatearFechaHora: function(fecha, hora) {
+    if (!fecha) return '';
+    var partes = [fecha];
+    if (hora) partes.push(hora);
+    return partes.join(' ');
+  },
+
+  _escaparHTML: function(texto) {
+    var div = document.createElement('div');
+    div.textContent = texto || '';
+    return div.innerHTML;
   },
 
   _renderizarSeccion: function(padre, titulo, abierta, renderContenido) {
