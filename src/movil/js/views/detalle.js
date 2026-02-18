@@ -281,6 +281,8 @@ var VistaDetalle = {
   },
 
   _ejecutarCambioFase: async function(registro, nuevaFase) {
+    // Normalizar fase a string con padding (evitar "0" en vez de "00")
+    nuevaFase = String(nuevaFase).padStart(2, '0');
     var faseAnterior = registro.fase;
     try {
       // Propagar al hilo completo en backend (como escritorio)

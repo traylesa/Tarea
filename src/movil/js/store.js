@@ -14,11 +14,20 @@ var DEFAULTS_CONFIG = {
 var Store = {
   // --- Registros ---
   obtenerRegistros: function() {
-    return this._leerJSON('registros', []);
+    var registros = this._leerJSON('registros', []);
+    return registros.map(this._normalizarRegistro);
   },
 
   guardarRegistros: function(registros) {
-    this._guardarJSON('registros', registros);
+    this._guardarJSON('registros', registros.map(this._normalizarRegistro));
+  },
+
+  _normalizarRegistro: function(r) {
+    // Fase: siempre string con padding 2 digitos ("00", "05", "19")
+    if (r.fase !== undefined && r.fase !== '') {
+      r.fase = String(r.fase).padStart(2, '0');
+    }
+    return r;
   },
 
   obtenerRegistrosPorCarga: function(codCar) {

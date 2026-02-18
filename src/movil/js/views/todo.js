@@ -113,6 +113,15 @@ var VistaTodo = {
       cargas = cargas.filter(function(c) { return c.fCarga === hoy; });
     } else if (this._filtroActivo === 'sinleer') {
       cargas = cargas.filter(function(c) { return c.estado === 'RECIBIDO'; });
+    } else if (this._filtroActivo === 'incidencias') {
+      cargas = cargas.filter(function(c) { return c.fase === '05' || c.fase === '25'; });
+    } else if (this._filtroActivo === 'enproceso') {
+      cargas = cargas.filter(function(c) {
+        var f = c.fase;
+        return f === '11' || f === '12' || f === '19' || f === '21' || f === '22';
+      });
+    } else if (this._filtroActivo === 'sinvincular') {
+      cargas = cargas.filter(function(c) { return c.vinculacion === 'SIN_VINCULAR' || !c.codCar; });
     } else if (this._filtroActivo && this._filtroActivo.indexOf('fase_') === 0) {
       var faseFilter = this._filtroActivo.substring(5);
       cargas = cargas.filter(function(c) { return c.fase === faseFilter; });
@@ -358,6 +367,8 @@ var VistaTodo = {
   },
 
   _ejecutarCambioMasivo: async function(campo, valor) {
+    // Normalizar fase a string con padding (evitar "0" en vez de "00")
+    if (campo === 'fase') valor = String(valor).padStart(2, '0');
     var registros = Store.obtenerRegistros();
     var seleccionadas = this._seleccionadas;
 

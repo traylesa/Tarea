@@ -6,6 +6,9 @@ function obtenerHoja(nombre) {
   var headersEsperados = HEADERS_SEGUIMIENTO;
   if (nombre === HOJA_HILOS) headersEsperados = HEADERS_HILOS;
   else if (nombre === HOJA_PROGRAMADOS) headersEsperados = HEADERS_PROGRAMADOS;
+  else if (nombre === HOJA_NOTAS) headersEsperados = HEADERS_NOTAS;
+  else if (nombre === HOJA_RECORDATORIOS) headersEsperados = HEADERS_RECORDATORIOS;
+  else if (nombre === HOJA_HISTORIAL) headersEsperados = HEADERS_HISTORIAL;
 
   if (!hoja) {
     const nueva = ss.insertSheet(nombre);
@@ -44,16 +47,41 @@ function leerRegistros() {
   return datos.slice(1).map(function(fila) {
     const obj = {};
     headers.forEach(function(h, i) { obj[h] = fila[i]; });
+    // Normalizar fase: Sheets puede convertir "00" en numero 0
+    if (obj.fase !== undefined && obj.fase !== '') {
+      obj.fase = String(obj.fase).padStart(2, '0');
+    }
     return obj;
   });
 }
 
+/**
+ * Normaliza valores antes de grabar en Sheets.
+ * Fase debe ser string con padding 2 digitos (ej: "00", "05").
+ */
+function _normalizarValorCampo(campo, valor) {
+  if (campo === 'fase' && valor !== undefined && valor !== '') {
+    return String(valor).padStart(2, '0');
+  }
+  return valor;
+}
+
 function guardarRegistro(registro) {
   const hoja = obtenerHoja(HOJA_SEGUIMIENTO);
+  // Normalizar fase antes de grabar
+  if (registro.fase !== undefined && registro.fase !== '') {
+    registro.fase = String(registro.fase).padStart(2, '0');
+  }
   const fila = HEADERS_SEGUIMIENTO.map(function(h) {
     return registro[h] !== undefined ? registro[h] : '';
   });
   hoja.appendRow(fila);
+  // Forzar formato texto en columna fase de la fila recien añadida
+  var idxFase = HEADERS_SEGUIMIENTO.indexOf('fase');
+  if (idxFase !== -1) {
+    var ultimaFila = hoja.getLastRow();
+    hoja.getRange(ultimaFila, idxFase + 1).setNumberFormat('@');
+  }
 }
 
 function actualizarCampo(messageId, campo, valor) {
@@ -63,9 +91,12 @@ function actualizarCampo(messageId, campo, valor) {
   const colCampo = datos[0].indexOf(campo);
   if (colId === -1 || colCampo === -1) return;
 
+  var valorNormalizado = _normalizarValorCampo(campo, valor);
   for (var i = 1; i < datos.length; i++) {
     if (datos[i][colId] === messageId) {
-      hoja.getRange(i + 1, colCampo + 1).setValue(valor);
+      var celda = hoja.getRange(i + 1, colCampo + 1);
+      celda.setNumberFormat('@');
+      celda.setValue(valorNormalizado);
       return;
     }
   }
@@ -163,4 +194,151 @@ function leerTodosProgramados() {
     headers.forEach(function(h, i) { obj[h] = fila[i]; });
     return obj;
   });
+}
+
+// --- CRUD Notas ---
+
+function _leerHojaGenerica(nombreHoja, headersRef) {
+  var hoja = obtenerHoja(nombreHoja);
+  var datos = hoja.getDataRange().getValues();
+  if (datos.length <= 1) return [];
+  var headers = datos[0];
+  return datos.slice(1).map(function(fila) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = fila[i]; });
+    return obj;
+  });
+}
+
+function _guardarFilaGenerica(nombreHoja, headersRef, registro) {
+  var hoja = obtenerHoja(nombreHoja);
+  var fila = headersRef.map(function(h) {
+    return registro[h] !== undefined ? registro[h] : '';
+  });
+  hoja.appendRow(fila);
+}
+
+function _eliminarFilaPorId(nombreHoja, id) {
+  var hoja = obtenerHoja(nombreHoja);
+  var datos = hoja.getDataRange().getValues();
+  var colId = datos[0].indexOf('id');
+  if (colId === -1) return false;
+  for (var i = 1; i < datos.length; i++) {
+    if (String(datos[i][colId]) === String(id)) {
+      hoja.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function leerNotas() {
+  return _leerHojaGenerica(HOJA_NOTAS, HEADERS_NOTAS);
+}
+
+function guardarNota(registro) {
+  _guardarFilaGenerica(HOJA_NOTAS, HEADERS_NOTAS, registro);
+}
+
+function eliminarNotaGAS(id) {
+  return _eliminarFilaPorId(HOJA_NOTAS, id);
+}
+
+// --- CRUD Recordatorios ---
+
+function leerRecordatoriosGAS() {
+  return _leerHojaGenerica(HOJA_RECORDATORIOS, HEADERS_RECORDATORIOS);
+}
+
+function guardarRecordatorioGAS(registro) {
+  _guardarFilaGenerica(HOJA_RECORDATORIOS, HEADERS_RECORDATORIOS, registro);
+}
+
+function eliminarRecordatorioGAS(id) {
+  return _eliminarFilaPorId(HOJA_RECORDATORIOS, id);
+}
+
+function actualizarRecordatorioEstado(id, nuevoEstado) {
+  var hoja = obtenerHoja(HOJA_RECORDATORIOS);
+  var datos = hoja.getDataRange().getValues();
+  var colId = datos[0].indexOf('id');
+  var colEstado = datos[0].indexOf('estado');
+  if (colId === -1 || colEstado === -1) return false;
+  for (var i = 1; i < datos.length; i++) {
+    if (String(datos[i][colId]) === String(id)) {
+      hoja.getRange(i + 1, colEstado + 1).setValue(nuevoEstado);
+      return true;
+    }
+  }
+  return false;
+}
+
+// --- CRUD Historial ---
+
+function leerHistorial() {
+  return _leerHojaGenerica(HOJA_HISTORIAL, HEADERS_HISTORIAL);
+}
+
+function guardarEntradaHistorial(registro) {
+  _guardarFilaGenerica(HOJA_HISTORIAL, HEADERS_HISTORIAL, registro);
+}
+
+/**
+ * Actualiza el codCar de todas las filas en SEGUIMIENTO que pertenecen a un threadId.
+ * Usado al vincular manualmente para reflejar el cambio inmediatamente en la tabla.
+ */
+function actualizarCodCarPorThread(threadId, codCar) {
+  const hoja = obtenerHoja(HOJA_SEGUIMIENTO);
+  const datos = hoja.getDataRange().getValues();
+  const headers = datos[0];
+
+  const idxThread = headers.indexOf('threadId');
+  const idxCodCar = headers.indexOf('codCar');
+  const idxVinc = headers.indexOf('vinculacion');
+
+  if (idxThread === -1 || idxCodCar === -1 || idxVinc === -1) {
+    throw new Error('Headers threadId/codCar/vinculacion no encontrados en SEGUIMIENTO');
+  }
+
+  var filasActualizadas = 0;
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i][idxThread] === threadId) {
+      hoja.getRange(i + 1, idxCodCar + 1).setValue(codCar);
+      if (datos[i][idxVinc] === 'SIN_VINCULAR') {
+        hoja.getRange(i + 1, idxVinc + 1).setValue('MANUAL');
+      }
+      filasActualizadas++;
+    }
+  }
+
+  Logger.log('actualizarCodCarPorThread: ' + filasActualizadas + ' filas actualizadas');
+}
+
+/**
+ * Actualiza un campo en todas las filas de SEGUIMIENTO que pertenecen a un threadId.
+ * Usado para propagar cambios de fase/estado a todo el hilo.
+ */
+function actualizarCampoPorThread(threadId, campo, valor) {
+  var hoja = obtenerHoja(HOJA_SEGUIMIENTO);
+  var datos = hoja.getDataRange().getValues();
+  var headers = datos[0];
+
+  var idxThread = headers.indexOf('threadId');
+  var idxCampo = headers.indexOf(campo);
+
+  if (idxThread === -1 || idxCampo === -1) {
+    throw new Error('Header threadId o ' + campo + ' no encontrado en SEGUIMIENTO');
+  }
+
+  var valorNormalizado = _normalizarValorCampo(campo, valor);
+  var filasActualizadas = 0;
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i][idxThread] === threadId) {
+      var celda = hoja.getRange(i + 1, idxCampo + 1);
+      celda.setNumberFormat('@');
+      celda.setValue(valorNormalizado);
+      filasActualizadas++;
+    }
+  }
+  Logger.log('actualizarCampoPorThread(' + campo + '): ' + filasActualizadas + ' filas');
 }
