@@ -15,7 +15,7 @@ var VistaTodo = {
     searchDiv.className = 'search-bar';
     var searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = 'Buscar codCar...';
+    searchInput.placeholder = 'Buscar en todos los campos...';
     searchInput.value = this._busqueda;
     searchInput.addEventListener('input', function(e) {
       VistaTodo._busqueda = e.target.value;
@@ -86,12 +86,18 @@ var VistaTodo = {
     });
     var cargas = Object.values(mapa);
 
-    // Filtrar por busqueda
+    // Filtrar por busqueda (todos los campos, como escritorio)
     if (this._busqueda) {
       var q = this._busqueda.toLowerCase();
       cargas = cargas.filter(function(c) {
-        return String(c.codCar || '').includes(q)
-          || (c.nombreTransportista || '').toLowerCase().includes(q);
+        var campos = [
+          c.codCar, c.codTra, c.nombreTransportista, c.interlocutor,
+          c.asunto, c.fase, c.estado, c.tipoTarea, c.emailRemitente,
+          c.referencia, c.zona, c.zDest, c.extracto, c.cuerpoTexto
+        ];
+        return campos.some(function(v) {
+          return v && String(v).toLowerCase().includes(q);
+        });
       });
     }
 
@@ -106,6 +112,12 @@ var VistaTodo = {
       cargas = cargas.filter(function(c) { return c.fCarga === hoy; });
     } else if (this._filtroActivo === 'sinleer') {
       cargas = cargas.filter(function(c) { return c.estado === 'RECIBIDO'; });
+    } else if (this._filtroActivo && this._filtroActivo.indexOf('fase_') === 0) {
+      var faseFilter = this._filtroActivo.substring(5);
+      cargas = cargas.filter(function(c) { return c.fase === faseFilter; });
+    } else if (this._filtroActivo && this._filtroActivo.indexOf('estado_') === 0) {
+      var estadoFilter = this._filtroActivo.substring(7);
+      cargas = cargas.filter(function(c) { return c.estado === estadoFilter; });
     }
 
     // Ordenar: criticas primero, luego por fecha descendente
@@ -129,8 +141,19 @@ var VistaTodo = {
       return;
     }
 
+    var self = this;
     cargas.forEach(function(carga) {
-      var card = CardUI.crear(carga, alertas, config);
+      var card = CardUI.crear(carga, alertas, config, registros);
+      var check = card.querySelector('input[type="checkbox"]');
+      if (check) {
+        check.checked = self._seleccionadas.has(String(carga.codCar));
+        check.addEventListener('change', function() {
+          var cod = String(carga.codCar);
+          if (check.checked) { self._seleccionadas.add(cod); }
+          else { self._seleccionadas.delete(cod); }
+          self._actualizarBarraSeleccion();
+        });
+      }
       lista.appendChild(card);
     });
   },
@@ -208,35 +231,176 @@ var VistaTodo = {
   },
 
   _abrirFiltrosAvanzados: function() {
-    BottomSheet.abrir({
-      titulo: 'Filtros avanzados',
-      opciones: [
-        { texto: 'Incidencias (05, 25)', accion: function() {
-          VistaTodo._filtroActivo = 'incidencias';
-          App.renderizar();
-        }},
-        { texto: 'En proceso (11-22)', accion: function() {
-          VistaTodo._filtroActivo = 'enproceso';
-          App.renderizar();
-        }},
-        { texto: 'Sin vincular', accion: function() {
-          VistaTodo._filtroActivo = 'sinvincular';
-          App.renderizar();
-        }},
-        { texto: 'Resetear filtros', color: '#D32F2F', accion: function() {
-          VistaTodo._filtroActivo = null;
-          App.renderizar();
-        }}
-      ]
+    var opciones = [
+      { texto: 'Incidencias (05, 25)', accion: function() {
+        VistaTodo._filtroActivo = 'incidencias'; App.renderizar();
+      }},
+      { texto: 'En proceso (11-22)', accion: function() {
+        VistaTodo._filtroActivo = 'enproceso'; App.renderizar();
+      }},
+      { texto: 'Sin vincular', accion: function() {
+        VistaTodo._filtroActivo = 'sinvincular'; App.renderizar();
+      }}
+    ];
+
+    // Fases dinamicas
+    var fases = typeof getDefaultFases === 'function'
+      ? getDefaultFases().filter(function(f) { return f.activa && f.codigo; }) : [];
+    fases.forEach(function(f) {
+      opciones.push({
+        texto: f.nombre,
+        color: f.clase_css === 'fase-incidencia' ? '#D32F2F'
+          : f.clase_css === 'fase-ok' ? '#2E7D32' : null,
+        accion: function() {
+          VistaTodo._filtroActivo = 'fase_' + f.codigo; App.renderizar();
+        }
+      });
     });
+
+    // Separador visual
+    opciones.push({ texto: '--- ESTADOS ---', accion: function() {} });
+
+    // Estados dinamicos
+    var estados = typeof getDefaultEstados === 'function'
+      ? getDefaultEstados().filter(function(e) { return e.activo; }) : [];
+    estados.forEach(function(e) {
+      opciones.push({
+        texto: e.icono + ' ' + e.nombre,
+        accion: function() {
+          VistaTodo._filtroActivo = 'estado_' + e.codigo; App.renderizar();
+        }
+      });
+    });
+
+    opciones.push({ texto: 'Resetear filtros', color: '#D32F2F', accion: function() {
+      VistaTodo._filtroActivo = null; App.renderizar();
+    }});
+
+    BottomSheet.abrir({ titulo: 'Filtros avanzados', opciones: opciones });
   },
 
   _cambiarFaseMasivo: function() {
-    // Placeholder: se conecta con bottom sheet de fases
+    if (this._seleccionadas.size === 0) {
+      ToastUI.mostrar('Selecciona al menos una carga', { tipo: 'info' });
+      return;
+    }
+
+    var fases = typeof getDefaultFases === 'function'
+      ? getDefaultFases().filter(function(f) { return f.activa && f.codigo; })
+      : [];
+
+    var self = this;
+    BottomSheet.abrir({
+      titulo: 'Cambiar fase (' + this._seleccionadas.size + ' cargas)',
+      opciones: fases.map(function(f) {
+        var color = f.clase_css === 'fase-incidencia' ? '#D32F2F'
+          : f.clase_css === 'fase-ok' ? '#2E7D32' : null;
+        return {
+          texto: f.nombre,
+          color: color,
+          accion: function() {
+            self._ejecutarCambioMasivo('fase', f.codigo);
+          }
+        };
+      })
+    });
   },
 
   _responderMasivo: function() {
-    // Placeholder: se conecta con editor de respuesta
+    if (this._seleccionadas.size === 0) {
+      ToastUI.mostrar('Selecciona al menos una carga', { tipo: 'info' });
+      return;
+    }
+
+    var plantillas = Store.obtenerPlantillas();
+    if (plantillas.length === 0) {
+      ToastUI.mostrar('Sin plantillas configuradas', { tipo: 'info' });
+      return;
+    }
+
+    var self = this;
+    BottomSheet.abrir({
+      titulo: 'Responder (' + this._seleccionadas.size + ' cargas)',
+      opciones: plantillas.map(function(p) {
+        return {
+          texto: p.alias,
+          accion: function() {
+            self._ejecutarRespuestaMasiva(p);
+          }
+        };
+      })
+    });
+  },
+
+  _ejecutarCambioMasivo: async function(campo, valor) {
+    var registros = Store.obtenerRegistros();
+    var seleccionadas = this._seleccionadas;
+    var errores = 0;
+    var exitos = 0;
+
+    for (var i = 0; i < registros.length; i++) {
+      var r = registros[i];
+      if (!seleccionadas.has(String(r.codCar))) continue;
+      try {
+        await API.post('actualizarCampo', { messageId: r.messageId, campo: campo, valor: valor });
+        exitos++;
+      } catch (e) { errores++; }
+    }
+
+    Feedback.vibrar('doble');
+    ToastUI.mostrar(exitos + ' actualizadas' + (errores ? ', ' + errores + ' errores' : ''), {
+      tipo: errores ? 'error' : 'exito'
+    });
+    this._limpiarSeleccion();
+    App.renderizar();
+  },
+
+  _ejecutarRespuestaMasiva: async function(plantilla) {
+    var registros = Store.obtenerRegistros();
+    var seleccionadas = this._seleccionadas;
+    var pie = Store.obtenerPieComun();
+    var destinatarios = [];
+
+    registros.forEach(function(r) {
+      if (!seleccionadas.has(String(r.codCar))) return;
+      var cuerpo = typeof interpolar === 'function'
+        ? interpolar(plantilla.cuerpo || plantilla.texto || '', {
+            codCar: r.codCar, transportista: r.nombreTransportista,
+            fase: r.fase, interlocutor: r.interlocutor
+          }) : (plantilla.cuerpo || plantilla.texto || '');
+      destinatarios.push({
+        email: r.interlocutor || r.emailRemitente,
+        threadId: r.threadId,
+        asunto: 'Re: ' + (r.asunto || ''),
+        cuerpo: '<p>' + cuerpo + '</p>' + pie,
+        para: r.interlocutor || r.emailRemitente,
+        cc: r.cc || '', cco: ''
+      });
+    });
+
+    if (destinatarios.length === 0) return;
+
+    try {
+      await API.post('enviarRespuesta', { destinatarios: destinatarios });
+      Feedback.vibrar('doble');
+      ToastUI.mostrar(destinatarios.length + ' emails enviados', { tipo: 'exito' });
+    } catch (e) {
+      Feedback.vibrar('error');
+      ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
+    }
+    this._limpiarSeleccion();
+    App.renderizar();
+  },
+
+  _actualizarBarraSeleccion: function() {
+    var bar = document.getElementById('seleccion-bar');
+    var count = document.getElementById('seleccion-count');
+    if (bar) {
+      bar.classList.toggle('hidden', this._seleccionadas.size === 0);
+    }
+    if (count) {
+      count.textContent = this._seleccionadas.size + ' seleccionadas';
+    }
   },
 
   _limpiarSeleccion: function() {

@@ -1,0 +1,96 @@
+/* mi-turno.css - KPIs, grafico semanal, tarjetas categoria */
+
+.kpi-strip {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kpi-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: white;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+
+.kpi-valor { font-size: 18px; font-weight: bold; }
+.kpi-label { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+.kpi-urgente .kpi-valor { color: var(--color-danger); }
+.kpi-ok .kpi-valor { color: var(--color-ok); }
+.kpi-info .kpi-valor { color: var(--color-info); }
+
+/* Grafico semanal */
+.grafico-semanal {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding: 10px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  min-height: 70px;
+}
+
+.grafico-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.grafico-barra {
+  width: 18px;
+  background: var(--color-primary);
+  border-radius: 3px 3px 0 0;
+  min-height: 3px;
+  transition: height 0.3s ease;
+}
+
+.grafico-dia { font-size: 10px; color: var(--text-secondary); }
+
+/* Tarjetas categoria */
+.cat-tarjeta {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 3px solid var(--color-primary);
+  margin-bottom: 6px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cat-nombre { font-weight: bold; font-size: 13px; }
+
+.cat-badge {
+  color: white;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* Secuencias */
+.seq-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #E0E0E0;
+  cursor: pointer;
+}
+
+.seq-nombre { font-weight: bold; font-size: 13px; }
+.seq-info { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }

@@ -1,14 +1,47 @@
 // sw.js - Service Worker para cache offline y notificaciones
 'use strict';
 
-var CACHE_NAME = 'tarealog-v1';
+var CACHE_NAME = 'tarealog-v4';
 var CACHE_URLS = [
   './',
   './index.html',
   './css/app.css',
   './css/cards.css',
   './css/outdoor.css',
-  './manifest.json'
+  './css/mi-turno.css',
+  './manifest.json',
+  './js/app.js',
+  './js/api.js',
+  './js/store.js',
+  './js/feedback.js',
+  './js/logic/action-resolver.js',
+  './js/components/toast.js',
+  './js/components/bottom-sheet.js',
+  './js/components/card.js',
+  './js/components/resumen-matutino.js',
+  './js/views/mi-turno.js',
+  './js/views/todo.js',
+  './js/views/detalle.js',
+  './js/views/programados.js',
+  './js/views/config.js',
+  './lib/constants.js',
+  './lib/date-utils.js',
+  './lib/alerts.js',
+  './lib/templates.js',
+  './lib/filters.js',
+  './lib/reminders.js',
+  './lib/sequences.js',
+  './lib/notes.js',
+  './lib/fases-config.js',
+  './lib/estados-config.js',
+  './lib/action-bar.js',
+  './lib/action-rules.js',
+  './lib/bulk-reply.js',
+  './lib/dashboard.js',
+  './lib/action-log.js',
+  './lib/shift-report.js',
+  './lib/alert-summary.js',
+  './lib/resilience.js'
 ];
 
 // Instalar: cachear archivos estaticos

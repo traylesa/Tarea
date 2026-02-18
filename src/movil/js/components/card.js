@@ -2,7 +2,7 @@
 'use strict';
 
 var CardUI = {
-  crear: function(carga, alertas, config) {
+  crear: function(carga, alertas, config, registros) {
     var el = document.createElement('div');
     el.className = 'card';
     el.dataset.codcar = carga.codCar || '';
@@ -10,22 +10,18 @@ var CardUI = {
 
     if (carga.estado === 'GESTIONADO') el.classList.add('gestionada');
 
-    // Resolver accion requerida
-    var accion = typeof resolverAccion === 'function'
-      ? resolverAccion(carga, alertas || [], config || {})
-      : null;
-
     // Banner accion requerida
+    var accion = typeof resolverAccion === 'function'
+      ? resolverAccion(carga, alertas || [], config || {}) : null;
     if (accion && (accion.tipo === 'alerta' || accion.tipo === 'deadline')) {
       var banner = document.createElement('div');
       var nivelClase = accion.color === '#D32F2F' ? 'critico'
         : accion.color === '#F57C00' ? 'alto' : 'medio';
       banner.className = 'card-banner card-banner-' + nivelClase;
-      banner.innerHTML = '&#9888; ACCION REQUERIDA: ' + this._escapar(accion.texto);
+      banner.innerHTML = '&#9888; ' + this._escapar(accion.texto);
       el.appendChild(banner);
     }
 
-    // Cuerpo
     var body = document.createElement('div');
     body.className = 'card-body';
 
@@ -42,38 +38,39 @@ var CardUI = {
     var info = document.createElement('div');
     info.className = 'card-info';
 
-    // Linea 1: codCar + transportista
+    // Linea 1: codCar + fase + estado
     var titulo = document.createElement('div');
     titulo.className = 'card-titulo';
     titulo.innerHTML = '<span class="card-codcar">' + (carga.codCar || 'Sin cod.') + '</span>'
-      + '<span class="card-transportista">' + this._escapar(carga.nombreTransportista || '') + '</span>';
+      + this._chipFaseHTML(carga.fase)
+      + this._chipEstadoHTML(carga.estado)
+      + '<span class="card-tiempo">' + this._tiempoRelativo(carga.fechaCorreo) + '</span>';
     info.appendChild(titulo);
 
-    // Linea 2: chip fase + tiempo
-    var estado = document.createElement('div');
-    estado.className = 'card-estado';
-
-    var chipFase = document.createElement('span');
-    var clFase = this._claseFase(carga.fase);
-    chipFase.className = 'chip-fase chip-fase-' + clFase;
-    chipFase.textContent = this._nombreFase(carga.fase);
-    estado.appendChild(chipFase);
-
-    if (carga.fechaCorreo) {
-      var tiempo = document.createElement('span');
-      tiempo.className = 'card-tiempo';
-      tiempo.textContent = this._tiempoRelativo(carga.fechaCorreo);
-      estado.appendChild(tiempo);
+    // Linea 2: transportista
+    if (carga.nombreTransportista) {
+      var trans = document.createElement('div');
+      trans.className = 'card-transportista';
+      trans.textContent = carga.nombreTransportista;
+      info.appendChild(trans);
     }
-    info.appendChild(estado);
 
-    // Linea 3: indicadores
-    var indicadores = document.createElement('div');
-    indicadores.className = 'card-indicadores';
-    if (carga.mensajesEnHilo > 1) {
-      indicadores.innerHTML += '<span>\u2709 ' + carga.mensajesEnHilo + ' msgs</span>';
+    // Linea 3: asunto
+    if (carga.asunto) {
+      var asunto = document.createElement('div');
+      asunto.className = 'card-asunto';
+      asunto.textContent = carga.asunto;
+      info.appendChild(asunto);
     }
-    info.appendChild(indicadores);
+
+    // Linea 4: preview ultimo mensaje
+    var ultimoMsg = this._obtenerUltimoMensaje(carga, registros || []);
+    if (ultimoMsg) {
+      var preview = document.createElement('div');
+      preview.className = 'card-preview';
+      preview.textContent = ultimoMsg;
+      info.appendChild(preview);
+    }
 
     body.appendChild(info);
 
@@ -86,7 +83,6 @@ var CardUI = {
 
     el.appendChild(body);
 
-    // Click para ir a detalle
     el.addEventListener('click', function() {
       if (typeof App !== 'undefined') App.navegar('detalle/' + carga.codCar);
     });
@@ -94,29 +90,58 @@ var CardUI = {
     return el;
   },
 
+  _chipFaseHTML: function(fase) {
+    var cl = this._claseFase(fase);
+    var nombre = this._nombreFaseCorto(fase);
+    return '<span class="chip-fase chip-fase-' + cl + '">' + nombre + '</span>';
+  },
+
+  _chipEstadoHTML: function(estado) {
+    if (!estado) return '';
+    var est = typeof getDefaultEstados === 'function'
+      ? obtenerEstadoPorCodigo(getDefaultEstados(), estado) : null;
+    var icono = est ? est.icono : '';
+    return '<span class="chip-estado">' + icono + '</span>';
+  },
+
   _claseFase: function(fase) {
-    if (fase === '05' || fase === '25') return 'incidencia';
-    if (fase === '19' || fase === '30') return 'ok';
+    var fases = typeof getDefaultFases === 'function' ? getDefaultFases() : [];
+    var claseCSS = typeof obtenerClaseCSS === 'function'
+      ? obtenerClaseCSS(fases, fase) : '';
+    if (claseCSS === 'fase-incidencia') return 'incidencia';
+    if (claseCSS === 'fase-ok') return 'ok';
     return 'default';
   },
 
-  _nombreFase: function(fase) {
-    var nombres = {
-      '00': '00 Espera', '01': '01 Esp.Carga', '02': '02 Esp.Desc.',
-      '05': '05 Incidencia', '11': '11 En Carga', '12': '12 Cargando',
-      '19': '19 Cargado', '21': '21 En Desc.', '22': '22 Descargando',
-      '25': '25 Incidencia', '29': '29 Vacio', '30': '30 Documentado'
-    };
-    return nombres[fase] || fase || '--';
+  _nombreFaseCorto: function(fase) {
+    if (!fase) return '--';
+    var fases = typeof getDefaultFases === 'function' ? getDefaultFases() : [];
+    var f = typeof obtenerFasePorCodigo === 'function'
+      ? obtenerFasePorCodigo(fases, fase) : null;
+    // Mostrar solo codigo (ej: "19") para ahorrar espacio
+    return fase;
   },
 
   _tiempoRelativo: function(iso) {
+    if (!iso) return '';
     var diff = Date.now() - new Date(iso).getTime();
     var mins = Math.floor(diff / 60000);
     if (mins < 60) return mins + 'min';
     var horas = Math.floor(mins / 60);
     if (horas < 24) return horas + 'h';
     return Math.floor(horas / 24) + 'd';
+  },
+
+  _obtenerUltimoMensaje: function(carga, registros) {
+    var hiloMsgs = registros.filter(function(r) {
+      return r.threadId && r.threadId === carga.threadId;
+    }).sort(function(a, b) {
+      return new Date(b.fechaCorreo) - new Date(a.fechaCorreo);
+    });
+    var ultimo = hiloMsgs[0];
+    if (!ultimo) return '';
+    var texto = ultimo.extracto || ultimo.cuerpoTexto || '';
+    return texto.substring(0, 80).replace(/\s+/g, ' ').trim();
   },
 
   _escapar: function(texto) {

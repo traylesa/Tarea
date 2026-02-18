@@ -106,33 +106,56 @@ var VistaDetalle = {
 
     contenedor.appendChild(scrollable);
 
-    // Bottom bar sticky
+    // Bottom bar dinámico via reglas
     var bottomBar = document.createElement('div');
     bottomBar.className = 'bottom-bar';
 
-    var btnResponder = document.createElement('button');
-    btnResponder.className = 'btn btn-primary btn-flex';
-    btnResponder.textContent = 'Responder';
-    btnResponder.addEventListener('click', function() {
-      VistaDetalle._abrirEditor(principal);
+    var config = Store.obtenerConfig();
+    var reglas = config.reglasAcciones || (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);
+    var accionesReglas = typeof obtenerAccionesDesdeReglas === 'function'
+      ? obtenerAccionesDesdeReglas(reglas, principal.fase) : [];
+    var accionesFase = typeof obtenerAccionesPorFase === 'function'
+      ? obtenerAccionesPorFase(principal.fase) : [];
+
+    // Primeros 2 botones: acciones dinámicas (reglas o fallback)
+    var botonesDinamicos = accionesReglas.length > 0 ? accionesReglas.slice(0, 2) : accionesFase.slice(0, 2);
+
+    botonesDinamicos.forEach(function(acc) {
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-flex';
+      btn.textContent = acc.etiqueta || acc.texto || 'Accion';
+      btn.addEventListener('click', function() {
+        if (acc.faseSiguiente) {
+          VistaDetalle._ejecutarCambioFase(principal, acc.faseSiguiente);
+        } else if (acc.plantilla) {
+          VistaDetalle._abrirEditorConPlantilla(principal, acc.plantilla);
+        } else if (acc.aviso) {
+          ToastUI.mostrar(acc.aviso, { tipo: 'info' });
+        } else {
+          VistaDetalle._abrirCambioFase(principal);
+        }
+      });
+      bottomBar.appendChild(btn);
     });
 
-    var btnFase = document.createElement('button');
-    btnFase.className = 'btn btn-outline btn-flex';
-    btnFase.textContent = 'Fase';
-    btnFase.addEventListener('click', function() {
-      VistaDetalle._abrirCambioFase(principal);
-    });
+    // Si no hay acciones dinámicas, botones por defecto
+    if (botonesDinamicos.length === 0) {
+      var btnFase = document.createElement('button');
+      btnFase.className = 'btn btn-outline btn-flex';
+      btnFase.textContent = 'Fase';
+      btnFase.addEventListener('click', function() {
+        VistaDetalle._abrirCambioFase(principal);
+      });
+      bottomBar.appendChild(btnFase);
+    }
 
+    // Boton + Nota siempre presente
     var btnNota = document.createElement('button');
     btnNota.className = 'btn btn-outline btn-flex';
     btnNota.textContent = '+ Nota';
     btnNota.addEventListener('click', function() {
       VistaDetalle._agregarNota(codCar);
     });
-
-    bottomBar.appendChild(btnResponder);
-    bottomBar.appendChild(btnFase);
     bottomBar.appendChild(btnNota);
     contenedor.appendChild(bottomBar);
   },
@@ -157,25 +180,18 @@ var VistaDetalle = {
   },
 
   _abrirCambioFase: function(registro) {
-    var fases = [
-      { texto: '00 Espera', codigo: '00' },
-      { texto: '05 Incidencia', codigo: '05', color: '#D32F2F' },
-      { texto: '11 En Carga', codigo: '11' },
-      { texto: '12 Cargando', codigo: '12' },
-      { texto: '19 Cargado', codigo: '19', color: '#2E7D32' },
-      { texto: '21 En Descarga', codigo: '21' },
-      { texto: '22 Descargando', codigo: '22' },
-      { texto: '25 Incidencia', codigo: '25', color: '#D32F2F' },
-      { texto: '29 Vacio', codigo: '29' },
-      { texto: '30 Documentado', codigo: '30', color: '#2E7D32' }
-    ];
+    var fases = typeof getDefaultFases === 'function'
+      ? getDefaultFases().filter(function(f) { return f.activa && f.codigo; })
+      : [];
 
     BottomSheet.abrir({
       titulo: 'Cambiar fase',
       opciones: fases.map(function(f) {
+        var color = f.clase_css === 'fase-incidencia' ? '#D32F2F'
+          : f.clase_css === 'fase-ok' ? '#2E7D32' : null;
         return {
-          texto: f.texto,
-          color: f.color,
+          texto: f.nombre,
+          color: color,
           accion: function() {
             VistaDetalle._ejecutarCambioFase(registro, f.codigo);
           }
@@ -185,6 +201,7 @@ var VistaDetalle = {
   },
 
   _ejecutarCambioFase: async function(registro, nuevaFase) {
+    var faseAnterior = registro.fase;
     try {
       await API.post('actualizarCampo', {
         messageId: registro.messageId,
@@ -193,10 +210,235 @@ var VistaDetalle = {
       });
       Feedback.vibrar('corto');
       ToastUI.mostrar('Fase actualizada a ' + nuevaFase, { tipo: 'exito' });
+
+      // Evaluar reglas post-cambio
+      VistaDetalle._procesarReglasPostCambio(registro, 'fase', nuevaFase, faseAnterior);
+
       App.renderizar();
     } catch (e) {
       Feedback.vibrar('error');
       ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
+    }
+  },
+
+  _procesarReglasPostCambio: function(registro, campo, valorNuevo, valorAnterior) {
+    if (typeof evaluarReglas !== 'function') return;
+
+    var config = Store.obtenerConfig();
+    var reglas = config.reglasAcciones || (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);
+    var resultados = evaluarReglas(reglas, campo, valorNuevo, valorAnterior);
+
+    resultados.forEach(function(r) {
+      r.acciones.forEach(function(a) {
+        switch (a.tipo) {
+          case 'PROPAGAR_HILO':
+            // Actualizar registros locales del mismo threadId
+            var todos = Store.obtenerRegistros();
+            todos.forEach(function(reg) {
+              if (reg.threadId === registro.threadId) reg[campo] = valorNuevo;
+            });
+            Store.guardarRegistros(todos);
+            break;
+
+          case 'SUGERIR_RECORDATORIO':
+            VistaDetalle._mostrarSugerenciaEmailProgramado(registro, a.params);
+            break;
+
+          case 'CREAR_RECORDATORIO':
+            if (typeof crearRecordatorio === 'function') {
+              var rec = crearRecordatorio(a.params.texto || 'Recordatorio', String(registro.codCar), a.params.horas || 1);
+              var recs = Store._leerJSON('tarealog_recordatorios', []);
+              recs.push(rec);
+              Store._guardarJSON('tarealog_recordatorios', recs);
+              ToastUI.mostrar('Recordatorio creado', { tipo: 'info' });
+            }
+            break;
+
+          case 'INICIAR_SECUENCIA':
+            if (typeof crearSecuencia === 'function') {
+              var seq = crearSecuencia(a.params.nombre || 'Seguimiento', String(registro.codCar), a.params.pasos || []);
+              var seqs = Store._leerJSON('tarealog_secuencias', []);
+              seqs.push(seq);
+              Store._guardarJSON('tarealog_secuencias', seqs);
+              ToastUI.mostrar('Secuencia iniciada', { tipo: 'info' });
+            }
+            break;
+
+          case 'CAMBIAR_FASE':
+            if (a.params.fase) {
+              API.post('actualizarCampo', {
+                messageId: registro.messageId, campo: 'fase', valor: a.params.fase
+              });
+            }
+            break;
+
+          case 'CAMBIAR_ESTADO':
+            if (a.params.estado) {
+              API.post('actualizarCampo', {
+                messageId: registro.messageId, campo: 'estado', valor: a.params.estado
+              });
+            }
+            break;
+
+          case 'PRESELECCIONAR_PLANTILLA':
+            VistaDetalle._abrirEditorConPlantilla(registro, a.params.nombrePlantilla);
+            break;
+
+          case 'MOSTRAR_AVISO':
+            ToastUI.mostrar(a.params.mensaje || r.nombre, { tipo: 'info' });
+            break;
+        }
+      });
+    });
+  },
+
+  // Mapeo fase → plantilla por defecto para email programado
+  _MAPEO_FASE_PLANTILLA: {
+    '19': { buscar: 'descarga', hora: '08:00', horas: 8 },
+    '29': { buscar: 'pod', hora: '08:00', horas: 24 }
+  },
+
+  _mostrarSugerenciaEmailProgramado: function(registro, params) {
+    var plantillas = Store.obtenerPlantillas();
+    var mapeo = this._MAPEO_FASE_PLANTILLA[registro.fase] || {};
+    var textoBuscar = (mapeo.buscar || params.texto || '').toLowerCase();
+
+    // Pre-seleccionar plantilla que coincida
+    var plantillaDefault = plantillas.find(function(p) {
+      return p.alias.toLowerCase().indexOf(textoBuscar) !== -1;
+    });
+
+    // Fecha programada: mañana a la hora configurada
+    var manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    var hora = mapeo.hora || '08:00';
+    var partes = hora.split(':');
+    manana.setHours(parseInt(partes[0]) || 8, parseInt(partes[1]) || 0, 0, 0);
+
+    var contenido = document.createElement('div');
+
+    var titulo = document.createElement('div');
+    titulo.style.cssText = 'font-weight:bold;font-size:16px;margin-bottom:12px';
+    titulo.textContent = params.texto || 'Email programado';
+    contenido.appendChild(titulo);
+
+    // Selector plantilla
+    var lblPlantilla = document.createElement('div');
+    lblPlantilla.style.cssText = 'margin-bottom:4px;font-size:14px;color:var(--text-secondary)';
+    lblPlantilla.textContent = 'Plantilla:';
+    contenido.appendChild(lblPlantilla);
+
+    var selPlantilla = document.createElement('select');
+    selPlantilla.style.cssText = 'width:100%;font-size:16px;min-height:48px;padding:8px;margin-bottom:12px;border:1px solid #CCC;border-radius:4px';
+    selPlantilla.innerHTML = '<option value="">Sin plantilla</option>';
+    plantillas.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.alias;
+      if (plantillaDefault && p.id === plantillaDefault.id) opt.selected = true;
+      selPlantilla.appendChild(opt);
+    });
+    contenido.appendChild(selPlantilla);
+
+    // Fecha/hora
+    var lblFecha = document.createElement('div');
+    lblFecha.style.cssText = 'margin-bottom:4px;font-size:14px;color:var(--text-secondary)';
+    lblFecha.textContent = 'Enviar:';
+    contenido.appendChild(lblFecha);
+
+    var inputFecha = document.createElement('input');
+    inputFecha.type = 'datetime-local';
+    inputFecha.style.cssText = 'width:100%;font-size:16px;min-height:48px;padding:8px;margin-bottom:12px;border:1px solid #CCC;border-radius:4px';
+    inputFecha.value = manana.toISOString().slice(0, 16);
+    contenido.appendChild(inputFecha);
+
+    // Destinatario
+    var lblDest = document.createElement('div');
+    lblDest.style.cssText = 'margin-bottom:4px;font-size:14px;color:var(--text-secondary)';
+    lblDest.textContent = 'Para:';
+    contenido.appendChild(lblDest);
+
+    var destInfo = document.createElement('div');
+    destInfo.style.cssText = 'padding:8px;background:var(--bg-secondary);border-radius:4px;margin-bottom:16px;font-size:14px';
+    destInfo.textContent = registro.interlocutor || registro.emailRemitente || 'Sin destinatario';
+    contenido.appendChild(destInfo);
+
+    // Botones
+    var btnProgramar = document.createElement('button');
+    btnProgramar.className = 'btn btn-success';
+    btnProgramar.style.cssText = 'width:100%;margin-bottom:8px';
+    btnProgramar.textContent = 'PROGRAMAR ENVIO';
+    btnProgramar.addEventListener('click', function() {
+      VistaDetalle._ejecutarEmailProgramado(registro, selPlantilla.value, inputFecha.value);
+      BottomSheet.cerrar();
+    });
+    contenido.appendChild(btnProgramar);
+
+    var btnRecordatorio = document.createElement('button');
+    btnRecordatorio.className = 'btn btn-outline';
+    btnRecordatorio.style.cssText = 'width:100%;margin-bottom:8px';
+    btnRecordatorio.textContent = 'Solo recordatorio';
+    btnRecordatorio.addEventListener('click', function() {
+      VistaDetalle._guardarRecordatorio(registro, (params.horas || 8) * 60);
+      BottomSheet.cerrar();
+    });
+    contenido.appendChild(btnRecordatorio);
+
+    BottomSheet.abrir({ titulo: params.texto || 'Programar seguimiento', contenido: contenido });
+  },
+
+  _ejecutarEmailProgramado: async function(registro, plantillaId, fechaISO) {
+    try {
+      var plantillas = Store.obtenerPlantillas();
+      var plantilla = plantillas.find(function(p) { return p.id === plantillaId; });
+      var cuerpo = '';
+
+      if (plantilla && typeof interpolar === 'function') {
+        cuerpo = interpolar(plantilla.cuerpo || plantilla.texto || '', {
+          codCar: registro.codCar, transportista: registro.nombreTransportista,
+          fase: registro.fase, interlocutor: registro.interlocutor
+        });
+      }
+
+      await API.post('enviarRespuesta', {
+        destinatarios: [{
+          email: registro.interlocutor || registro.emailRemitente,
+          threadId: registro.threadId,
+          asunto: 'Re: ' + (registro.asunto || ''),
+          cuerpo: '<p>' + cuerpo + '</p>' + Store.obtenerPieComun(),
+          para: registro.interlocutor || registro.emailRemitente,
+          cc: registro.cc || '', cco: ''
+        }],
+        programado: true,
+        fechaProgramada: new Date(fechaISO).toISOString()
+      });
+
+      Feedback.vibrar('doble');
+      var fechaLocal = new Date(fechaISO).toLocaleString('es-ES');
+      ToastUI.mostrar('Email programado para ' + fechaLocal, { tipo: 'exito' });
+    } catch (e) {
+      Feedback.vibrar('error');
+      ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
+    }
+  },
+
+  _abrirEditorConPlantilla: function(registro, nombrePlantilla) {
+    var plantillas = Store.obtenerPlantillas();
+    var plantilla = plantillas.find(function(p) {
+      return p.alias.toLowerCase().indexOf((nombrePlantilla || '').toLowerCase()) !== -1;
+    });
+
+    this._abrirEditor(registro);
+
+    // Pre-seleccionar plantilla si existe
+    if (plantilla) {
+      setTimeout(function() {
+        var select = document.querySelector('.editor-overlay select');
+        if (select) {
+          select.value = plantilla.id;
+          select.dispatchEvent(new Event('change'));
+        }
+      }, 100);
     }
   },
 
@@ -292,19 +534,54 @@ var VistaDetalle = {
   },
 
   _abrirMenuOpciones: function(registro) {
+    var opciones = [
+      { texto: 'Responder', accion: function() {
+        VistaDetalle._abrirEditor(registro);
+      }},
+      { texto: 'Cambiar fase', accion: function() {
+        VistaDetalle._abrirCambioFase(registro);
+      }},
+      { texto: 'Recordatorio', accion: function() {
+        VistaDetalle._crearRecordatorio(registro);
+      }},
+      { texto: 'Iniciar secuencia', accion: function() {
+        VistaDetalle._abrirIniciarSecuencia(registro);
+      }},
+      { texto: 'Vincular manual', accion: function() {
+        var cod = prompt('Codigo de carga:');
+        if (cod) {
+          API.post('vincularManual', { threadId: registro.threadId, codCar: cod });
+        }
+      }}
+    ];
+    BottomSheet.abrir({ titulo: 'Opciones', opciones: opciones });
+  },
+
+  _abrirIniciarSecuencia: function(registro) {
+    var predefinidas = typeof SECUENCIAS_PREDEFINIDAS !== 'undefined' ? SECUENCIAS_PREDEFINIDAS : {};
+    var nombres = Object.keys(predefinidas);
+    if (nombres.length === 0) {
+      ToastUI.mostrar('Sin secuencias disponibles', { tipo: 'info' });
+      return;
+    }
     BottomSheet.abrir({
-      titulo: 'Opciones',
-      opciones: [
-        { texto: 'Recordatorio', accion: function() {
-          VistaDetalle._crearRecordatorio(registro);
-        }},
-        { texto: 'Vincular manual', accion: function() {
-          var cod = prompt('Codigo de carga:');
-          if (cod) {
-            API.post('vincularManual', { threadId: registro.threadId, codCar: cod });
+      titulo: 'Iniciar secuencia',
+      opciones: nombres.map(function(nombre) {
+        return {
+          texto: nombre,
+          accion: function() {
+            if (typeof crearSecuencia === 'function') {
+              var config = predefinidas[nombre];
+              var seq = crearSecuencia(nombre, String(registro.codCar), config.pasos);
+              var seqs = Store._leerJSON('tarealog_secuencias', []);
+              seqs.push(seq);
+              Store._guardarJSON('tarealog_secuencias', seqs);
+              Feedback.vibrar('corto');
+              ToastUI.mostrar('Secuencia "' + nombre + '" iniciada', { tipo: 'exito' });
+            }
           }
-        }}
-      ]
+        };
+      })
     });
   },
 

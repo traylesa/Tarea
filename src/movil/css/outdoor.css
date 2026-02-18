@@ -23,6 +23,18 @@ body.outdoor .seccion-header { font-size: 20px; }
 body.outdoor .email-cuerpo { font-size: 16px; }
 body.outdoor .nota-texto { font-size: 16px; }
 
+/* Mi Turno - outdoor */
+body.outdoor .kpi-valor { font-size: 28px; }
+body.outdoor .kpi-label { font-size: 14px; }
+body.outdoor .kpi-chip { padding: 14px 18px; }
+body.outdoor .cat-tarjeta { padding: 16px; border-left-width: 6px; min-height: 56px; }
+body.outdoor .cat-nombre { font-size: 18px; }
+body.outdoor .cat-badge { font-size: 16px; }
+body.outdoor .grafico-barra { width: 32px; }
+body.outdoor .grafico-dia { font-size: 14px; }
+body.outdoor .seq-nombre { font-size: 18px; }
+body.outdoor .seq-info { font-size: 16px; }
+
 /* Desactivar animaciones */
 body.outdoor * {
   animation-duration: 0s !important;

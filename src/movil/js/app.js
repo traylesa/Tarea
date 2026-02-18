@@ -2,7 +2,7 @@
 'use strict';
 
 var App = {
-  _vistaActual: 'todo',
+  _vistaActual: 'mi-turno',
 
   inicializar: function() {
     var config = Store.obtenerConfig();
@@ -26,7 +26,7 @@ var App = {
     }
 
     // Render inicial
-    if (!window.location.hash) window.location.hash = '#todo';
+    if (!window.location.hash) window.location.hash = '#mi-turno';
     this.renderizar();
 
     // Auto-refresh si hay gasUrl
@@ -40,7 +40,7 @@ var App = {
   },
 
   renderizar: function() {
-    var hash = window.location.hash.replace('#', '') || 'todo';
+    var hash = window.location.hash.replace('#', '') || 'mi-turno';
     var partes = hash.split('/');
     var vista = partes[0];
     var param = partes[1] || null;
@@ -50,6 +50,9 @@ var App = {
     if (!contenedor) return;
 
     switch (vista) {
+      case 'mi-turno':
+        VistaMiTurno.renderizar(contenedor);
+        break;
       case 'todo':
         VistaTodo.renderizar(contenedor);
         break;
@@ -63,7 +66,7 @@ var App = {
         VistaConfig.renderizar(contenedor);
         break;
       default:
-        VistaTodo.renderizar(contenedor);
+        VistaMiTurno.renderizar(contenedor);
     }
 
     this._actualizarNav(vista);
@@ -112,6 +115,15 @@ var App = {
       }
 
       this.renderizar();
+
+      // Resumen matutino
+      if (typeof debeMostrarMatutino === 'function' && typeof ResumenMatutino !== 'undefined') {
+        var config = Store.obtenerConfig();
+        var flag = Store._leerJSON('tarealog_resumen_flag', null);
+        if (debeMostrarMatutino(flag, config.resumenMatutino || { activado: true, hora: '08:00' }, new Date())) {
+          ResumenMatutino.mostrar(Store.obtenerAlertas(), config);
+        }
+      }
     } catch (e) {
       // Offline: usar cache
       if (cached.length === 0) {

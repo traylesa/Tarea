@@ -8,11 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TareaLog Movil</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/cards.css">
   <link rel="stylesheet" href="css/outdoor.css">
+  <link rel="stylesheet" href="css/mi-turno.css">
 </head>
 <body>
   <div class="app">
@@ -21,7 +22,11 @@
 
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
-      <a class="bottom-nav-item activo" data-ruta="todo" onclick="App.navegar('todo')">
+      <a class="bottom-nav-item activo" data-ruta="mi-turno" onclick="App.navegar('mi-turno')">
+        <span style="font-size:20px">&#9201;</span>
+        <span>Mi Turno</span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="todo" onclick="App.navegar('todo')">
         <span style="font-size:20px">&#9776;</span>
         <span>Todo</span>
         <span class="nav-badge" id="badge-todo" style="display:none"></span>
@@ -38,20 +43,24 @@
   </div>
 
   <!-- Logica pura reutilizada de extension Chrome -->
-  <script src="../extension/constants.js"></script>
-  <script src="../extension/date-utils.js"></script>
-  <script src="../extension/alerts.js"></script>
-  <script src="../extension/templates.js"></script>
-  <script src="../extension/filters.js"></script>
-  <script src="../extension/reminders.js"></script>
-  <script src="../extension/sequences.js"></script>
-  <script src="../extension/notes.js"></script>
-  <script src="../extension/action-bar.js"></script>
-  <script src="../extension/dashboard.js"></script>
-  <script src="../extension/action-log.js"></script>
-  <script src="../extension/shift-report.js"></script>
-  <script src="../extension/alert-summary.js"></script>
-  <script src="../extension/resilience.js"></script>
+  <script src="./lib/constants.js"></script>
+  <script src="./lib/date-utils.js"></script>
+  <script src="./lib/alerts.js"></script>
+  <script src="./lib/templates.js"></script>
+  <script src="./lib/filters.js"></script>
+  <script src="./lib/reminders.js"></script>
+  <script src="./lib/sequences.js"></script>
+  <script src="./lib/notes.js"></script>
+  <script src="./lib/fases-config.js"></script>
+  <script src="./lib/estados-config.js"></script>
+  <script src="./lib/action-bar.js"></script>
+  <script src="./lib/action-rules.js"></script>
+  <script src="./lib/bulk-reply.js"></script>
+  <script src="./lib/dashboard.js"></script>
+  <script src="./lib/action-log.js"></script>
+  <script src="./lib/shift-report.js"></script>
+  <script src="./lib/alert-summary.js"></script>
+  <script src="./lib/resilience.js"></script>
 
   <!-- Capa de datos movil -->
   <script src="js/api.js"></script>
@@ -64,7 +73,11 @@
   <script src="js/components/bottom-sheet.js"></script>
   <script src="js/components/card.js"></script>
 
+  <!-- Componentes -->
+  <script src="js/components/resumen-matutino.js"></script>
+
   <!-- Vistas -->
+  <script src="js/views/mi-turno.js"></script>
   <script src="js/views/todo.js"></script>
   <script src="js/views/detalle.js"></script>
   <script src="js/views/programados.js"></script>
