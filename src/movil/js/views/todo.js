@@ -61,9 +61,10 @@ var VistaTodo = {
     var bottomBar = document.createElement('div');
     bottomBar.className = 'bottom-bar hidden';
     bottomBar.id = 'seleccion-bar';
-    bottomBar.innerHTML = '<span id="seleccion-count">0 seleccionadas</span>'
+    bottomBar.innerHTML = '<span id="seleccion-count">0</span>'
       + '<button class="btn btn-primary" onclick="VistaTodo._cambiarFaseMasivo()">Fase</button>'
-      + '<button class="btn btn-primary" onclick="VistaTodo._responderMasivo()">Responder</button>'
+      + '<button class="btn btn-primary" onclick="VistaTodo._cambiarEstadoMasivo()">Estado</button>'
+      + '<button class="btn btn-primary" onclick="VistaTodo._responderMasivo()">Resp</button>'
       + '<button class="btn btn-outline" onclick="VistaTodo._limpiarSeleccion()">X</button>';
     contenedor.appendChild(bottomBar);
   },
@@ -306,6 +307,30 @@ var VistaTodo = {
     });
   },
 
+  _cambiarEstadoMasivo: function() {
+    if (this._seleccionadas.size === 0) {
+      ToastUI.mostrar('Selecciona al menos una carga', { tipo: 'info' });
+      return;
+    }
+
+    var estados = typeof getDefaultEstados === 'function'
+      ? getDefaultEstados().filter(function(e) { return e.activo; })
+      : [];
+
+    var self = this;
+    BottomSheet.abrir({
+      titulo: 'Cambiar estado (' + this._seleccionadas.size + ' cargas)',
+      opciones: estados.map(function(e) {
+        return {
+          texto: e.icono + ' ' + e.nombre,
+          accion: function() {
+            self._ejecutarCambioMasivo('estado', e.codigo);
+          }
+        };
+      })
+    });
+  },
+
   _responderMasivo: function() {
     if (this._seleccionadas.size === 0) {
       ToastUI.mostrar('Selecciona al menos una carga', { tipo: 'info' });
@@ -335,20 +360,43 @@ var VistaTodo = {
   _ejecutarCambioMasivo: async function(campo, valor) {
     var registros = Store.obtenerRegistros();
     var seleccionadas = this._seleccionadas;
+
+    // 1. Recopilar threadIds unicos de los seleccionados (como escritorio)
+    var threadsAfectados = {};
+    registros.forEach(function(r) {
+      if (seleccionadas.has(String(r.codCar)) && r.threadId) {
+        threadsAfectados[r.threadId] = true;
+      }
+    });
+    var threadIds = Object.keys(threadsAfectados);
+
+    // 2. Propagar a TODO el hilo localmente (como escritorio)
+    registros.forEach(function(r) {
+      if (r.threadId && threadsAfectados[r.threadId]) {
+        r[campo] = valor;
+      }
+    });
+    Store.guardarRegistros(registros);
+
+    // 3. Re-evaluar alertas
+    if (typeof evaluarAlertas === 'function') {
+      Store.guardarAlertas(evaluarAlertas(registros, Store.obtenerConfig()));
+    }
+
+    // 4. Backend: un request por threadId (como escritorio)
     var errores = 0;
     var exitos = 0;
-
-    for (var i = 0; i < registros.length; i++) {
-      var r = registros[i];
-      if (!seleccionadas.has(String(r.codCar))) continue;
+    for (var i = 0; i < threadIds.length; i++) {
       try {
-        await API.post('actualizarCampo', { messageId: r.messageId, campo: campo, valor: valor });
+        await API.post('actualizarCampoPorThread', {
+          threadId: threadIds[i], campo: campo, valor: valor
+        });
         exitos++;
       } catch (e) { errores++; }
     }
 
     Feedback.vibrar('doble');
-    ToastUI.mostrar(exitos + ' actualizadas' + (errores ? ', ' + errores + ' errores' : ''), {
+    ToastUI.mostrar(exitos + ' hilos actualizados' + (errores ? ', ' + errores + ' errores' : ''), {
       tipo: errores ? 'error' : 'exito'
     });
     this._limpiarSeleccion();

@@ -203,11 +203,24 @@ var VistaDetalle = {
   _ejecutarCambioFase: async function(registro, nuevaFase) {
     var faseAnterior = registro.fase;
     try {
-      await API.post('actualizarCampo', {
-        messageId: registro.messageId,
+      // Propagar al hilo completo en backend (como escritorio)
+      await API.post('actualizarCampoPorThread', {
+        threadId: registro.threadId,
         campo: 'fase',
         valor: nuevaFase
       });
+
+      // Propagar al hilo completo en local
+      var todos = Store.obtenerRegistros();
+      todos.forEach(function(r) {
+        if (r.threadId === registro.threadId) r.fase = nuevaFase;
+      });
+      Store.guardarRegistros(todos);
+
+      if (typeof evaluarAlertas === 'function') {
+        Store.guardarAlertas(evaluarAlertas(todos, Store.obtenerConfig()));
+      }
+
       Feedback.vibrar('corto');
       ToastUI.mostrar('Fase actualizada a ' + nuevaFase, { tipo: 'exito' });
 
@@ -265,18 +278,28 @@ var VistaDetalle = {
             break;
 
           case 'CAMBIAR_FASE':
-            if (a.params.fase) {
-              API.post('actualizarCampo', {
-                messageId: registro.messageId, campo: 'fase', valor: a.params.fase
+            if (a.params.fase && registro.threadId) {
+              API.post('actualizarCampoPorThread', {
+                threadId: registro.threadId, campo: 'fase', valor: a.params.fase
               });
+              var todosFase = Store.obtenerRegistros();
+              todosFase.forEach(function(reg) {
+                if (reg.threadId === registro.threadId) reg.fase = a.params.fase;
+              });
+              Store.guardarRegistros(todosFase);
             }
             break;
 
           case 'CAMBIAR_ESTADO':
-            if (a.params.estado) {
-              API.post('actualizarCampo', {
-                messageId: registro.messageId, campo: 'estado', valor: a.params.estado
+            if (a.params.estado && registro.threadId) {
+              API.post('actualizarCampoPorThread', {
+                threadId: registro.threadId, campo: 'estado', valor: a.params.estado
               });
+              var todosEst = Store.obtenerRegistros();
+              todosEst.forEach(function(reg) {
+                if (reg.threadId === registro.threadId) reg.estado = a.params.estado;
+              });
+              Store.guardarRegistros(todosEst);
             }
             break;
 
