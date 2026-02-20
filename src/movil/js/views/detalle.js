@@ -350,8 +350,8 @@ var VistaDetalle = {
 
           case 'CREAR_RECORDATORIO':
             if (typeof crearRecordatorio === 'function') {
-              var rec = crearRecordatorio(a.params.texto || 'Recordatorio', String(registro.codCar), a.params.horas || 1);
               var recs = Store._leerJSON('tarealog_recordatorios', []);
+              var rec = crearRecordatorio(a.params.texto || 'Recordatorio', String(registro.codCar), (a.params.horas || 1) + 'h', new Date(), recs, registro.asunto || null);
               recs.push(rec);
               Store._guardarJSON('tarealog_recordatorios', recs);
               ToastUI.mostrar('Recordatorio creado', { tipo: 'info' });
@@ -395,7 +395,14 @@ var VistaDetalle = {
             break;
 
           case 'PRESELECCIONAR_PLANTILLA':
-            VistaDetalle._abrirEditorConPlantilla(registro, a.params.nombrePlantilla);
+            if (a.params.programarEnvio) {
+              VistaDetalle._mostrarSugerenciaEmailProgramado(registro, {
+                texto: a.params.nombrePlantilla || 'Email programado',
+                horas: 24
+              });
+            } else {
+              VistaDetalle._abrirEditorConPlantilla(registro, a.params.nombrePlantilla);
+            }
             break;
 
           case 'MOSTRAR_AVISO':
@@ -415,7 +422,7 @@ var VistaDetalle = {
   _mostrarSugerenciaEmailProgramado: function(registro, params) {
     var plantillas = Store.obtenerPlantillas();
     var mapeo = this._MAPEO_FASE_PLANTILLA[registro.fase] || {};
-    var textoBuscar = (mapeo.buscar || params.texto || '').toLowerCase();
+    var textoBuscar = (params.texto || mapeo.buscar || '').toLowerCase();
 
     // Pre-seleccionar plantilla que coincida
     var plantillaDefault = plantillas.find(function(p) {
@@ -717,6 +724,7 @@ var VistaDetalle = {
       await API.post('guardarRecordatorio', {
         clave: String(registro.codCar),
         texto: 'Revisar carga ' + registro.codCar,
+        asunto: registro.asunto || '',
         fechaDisparo: fecha,
         preset: minutos + 'min',
         origen: 'manual'

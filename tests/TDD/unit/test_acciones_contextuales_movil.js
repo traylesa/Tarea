@@ -35,11 +35,11 @@ describe('Acciones contextuales - evaluarReglas post-cambio', () => {
   test('evaluarReglas detecta cambio a fase 19', () => {
     var resultados = evaluarReglas(reglasDefault, 'fase', '19', '12');
     expect(resultados.length).toBeGreaterThan(0);
-    // Debe incluir propagar + sugerir recordatorio
+    // Debe incluir propagar + preseleccionar plantilla con programarEnvio
     var tipos = [];
     resultados.forEach(r => r.acciones.forEach(a => tipos.push(a.tipo)));
     expect(tipos).toContain('PROPAGAR_HILO');
-    expect(tipos).toContain('SUGERIR_RECORDATORIO');
+    expect(tipos).toContain('PRESELECCIONAR_PLANTILLA');
   });
 
   test('evaluarReglas detecta cambio a fase 29', () => {
@@ -68,17 +68,18 @@ describe('Acciones contextuales - Mapeo fase/plantilla email programado', () => 
     expect(TIPOS_ACCION_REGLA.MOSTRAR_AVISO).toBe('MOSTRAR_AVISO');
   });
 
-  test('reglas default sugieren recordatorio con params correctos para fase 19', () => {
+  test('reglas default preseleccionan plantilla con programarEnvio para fase 19', () => {
     var resultados = evaluarReglas(generarReglasDefault(), 'fase', '19', null);
-    var sugerencia = null;
+    var accion = null;
     resultados.forEach(function(r) {
       r.acciones.forEach(function(a) {
-        if (a.tipo === 'SUGERIR_RECORDATORIO') sugerencia = a;
+        if (a.tipo === 'PRESELECCIONAR_PLANTILLA') accion = a;
       });
     });
-    expect(sugerencia).not.toBeNull();
-    expect(sugerencia.params.texto).toBe('Verificar descarga');
-    expect(sugerencia.params.horas).toBe(8);
+    expect(accion).not.toBeNull();
+    expect(accion.params.nombrePlantilla).toBe('Solicitud docs descarga');
+    expect(accion.params.programarEnvio).toBe(true);
+    expect(accion.params.horaDefault).toBe('09:00');
   });
 
   test('reglas default sugieren recordatorio con params correctos para fase 29', () => {

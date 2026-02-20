@@ -165,11 +165,11 @@ function generarReglasDefault() {
       origen: 'sistema'
     },
     {
-      id: 'default_sugerir_descarga',
-      nombre: 'Sugerir: Verificar descarga',
+      id: 'default_solicitar_docs',
+      nombre: 'Solicitar docs descarga',
       activa: true,
       condicion: { campo: 'fase', valor: '19', faseOrigen: null },
-      acciones: [{ tipo: 'SUGERIR_RECORDATORIO', params: { texto: 'Verificar descarga', horas: 8 } }],
+      acciones: [{ tipo: 'PRESELECCIONAR_PLANTILLA', params: { nombrePlantilla: 'Solicitud docs descarga', programarEnvio: true, horaDefault: '09:00' } }],
       orden: 10,
       origen: 'sistema'
     },

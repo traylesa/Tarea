@@ -176,7 +176,7 @@ describe('action-rules.js', () => {
       var result = evaluarReglas(reglas, 'fase', '19', '12');
       var nombres = result.map(r => r.nombre);
       expect(nombres).toContain('Propagar fase al hilo');
-      expect(nombres).toContain('Sugerir: Verificar descarga');
+      expect(nombres).toContain('Solicitar docs descarga');
     });
 
     test('detecta cambio de estado con wildcard', () => {
@@ -318,7 +318,7 @@ describe('action-rules.js', () => {
     test('IDs son estables (predecibles)', () => {
       var defaults = generarReglasDefault();
       expect(defaults[0].id).toBe('default_propagar_fase');
-      expect(defaults[3].id).toBe('default_sugerir_descarga');
+      expect(defaults[3].id).toBe('default_solicitar_docs');
     });
 
     test('3 reglas de propagacion con wildcard', () => {
@@ -335,16 +335,17 @@ describe('action-rules.js', () => {
       var defaults = generarReglasDefault();
       var sugerencias = defaults.filter(r =>
         r.acciones.some(a => a.tipo === 'SUGERIR_RECORDATORIO'));
-      expect(sugerencias).toHaveLength(2);
+      expect(sugerencias).toHaveLength(1); // solo fase 29
     });
 
-    test('sugerencia fase 19 con 8h, fase 29 con 24h', () => {
+    test('fase 19 preselecciona plantilla con programarEnvio, fase 29 sugiere 24h', () => {
       var defaults = generarReglasDefault();
-      var sug19 = defaults.find(r => r.condicion.valor === '19' &&
-        r.acciones.some(a => a.tipo === 'SUGERIR_RECORDATORIO'));
+      var pre19 = defaults.find(r => r.condicion.valor === '19' &&
+        r.acciones.some(a => a.tipo === 'PRESELECCIONAR_PLANTILLA'));
       var sug29 = defaults.find(r => r.condicion.valor === '29' &&
         r.acciones.some(a => a.tipo === 'SUGERIR_RECORDATORIO'));
-      expect(sug19.acciones[0].params.horas).toBe(8);
+      expect(pre19.acciones[0].params.programarEnvio).toBe(true);
+      expect(pre19.acciones[0].params.nombrePlantilla).toBe('Solicitud docs descarga');
       expect(sug29.acciones[0].params.horas).toBe(24);
     });
   });

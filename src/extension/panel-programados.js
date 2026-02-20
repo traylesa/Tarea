@@ -94,7 +94,7 @@ async function programarEnvioMasivo() {
     return;
   }
 
-  var seleccionados = tabla.getSelectedData();
+  var seleccionados = _registroRegla ? [_registroRegla] : tabla.getSelectedData();
   var plantilla = {
     asunto: document.getElementById('respuesta-asunto').value,
     cuerpo: document.getElementById('respuesta-cuerpo').value,

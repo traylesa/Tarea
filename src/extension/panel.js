@@ -650,7 +650,7 @@ async function ejecutarAccionRegla(accion, rowData) {
         var aceptar = confirm('Sugerencia: "' + params.texto + '" en ' + params.horas + 'h. ¿Crear recordatorio?');
         if (aceptar) {
           var sug = { texto: params.texto, horasAntes: params.horas };
-          var rec = aceptarSugerencia(sug, rowData.codCar || null, new Date());
+          var rec = aceptarSugerencia(sug, rowData.codCar || null, new Date(), rowData.asunto || null);
           var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
           var lista = stored[STORAGE_KEY_RECORDATORIOS] || [];
           lista.push(rec);
@@ -664,7 +664,7 @@ async function ejecutarAccionRegla(accion, rowData) {
     case 'CREAR_RECORDATORIO':
       if (typeof aceptarSugerencia === 'function') {
         var sugAuto = { texto: params.texto, horasAntes: params.horas };
-        var recAuto = aceptarSugerencia(sugAuto, rowData.codCar || null, new Date());
+        var recAuto = aceptarSugerencia(sugAuto, rowData.codCar || null, new Date(), rowData.asunto || null);
         var storedAuto = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
         var listaAuto = storedAuto[STORAGE_KEY_RECORDATORIOS] || [];
         listaAuto.push(recAuto);
@@ -718,22 +718,26 @@ async function ejecutarAccionRegla(accion, rowData) {
       break;
 
     case 'PRESELECCIONAR_PLANTILLA':
-      if (params.nombrePlantilla && typeof abrirModalRespuesta === 'function') {
-        abrirModalRespuesta();
-        setTimeout(function() {
-          var plantilla = plantillasGuardadas.find(function(p) {
-            return p.alias === params.nombrePlantilla;
-          });
-          if (plantilla) {
-            var select = document.getElementById('respuesta-plantilla');
-            if (select) {
-              select.value = plantilla.id;
-              if (typeof alSeleccionarPlantillaRespuesta === 'function') {
-                alSeleccionarPlantillaRespuesta();
+      if (params.nombrePlantilla) {
+        if (params.programarEnvio && typeof abrirModalRespuestaDesdeRegla === 'function') {
+          abrirModalRespuestaDesdeRegla(rowData, params);
+        } else if (typeof abrirModalRespuesta === 'function') {
+          abrirModalRespuesta();
+          setTimeout(function() {
+            var plantilla = plantillasGuardadas.find(function(p) {
+              return p.alias === params.nombrePlantilla;
+            });
+            if (plantilla) {
+              var select = document.getElementById('respuesta-plantilla');
+              if (select) {
+                select.value = plantilla.id;
+                if (typeof alSeleccionarPlantillaRespuesta === 'function') {
+                  alSeleccionarPlantillaRespuesta();
+                }
               }
             }
-          }
-        }, 100);
+          }, 100);
+        }
       }
       break;
 

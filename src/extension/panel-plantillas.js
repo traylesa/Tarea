@@ -65,6 +65,76 @@ function crearPlantillasPredefinidas() {
   ];
 }
 
+// Registro individual para envio desde regla (null = usar seleccion tabla)
+var _registroRegla = null;
+
+function obtenerVariablesInterpolacion(row) {
+  return {
+    codCar: row.codCar || '', nombreTransportista: row.nombreTransportista || '',
+    codTra: row.codTra || '', emailRemitente: row.emailRemitente || '',
+    interlocutor: row.interlocutor || '', referencia: row.referencia || '',
+    asunto: row.asunto || '', fechaCorreo: row.fechaCorreo || '',
+    estado: row.estado || '', tipoTarea: row.tipoTarea || ''
+  };
+}
+
+function abrirModalRespuestaDesdeRegla(rowData, params) {
+  _registroRegla = rowData;
+
+  var dest = rowData.interlocutor || rowData.emailRemitente || '';
+  document.getElementById('respuesta-destinatarios').innerHTML =
+    '<strong>Para:</strong> ' + dest + (rowData.codCar ? ' — Carga ' + rowData.codCar : '');
+
+  var select = document.getElementById('respuesta-plantilla');
+  select.innerHTML = '<option value="">-- Sin plantilla --</option>';
+  plantillasGuardadas.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.alias;
+    select.appendChild(opt);
+  });
+
+  if (params.nombrePlantilla) {
+    var plantilla = plantillasGuardadas.find(function(p) {
+      return p.alias.toLowerCase().indexOf(params.nombrePlantilla.toLowerCase()) !== -1;
+    });
+    if (plantilla) {
+      select.value = plantilla.id;
+      var vars = obtenerVariablesInterpolacion(rowData);
+      document.getElementById('respuesta-asunto').value = interpolar(plantilla.asunto, vars);
+      document.getElementById('respuesta-cuerpo').value = interpolar(plantilla.cuerpo, vars);
+    }
+  }
+
+  var piePreview = document.getElementById('respuesta-pie-preview');
+  if (pieComun) {
+    piePreview.innerHTML = '<small>Pie comun:</small> ' + sanitizarHtml(pieComun);
+    piePreview.style.display = '';
+  } else {
+    piePreview.style.display = 'none';
+  }
+
+  if (params.programarEnvio) {
+    document.getElementById('chk-programar-envio').checked = true;
+    document.getElementById('programar-campos').classList.remove('hidden');
+    document.getElementById('btn-enviar-respuesta').textContent = 'Programar envio';
+
+    var manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    var partes = (params.horaDefault || '09:00').split(':');
+    manana.setHours(parseInt(partes[0], 10), parseInt(partes[1] || '0', 10), 0, 0);
+    var local = new Date(manana.getTime() - manana.getTimezoneOffset() * 60000);
+    document.getElementById('programar-fecha').value = local.toISOString().slice(0, 16);
+  } else {
+    document.getElementById('chk-programar-envio').checked = false;
+    document.getElementById('programar-campos').classList.add('hidden');
+    document.getElementById('btn-enviar-respuesta').textContent = 'Enviar';
+  }
+
+  document.getElementById('respuesta-error').classList.add('hidden');
+  document.getElementById('preview-respuesta').classList.add('hidden');
+  document.getElementById('modal-respuesta').classList.remove('hidden');
+}
+
 // --- Modal respuesta masiva ---
 
 function abrirModalRespuesta() {
@@ -113,7 +183,7 @@ function alSeleccionarPlantillaRespuesta() {
 }
 
 async function enviarRespuestaMasiva() {
-  const seleccionados = tabla.getSelectedData();
+  const seleccionados = _registroRegla ? [_registroRegla] : tabla.getSelectedData();
   const plantilla = {
     asunto: document.getElementById('respuesta-asunto').value,
     cuerpo: document.getElementById('respuesta-cuerpo').value,
@@ -184,6 +254,7 @@ async function enviarRespuestaMasiva() {
 }
 
 function cerrarModalRespuesta() {
+  _registroRegla = null;
   document.getElementById('modal-respuesta').classList.add('hidden');
   document.getElementById('preview-respuesta').classList.add('hidden');
 }
