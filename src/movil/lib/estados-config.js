@@ -1,16 +1,25 @@
 /**
  * estados-config.js - Logica pura para estados configurables.
  * Sin dependencias DOM. Testeable unitariamente.
+ *
+ * 7 estados con iconos UNICOS por forma (accesibilidad daltonismo)
+ * y colores distintos para escaneo rapido de 300+ cards.
  */
 
-const CLASES_CSS_ESTADOS_VALIDAS = ['', 'estado-ok', 'estado-alerta', 'estado-admin', 'estado-sin'];
+var CLASES_CSS_ESTADOS_VALIDAS = [
+  '', 'estado-nuevo', 'estado-enviado', 'estado-recibido',
+  'estado-pendiente', 'estado-gestionado', 'estado-alerta', 'estado-cerrado'
+];
 
 function getDefaultEstados() {
   return [
-    { codigo: 'ENVIADO',     nombre: 'Enviado',     icono: '\u{1F7E2}', clase_css: 'estado-ok',     orden: 1, activo: true },
-    { codigo: 'RECIBIDO',    nombre: 'Recibido',    icono: '\u{1F7E2}', clase_css: 'estado-ok',     orden: 2, activo: true },
-    { codigo: 'GESTIONADO',  nombre: 'Gestionado',  icono: '\u{1F7E2}', clase_css: 'estado-ok',     orden: 3, activo: true },
-    { codigo: 'ALERTA',      nombre: 'Alerta',      icono: '\u{1F534}', clase_css: 'estado-alerta', orden: 4, activo: true }
+    { codigo: 'NUEVO',      nombre: 'Nuevo',      icono: '\u25CF', abreviatura: 'NUE', clase_css: 'estado-nuevo',      orden: 1, activo: true },
+    { codigo: 'ENVIADO',    nombre: 'Enviado',     icono: '\u2197', abreviatura: 'ENV', clase_css: 'estado-enviado',    orden: 2, activo: true },
+    { codigo: 'RECIBIDO',   nombre: 'Recibido',    icono: '\u2199', abreviatura: 'REC', clase_css: 'estado-recibido',   orden: 3, activo: true },
+    { codigo: 'PENDIENTE',  nombre: 'Pendiente',   icono: '\u25D4', abreviatura: 'PEN', clase_css: 'estado-pendiente',  orden: 4, activo: true },
+    { codigo: 'GESTIONADO', nombre: 'Gestionado',  icono: '\u2713', abreviatura: 'GES', clase_css: 'estado-gestionado', orden: 5, activo: true },
+    { codigo: 'ALERTA',     nombre: 'Alerta',      icono: '\u25B2', abreviatura: 'ALE', clase_css: 'estado-alerta',     orden: 6, activo: true },
+    { codigo: 'CERRADO',    nombre: 'Cerrado',     icono: '\u2714', abreviatura: 'CER', clase_css: 'estado-cerrado',    orden: 7, activo: true }
   ];
 }
 

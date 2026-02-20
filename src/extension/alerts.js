@@ -34,13 +34,13 @@ function evaluarAlertas(registros, config, alertasPrevias, ahora) {
   alertas = alertas.concat(_reglaR5(registros));
   alertas = alertas.concat(_reglaR6(registros, ahora));
 
-  return deduplicar(alertas, alertasPrevias || [], cfg.cooldownMs || 3600000);
+  return deduplicar(alertas, alertasPrevias || [], cfg.cooldownMs || MS_POR_HORA);
 }
 
 // --- R2: Silencio transportista ---
 
 function _reglaR2(registros, cfg, ahora) {
-  var umbralMs = (cfg.silencioUmbralH || 4) * 3600000;
+  var umbralMs = (cfg.silencioUmbralH || UMBRAL_SILENCIO_HORAS) * MS_POR_HORA;
   var enviados = registros.filter(function(r) { return r.estado === 'ENVIADO'; });
   var alertas = [];
 
@@ -82,7 +82,7 @@ function _reglaR3(registros, cfg, ahora) {
     var limiteH = maxH[reg.fase];
     if (!limiteH) return;
 
-    var horasTranscurridas = (ahora.getTime() - new Date(reg.fechaCorreo).getTime()) / 3600000;
+    var horasTranscurridas = (ahora.getTime() - new Date(reg.fechaCorreo).getTime()) / MS_POR_HORA;
     if (horasTranscurridas <= limiteH) return;
 
     var nivel = horasTranscurridas > limiteH * 2 ? NIVEL.ALTO : NIVEL.MEDIO;
@@ -106,7 +106,7 @@ function _reglaR3(registros, cfg, ahora) {
 
 function _reglaR4(registros, cfg, ahora) {
   var umbralDias = cfg.docsUmbralDias || 2;
-  var umbralMs = umbralDias * 86400000;
+  var umbralMs = umbralDias * MS_POR_DIA;
   var alertas = [];
 
   registros.forEach(function(reg) {
@@ -115,7 +115,7 @@ function _reglaR4(registros, cfg, ahora) {
     var fechaRef = reg.fEntrega || reg.fechaCorreo;
     if (!fechaRef) return;
 
-    var diasTranscurridos = (ahora.getTime() - new Date(fechaRef).getTime()) / 86400000;
+    var diasTranscurridos = (ahora.getTime() - new Date(fechaRef).getTime()) / MS_POR_DIA;
     if (diasTranscurridos <= umbralDias) return;
 
     var nivel = diasTranscurridos > 5 ? NIVEL.ALTO : NIVEL.MEDIO;
@@ -161,7 +161,7 @@ function _reglaR5(registros) {
 // --- R6: Carga HOY sin orden ---
 
 function _reglaR6(registros, ahora) {
-  var hoyStr = ahora.toISOString().slice(0, 10);
+  var hoyStr = obtenerFechaLocal(ahora);
   var alertas = [];
 
   // Agrupar por codCar para verificar si alguno tiene ENVIADO
@@ -185,10 +185,8 @@ function _reglaR6(registros, ahora) {
 
     var nivel = NIVEL.ALTO;
     if (info.hCarga) {
-      var partes = info.hCarga.split(':');
-      var horaCarga = new Date(ahora);
-      horaCarga.setHours(parseInt(partes[0], 10), parseInt(partes[1] || '0', 10), 0, 0);
-      var horasRestantes = (horaCarga.getTime() - ahora.getTime()) / 3600000;
+      var horaCarga = crearHoraLocal(ahora, info.hCarga);
+      var horasRestantes = (horaCarga.getTime() - ahora.getTime()) / MS_POR_HORA;
       if (horasRestantes < 3) nivel = NIVEL.CRITICO;
     }
 

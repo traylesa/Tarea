@@ -3,7 +3,11 @@
 // ID de la hoja de calculo (configurable desde la extension via PropertiesService)
 function obtenerSpreadsheetId() {
   var props = PropertiesService.getScriptProperties();
-  return props.getProperty('SPREADSHEET_ID') || '1cLslY9zsd06zQthBnPQpSFTY6KLkopB0xSEIDx5KN-c';
+  var id = props.getProperty('SPREADSHEET_ID');
+  if (!id || !id.trim()) {
+    throw new Error('SPREADSHEET_ID no configurado. Vaya a Configuracion > Hoja de Calculo Destino en la extension para configurarlo.');
+  }
+  return id;
 }
 
 function guardarSpreadsheetId(id) {
@@ -34,6 +38,16 @@ const HEADERS_PROGRAMADOS = [
   'cc', 'bcc', 'fechaProgramada', 'estado',
   'fechaEnvio', 'errorDetalle', 'creadoPor', 'creadoAt'
 ];
+
+// Hojas de datos operativos
+const HOJA_NOTAS = 'NOTAS';
+const HEADERS_NOTAS = ['clave', 'id', 'texto', 'fechaCreacion', 'tipo'];
+
+const HOJA_RECORDATORIOS = 'RECORDATORIOS';
+const HEADERS_RECORDATORIOS = ['id', 'clave', 'texto', 'fechaDisparo', 'preset', 'origen', 'estado'];
+
+const HOJA_HISTORIAL = 'HISTORIAL';
+const HEADERS_HISTORIAL = ['id', 'clave', 'tipo', 'descripcion', 'fechaCreacion'];
 
 // Email propio: cuenta que despliega el script (funciona en Web App)
 function obtenerEmailPropio() {

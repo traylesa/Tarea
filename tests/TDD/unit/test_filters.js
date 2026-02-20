@@ -17,7 +17,20 @@ describe('filters', () => {
       const defs = [{ campo: 'emailRemitente', operador: 'contiene', valor: 'gmail' }];
       const result = construirFiltros(defs);
 
-      expect(result).toEqual([{ field: 'emailRemitente', type: 'like', value: 'gmail' }]);
+      expect(result[0]).toMatchObject({ field: 'emailRemitente', type: 'like', value: 'gmail' });
+      expect(result[0].func).toEqual(expect.any(Function));
+    });
+
+    test('filtro "contiene" es case-insensitive', () => {
+      const defs = [{ campo: 'estado', operador: 'contiene', valor: 'envi' }];
+      const filtroFn = construirFiltros(defs)[0].func;
+
+      // Tabulator llama func(filterValue, cellValue)
+      expect(filtroFn('envi', 'ENVIADO')).toBe(true);
+      expect(filtroFn('envi', 'enviado')).toBe(true);
+      expect(filtroFn('ENVI', 'enviado')).toBe(true);
+      expect(filtroFn('envi', 'RECIBIDO')).toBe(false);
+      expect(filtroFn('envi', null)).toBe(false);
     });
 
     test('construye filtro "no contiene" para un campo', () => {
@@ -29,11 +42,34 @@ describe('filters', () => {
 
     test('filtro "no contiene" excluye registros correctamente', () => {
       const defs = [{ campo: 'emailRemitente', operador: 'no_contiene', valor: 'spam' }];
-      const result = construirFiltros(defs);
-      const filtroFn = result[0].func;
+      const filtroFn = construirFiltros(defs)[0].func;
 
-      expect(filtroFn('buencorreo@gmail.com', 'spam')).toBe(true);
-      expect(filtroFn('spam@correo.com', 'spam')).toBe(false);
+      // Tabulator llama func(filterValue, cellValue)
+      expect(filtroFn('spam', 'buencorreo@gmail.com')).toBe(true);
+      expect(filtroFn('spam', 'spam@correo.com')).toBe(false);
+      expect(filtroFn('spam', null)).toBe(true);
+    });
+
+    test('filtro "no contiene" es case-insensitive', () => {
+      const defs = [{ campo: 'estado', operador: 'no_contiene', valor: 'nada' }];
+      const filtroFn = construirFiltros(defs)[0].func;
+
+      // "ENVIADO" no contiene "nada" → true (debe pasar)
+      expect(filtroFn('nada', 'ENVIADO')).toBe(true);
+      expect(filtroFn('NADA', 'ENVIADO')).toBe(true);
+      // "NADA" contiene "nada" → false (debe excluir)
+      expect(filtroFn('nada', 'NADA')).toBe(false);
+      expect(filtroFn('NADA', 'nada')).toBe(false);
+    });
+
+    test('filtro "igual" es case-insensitive', () => {
+      const defs = [{ campo: 'estado', operador: 'igual', valor: 'enviado' }];
+      const filtroFn = construirFiltros(defs)[0].func;
+
+      expect(filtroFn('enviado', 'ENVIADO')).toBe(true);
+      expect(filtroFn('ENVIADO', 'enviado')).toBe(true);
+      expect(filtroFn('enviado', 'RECIBIDO')).toBe(false);
+      expect(filtroFn('enviado', null)).toBe(false);
     });
 
     test('combina multiples filtros con AND', () => {

@@ -95,6 +95,9 @@ PruebaInicializa4/
 | `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest |
 | `sheets-database.md` | Backend | CRUD Sheets, auto-sync headers, limitaciones |
 | `alertas-proactivas.md` | Dominio | Motor de reglas, niveles, notificaciones, resumen |
+| `productividad-avanzada.md` | Dominio | Recordatorios, secuencias, dashboard, historial, notas |
+| `trazabilidad-hilos.md` | Backend | ThreadManager, DB_HILOS, vinculacion auto/manual/hilo |
+| `pwa-mobile-development.md` | Mobile | PWA, integracion GAS, UI mobile-first, accesibilidad campo |
 
 ---
 

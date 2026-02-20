@@ -100,8 +100,9 @@ var CardUI = {
     if (!estado) return '';
     var est = typeof getDefaultEstados === 'function'
       ? obtenerEstadoPorCodigo(getDefaultEstados(), estado) : null;
-    var icono = est ? est.icono : '';
-    return '<span class="chip-estado">' + icono + '</span>';
+    if (!est) return '';
+    var clase = 'chip-estado chip-estado-' + estado.toLowerCase();
+    return '<span class="' + clase + '">' + est.icono + ' ' + est.abreviatura + '</span>';
   },
 
   _claseFase: function(fase) {

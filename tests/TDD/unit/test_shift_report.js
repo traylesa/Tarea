@@ -134,7 +134,7 @@ describe('esMismoDia', function () {
   test('misma fecha retorna true', function () {
     // Arrange
     var fecha1 = new Date('2026-02-15T08:00:00Z');
-    var fecha2 = new Date('2026-02-15T23:59:59Z');
+    var fecha2 = new Date('2026-02-15T18:00:00Z');
 
     // Act / Assert
     expect(esMismoDia(fecha1, fecha2)).toBe(true);

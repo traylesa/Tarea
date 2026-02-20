@@ -1,0 +1,12 @@
+# Cobertura Jest
+coverage/
+
+# Temporales Windows
+~$*
+*~*
+
+# Node
+node_modules/
+
+# Clasp
+.clasp.json

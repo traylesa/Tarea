@@ -88,10 +88,26 @@
   margin-bottom: 1px;
 }
 
+/* Chip estado: pill coloreada con icono + abreviatura */
 .chip-estado {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 600;
   line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
 }
+
+.chip-estado-nuevo      { background: #BBDEFB; color: #0D47A1; }
+.chip-estado-enviado    { background: #E3F2FD; color: #1565C0; }
+.chip-estado-recibido   { background: #FFF3E0; color: #E65100; }
+.chip-estado-pendiente  { background: #FFF8E1; color: #F57F17; }
+.chip-estado-gestionado { background: #E8F5E9; color: #2E7D32; }
+.chip-estado-alerta     { background: #FFEBEE; color: #C62828; }
+.chip-estado-cerrado    { background: #F5F5F5; color: #757575; }
 
 /* Linea asunto */
 .card-asunto {
@@ -397,10 +413,13 @@
   background: var(--bg-secondary);
 }
 
-.ficha-estado-enviado { background: #E3F2FD; color: #1565C0; }
-.ficha-estado-recibido { background: #FFF3E0; color: #E65100; }
+.ficha-estado-nuevo      { background: #BBDEFB; color: #0D47A1; }
+.ficha-estado-enviado    { background: #E3F2FD; color: #1565C0; }
+.ficha-estado-recibido   { background: #FFF3E0; color: #E65100; }
+.ficha-estado-pendiente  { background: #FFF8E1; color: #F57F17; }
 .ficha-estado-gestionado { background: #E8F5E9; color: #2E7D32; }
-.ficha-estado-alerta { background: #FFEBEE; color: #C62828; }
+.ficha-estado-alerta     { background: #FFEBEE; color: #C62828; }
+.ficha-estado-cerrado    { background: #F5F5F5; color: #757575; }
 
 /* Cuerpo email expandible */
 .detalle-cuerpo-email {

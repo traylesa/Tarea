@@ -32,31 +32,17 @@ function _esCerrado(reg) {
   return reg.estado === 'GESTIONADO' && reg.fase === '30';
 }
 
-function _esMismoDia(fecha1, fecha2) {
-  return fecha1.getFullYear() === fecha2.getFullYear() &&
-    fecha1.getMonth() === fecha2.getMonth() &&
-    fecha1.getDate() === fecha2.getDate();
-}
-
-function _formatearFecha(fecha) {
-  var y = fecha.getFullYear();
-  var m = ('0' + (fecha.getMonth() + 1)).slice(-2);
-  var d = ('0' + fecha.getDate()).slice(-2);
-  return y + '-' + m + '-' + d;
-}
-
 function calcularKPIsTurno(registros, alertas, recordatorios, ahora) {
   var porGrupo = _gruposVacios();
   var activas = 0;
   var cerradasHoy = 0;
   var cerradasSemana = 0;
-  var limiteInferior = new Date(ahora.getTime() - 6 * 24 * 60 * 60 * 1000);
-  limiteInferior.setHours(0, 0, 0, 0);
+  var limiteInferior = inicioDelDia(new Date(ahora.getTime() - VENTANA_SEMANAL_DIAS * MS_POR_DIA));
 
   registros.forEach(function(reg) {
     if (_esCerrado(reg)) {
       var fecha = new Date(reg.fechaCorreo);
-      if (_esMismoDia(fecha, ahora)) cerradasHoy++;
+      if (esMismoDia(fecha, ahora)) cerradasHoy++;
       if (fecha >= limiteInferior) cerradasSemana++;
     } else {
       activas++;
@@ -70,7 +56,7 @@ function calcularKPIsTurno(registros, alertas, recordatorios, ahora) {
   }).length;
 
   var recordatoriosHoy = recordatorios.filter(function(r) {
-    return _esMismoDia(new Date(r.fechaDisparo), ahora);
+    return esMismoDia(r.fechaDisparo, ahora);
   }).length;
 
   return {
@@ -87,17 +73,17 @@ function calcularGraficoSemanal(registros, ahora) {
   var dias = [];
   var i;
   for (i = 6; i >= 0; i--) {
-    var fecha = new Date(ahora.getTime() - i * 24 * 60 * 60 * 1000);
+    var fecha = new Date(ahora.getTime() - i * MS_POR_DIA);
     dias.push({
       dia: DIAS_SEMANA[fecha.getDay()],
-      fecha: _formatearFecha(fecha),
+      fecha: obtenerFechaLocal(fecha),
       conteo: 0
     });
   }
 
   registros.forEach(function(reg) {
     if (!_esCerrado(reg)) return;
-    var fechaStr = _formatearFecha(new Date(reg.fechaCorreo));
+    var fechaStr = obtenerFechaLocal(new Date(reg.fechaCorreo));
     for (var j = 0; j < dias.length; j++) {
       if (dias[j].fecha === fechaStr) {
         dias[j].conteo++;

@@ -1,0 +1,219 @@
+{
+  "version": "1.2.0",
+  "fecha_exportacion": "2026-02-16T16:22:47.096Z",
+  "config": {
+    "gasUrl": "https://script.google.com/macros/s/AKfycbx_ZsFCThThytPfD0WlNPpLgvw2Ilu22-ec5n9NqhDc0bPajsSj9w0u-8KuEXIXmEHz/exec",
+    "intervaloMinutos": 15,
+    "rutaCsvErp": "",
+    "patrones": {
+      "codcarAdjunto": "Carga_0*(\\d+)\\.pdf",
+      "keywordsAdmin": "certificado|hacienda|347|aeat|factura"
+    },
+    "ventana": {
+      "width": 1485,
+      "height": 941,
+      "left": -1484,
+      "top": 1
+    },
+    "emailsPorMinuto": 10,
+    "fases": [
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "",
+        "es_critica": false,
+        "nombre": "--",
+        "orden": 0
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "00",
+        "es_critica": false,
+        "nombre": "00 Espera",
+        "orden": 1
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "01",
+        "es_critica": false,
+        "nombre": "01 Espera en Carga",
+        "orden": 2
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "02",
+        "es_critica": false,
+        "nombre": "02 Espera en Descarga",
+        "orden": 3
+      },
+      {
+        "activa": true,
+        "clase_css": "fase-incidencia",
+        "codigo": "05",
+        "es_critica": true,
+        "nombre": "05 Incidencia",
+        "orden": 4
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "11",
+        "es_critica": false,
+        "nombre": "11 En Carga",
+        "orden": 5
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "12",
+        "es_critica": false,
+        "nombre": "12 Cargando",
+        "orden": 6
+      },
+      {
+        "activa": true,
+        "clase_css": "fase-ok",
+        "codigo": "19",
+        "es_critica": false,
+        "nombre": "19 Cargado",
+        "orden": 7
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "21",
+        "es_critica": false,
+        "nombre": "21 En Descarga",
+        "orden": 8
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "22",
+        "es_critica": false,
+        "nombre": "22 Descargando",
+        "orden": 9
+      },
+      {
+        "activa": true,
+        "clase_css": "fase-incidencia",
+        "codigo": "25",
+        "es_critica": true,
+        "nombre": "25 Incidencia",
+        "orden": 10
+      },
+      {
+        "activa": true,
+        "clase_css": "",
+        "codigo": "29",
+        "es_critica": false,
+        "nombre": "29 Vacio",
+        "orden": 11
+      },
+      {
+        "activa": true,
+        "clase_css": "fase-ok",
+        "codigo": "30",
+        "es_critica": false,
+        "nombre": "30 Documentado",
+        "orden": 12
+      }
+    ],
+    "estados": [
+      {
+        "activo": true,
+        "clase_css": "estado-ok",
+        "codigo": "ENVIADO",
+        "icono": "🟢",
+        "nombre": "Enviado",
+        "orden": 1
+      },
+      {
+        "activo": true,
+        "clase_css": "estado-ok",
+        "codigo": "RECIBIDO",
+        "icono": "⚫",
+        "nombre": "Recibido",
+        "orden": 2
+      },
+      {
+        "activo": true,
+        "clase_css": "estado-ok",
+        "codigo": "GESTIONADO",
+        "icono": "🟢",
+        "nombre": "Gestionado",
+        "orden": 3
+      },
+      {
+        "activo": true,
+        "clase_css": "estado-alerta",
+        "codigo": "ALERTA",
+        "icono": "🔴",
+        "nombre": "Alerta",
+        "orden": 4
+      },
+      {
+        "activo": true,
+        "clase_css": "estado-admin",
+        "codigo": "NADA",
+        "icono": "🧹",
+        "nombre": "NADA",
+        "orden": 0
+      },
+      {
+        "activo": true,
+        "clase_css": "estado-admin",
+        "codigo": "PENDIENTE",
+        "icono": "🟡",
+        "nombre": "Pendiente",
+        "orden": 5
+      }
+    ],
+    "alertas": {
+      "activado": true,
+      "silencioUmbralH": 4,
+      "estancamientoMaxH": 24,
+      "docsUmbralDias": 2,
+      "cooldownMs": 3600000
+    },
+    "resumenMatutino": {
+      "activado": true,
+      "hora": "09.15"
+    },
+    "recordatorios": {
+      "sugerenciasActivadas": true
+    },
+    "secuencias": {
+      "activado": true,
+      "evaluacionMinutos": 15
+    },
+    "reporteTurno": {
+      "activado": true,
+      "hora": "18:00"
+    },
+    "robustez": {
+      "timeoutBarridoMs": 300000,
+      "limiteLoteProcesamiento": 50,
+      "tamanoTandaEnvio": 15
+    }
+  },
+  "servicios": {
+    "activeServiceId": "svc_1771239299095_1",
+    "services": [
+      {
+        "alias": "traylesa.com",
+        "id": "svc_1771239299095_1",
+        "url": "https://script.google.com/macros/s/AKfycbx_ZsFCThThytPfD0WlNPpLgvw2Ilu22-ec5n9NqhDc0bPajsSj9w0u-8KuEXIXmEHz/exec"
+      }
+    ]
+  },
+  "gmailQuery": "(in:inbox OR in:sent) newer_than:7d",
+  "spreadsheet": {
+    "actualizadoAt": "2026-02-16T10:52:58.151Z",
+    "id": "1cLslY9zsd06zQthBnPQpSFTY6KLkopB0xSEIDx5KN-c",
+    "nombre": "TareaLog"
+  }
+}

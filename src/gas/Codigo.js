@@ -8,6 +8,9 @@ function doGet(e) {
     if (action === 'obtenerConfig') return accionObtenerConfig();
     if (action === 'getProgramados') return accionGetProgramados();
     if (action === 'getHorarioLaboral') return accionGetHorarioLaboral();
+    if (action === 'getNotas') return accionGetNotas();
+    if (action === 'getRecordatorios') return accionGetRecordatorios();
+    if (action === 'getHistorial') return accionGetHistorial();
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -20,7 +23,7 @@ function doPost(e) {
     var action = (e && e.parameter && e.parameter.action) || '';
     var body = e && e.postData ? JSON.parse(e.postData.contents) : {};
 
-    if (action === 'procesarCorreos') return accionProcesarCorreos();
+    if (action === 'procesarCorreos') return accionProcesarCorreos(body);
     if (action === 'actualizarCampo') return accionActualizarCampo(body);
     if (action === 'vincularManual') return accionVincularManual(body);
     if (action === 'enviarRespuesta') return accionEnviarRespuesta(body);
@@ -29,6 +32,13 @@ function doPost(e) {
     if (action === 'programarEnvio') return accionProgramarEnvio(body);
     if (action === 'cancelarProgramado') return accionCancelarProgramado(body);
     if (action === 'guardarHorarioLaboral') return accionGuardarHorarioLaboral(body);
+    if (action === 'guardarNota') return accionGuardarNota(body);
+    if (action === 'eliminarNota') return accionEliminarNota(body);
+    if (action === 'guardarRecordatorio') return accionGuardarRecordatorio(body);
+    if (action === 'eliminarRecordatorio') return accionEliminarRecordatorio(body);
+    if (action === 'actualizarEstadoRecordatorio') return accionActualizarEstadoRecordatorio(body);
+    if (action === 'registrarHistorial') return accionRegistrarHistorial(body);
+    if (action === 'actualizarCampoPorThread') return accionActualizarCampoPorThread(body);
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -52,8 +62,9 @@ function accionObtenerConfig() {
 
 // --- Acciones POST ---
 
-function accionProcesarCorreos() {
-  Logger.log('=== INICIO procesarCorreos ===');
+function accionProcesarCorreos(body) {
+  var limite = (body && body.limite) || 50;
+  Logger.log('=== INICIO procesarCorreos (limite: ' + limite + ') ===');
   Logger.log('Spreadsheet ID: ' + obtenerSpreadsheetId());
 
   var hilosMap = leerHilos();
@@ -69,7 +80,8 @@ function accionProcesarCorreos() {
   var idsExistentes = obtenerIdsYaProcesados();
   cargarIdsProcesados(idsExistentes);
 
-  var mensajes = obtenerMensajesNuevos();
+  var mensajes = obtenerMensajesNuevos(undefined, limite);
+  var hayMas = mensajes.length >= limite;
   var procesados = 0;
   var errores = 0;
 
@@ -84,26 +96,56 @@ function accionProcesarCorreos() {
     }
   });
 
-  Logger.log('=== FIN procesarCorreos: ' + procesados + ' procesados, ' + errores + ' errores ===');
+  // NUEVO: Persistir vinculaciones descubiertas durante procesamiento
+  var vinculacionesNuevas = threadManager.getAllMappings();
+  vinculacionesNuevas.forEach(function(vinc) {
+    if (!hilosMap[vinc.threadId]) {  // Solo si es nueva
+      guardarHilo(vinc.threadId, vinc.codCar);
+    }
+  });
 
-  // Retornar registros actualizados para evaluacion client-side de alertas
+  Logger.log('=== FIN procesarCorreos: ' + procesados + ' procesados, ' + errores + ' errores, hayMas: ' + hayMas + ' ===');
+
   var registrosActualizados = leerRegistros();
 
   return respuestaJson({
     ok: true,
     procesados: procesados,
     errores: errores,
+    hayMas: hayMas,
     registros: registrosActualizados
   });
 }
 
+var CAMPOS_EDITABLES = [
+  'codCar', 'codTra', 'nombreTransportista',
+  'tipoTarea', 'estado', 'fase', 'alerta', 'vinculacion',
+  'referencia', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega',
+  'zona', 'zDest'
+];
+
 function accionActualizarCampo(body) {
+  if (!body.campo || CAMPOS_EDITABLES.indexOf(body.campo) === -1) {
+    return respuestaError('Campo no editable: ' + (body.campo || '(vacío)'));
+  }
   actualizarCampo(body.messageId, body.campo, body.valor);
+  return respuestaJson({ ok: true });
+}
+
+function accionActualizarCampoPorThread(body) {
+  if (!body.threadId || !body.campo || CAMPOS_EDITABLES.indexOf(body.campo) === -1) {
+    return respuestaError('Parametros invalidos para actualizarCampoPorThread');
+  }
+  actualizarCampoPorThread(body.threadId, body.campo, body.valor);
   return respuestaJson({ ok: true });
 }
 
 function accionVincularManual(body) {
   guardarHilo(body.threadId, body.codCar);
+
+  // NUEVO: Actualizar registros existentes en SEGUIMIENTO
+  actualizarCodCarPorThread(body.threadId, body.codCar);
+
   return respuestaJson({ ok: true });
 }
 
@@ -288,6 +330,81 @@ function accionGuardarHorarioLaboral(body) {
   }
   guardarHorarioLaboral(h);
   return respuestaJson({ ok: true, horario: h });
+}
+
+// --- Acciones Notas, Recordatorios, Historial ---
+
+function accionGetNotas() {
+  return respuestaJson({ ok: true, notas: leerNotas() });
+}
+
+function accionGuardarNota(body) {
+  if (!body.clave) return respuestaError('clave es requerida');
+  if (!body.texto) return respuestaError('texto es requerido');
+  var registro = {
+    clave: String(body.clave),
+    id: body.id || 'nota_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    texto: body.texto,
+    fechaCreacion: body.fechaCreacion || new Date().toISOString(),
+    tipo: body.tipo || 'CARGA'
+  };
+  guardarNota(registro);
+  return respuestaJson({ ok: true, id: registro.id });
+}
+
+function accionEliminarNota(body) {
+  if (!body.id) return respuestaError('id es requerido');
+  eliminarNotaGAS(body.id);
+  return respuestaJson({ ok: true });
+}
+
+function accionGetRecordatorios() {
+  return respuestaJson({ ok: true, recordatorios: leerRecordatoriosGAS() });
+}
+
+function accionGuardarRecordatorio(body) {
+  if (!body.texto) return respuestaError('texto es requerido');
+  var registro = {
+    id: body.id || 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    clave: String(body.clave || ''),
+    texto: body.texto,
+    fechaDisparo: body.fechaDisparo || '',
+    preset: body.preset || '',
+    origen: body.origen || 'manual',
+    estado: body.estado || 'ACTIVO'
+  };
+  guardarRecordatorioGAS(registro);
+  return respuestaJson({ ok: true, id: registro.id });
+}
+
+function accionEliminarRecordatorio(body) {
+  if (!body.id) return respuestaError('id es requerido');
+  eliminarRecordatorioGAS(body.id);
+  return respuestaJson({ ok: true });
+}
+
+function accionActualizarEstadoRecordatorio(body) {
+  if (!body.id) return respuestaError('id es requerido');
+  if (!body.estado) return respuestaError('estado es requerido');
+  actualizarRecordatorioEstado(body.id, body.estado);
+  return respuestaJson({ ok: true });
+}
+
+function accionGetHistorial() {
+  return respuestaJson({ ok: true, historial: leerHistorial() });
+}
+
+function accionRegistrarHistorial(body) {
+  if (!body.tipo) return respuestaError('tipo es requerido');
+  var registro = {
+    id: body.id || 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    clave: String(body.clave || ''),
+    tipo: body.tipo,
+    descripcion: body.descripcion || '',
+    fechaCreacion: body.fechaCreacion || new Date().toISOString()
+  };
+  guardarEntradaHistorial(registro);
+  return respuestaJson({ ok: true, id: registro.id });
 }
 
 // --- Trigger programado ---

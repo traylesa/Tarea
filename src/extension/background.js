@@ -1,4 +1,7 @@
 // Importar modulos de logica pura en service worker
+importScripts('resilience.js');
+importScripts('constants.js');
+importScripts('date-utils.js');
 importScripts('alerts.js');
 importScripts('alert-summary.js');
 importScripts('reminders.js');
@@ -144,6 +147,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await verificarSecuencias();
     return;
   }
+  if (alarm.name === ALARM_BARRIDO_CONTINUACION) {
+    await ejecutarBarridoPeriodico();
+    return;
+  }
 });
 
 chrome.runtime.onMessage.addListener((msg) => {
@@ -191,12 +198,34 @@ async function verificarResumenMatutino() {
   await abrirVentanaResumen();
 }
 
+var _barridoEnCurso = false;
+const ALARM_BARRIDO_CONTINUACION = 'tarealog-barrido-cont';
+
 async function ejecutarBarridoPeriodico() {
+  if (_barridoEnCurso) return;
+  _barridoEnCurso = true;
+
   const config = await cargarConfig();
-  if (!config.gasUrl) return;
+  if (!config.gasUrl) {
+    _barridoEnCurso = false;
+    return;
+  }
+
+  var timeoutMs = (config.robustez && config.robustez.timeoutBarridoMs) || 300000;
+  var limite = (config.robustez && config.robustez.limiteLoteProcesamiento) || 50;
 
   try {
-    const response = await fetch(config.gasUrl + '?action=procesarCorreos', { method: 'POST' });
+    const controller = new AbortController();
+    const timer = setTimeout(function() { controller.abort(); }, timeoutMs);
+
+    const response = await fetch(config.gasUrl + '?action=procesarCorreos', {
+      method: 'POST',
+      credentials: 'omit',
+      signal: controller.signal,
+      body: JSON.stringify({ limite: limite })
+    });
+    clearTimeout(timer);
+
     const data = await response.json();
     const registros = data.registros || [];
 
@@ -205,10 +234,19 @@ async function ejecutarBarridoPeriodico() {
       ultimoBarrido: new Date().toISOString()
     });
 
-    // Evaluar alertas proactivas sobre registros
     await _evaluarYNotificarAlertas(registros, config);
+
+    if (data.hayMas) {
+      chrome.alarms.create(ALARM_BARRIDO_CONTINUACION, { delayInMinutes: 0.1 });
+    }
   } catch (error) {
-    console.error('Error en barrido periodico:', error);
+    if (error.name === 'AbortError') {
+      console.error('Barrido cancelado por timeout (' + timeoutMs + 'ms)');
+    } else {
+      console.error('Error en barrido periodico:', error);
+    }
+  } finally {
+    _barridoEnCurso = false;
   }
 }
 

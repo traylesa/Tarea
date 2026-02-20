@@ -43,7 +43,7 @@ function calcularKPIs(registros, alertas, ahora) {
     if (r.codCar) codCarsUnicos[r.codCar] = true;
   });
 
-  var hoyStr = ahora ? ahora.toISOString().slice(0, 10) : '';
+  var hoyStr = ahora ? obtenerFechaLocal(ahora) : '';
   var hoy = 0;
   regs.forEach(function(r) {
     if (r.fCarga && r.fCarga.slice(0, 10) === hoyStr) hoy++;
@@ -78,7 +78,7 @@ function debeMostrarMatutino(flag, configResumen, ahora) {
 
   if (!flag) return true;
 
-  var hoyStr = ahora.toISOString().slice(0, 10);
+  var hoyStr = obtenerFechaLocal(ahora);
 
   // Si hay pospuesto, verificar si ya paso la hora
   if (flag.pospuestoHasta) {
@@ -95,7 +95,7 @@ function debeMostrarMatutino(flag, configResumen, ahora) {
 
 function crearFlagMostrado(ahora, posponerMinutos) {
   var flag = {
-    fecha: ahora.toISOString().slice(0, 10),
+    fecha: obtenerFechaLocal(ahora),
     pospuestoHasta: null
   };
 

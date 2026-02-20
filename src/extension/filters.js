@@ -10,26 +10,51 @@ function construirFiltros(definiciones) {
     .filter(d => d.valor && d.valor.trim() !== '')
     .map(d => {
       if (d.operador === 'contiene') {
-        return { field: d.campo, type: 'like', value: d.valor };
+        return {
+          field: d.campo,
+          type: 'like',
+          value: d.valor,
+          func: (filterValue, cellValue) => {
+            if (!cellValue) return false;
+            return String(cellValue).toLowerCase().includes(String(filterValue).toLowerCase());
+          }
+        };
       }
       if (d.operador === 'no_contiene') {
         return {
           field: d.campo,
           type: '!=',
           value: d.valor,
-          func: (cellValue, filterValue) => {
+          func: (filterValue, cellValue) => {
             if (!cellValue) return true;
             return !String(cellValue).toLowerCase().includes(String(filterValue).toLowerCase());
           }
         };
       }
       if (d.operador === 'igual') {
-        return { field: d.campo, type: '=', value: d.valor };
+        return {
+          field: d.campo,
+          type: '=',
+          value: d.valor,
+          func: (filterValue, cellValue) => {
+            if (!cellValue && !filterValue) return true;
+            if (!cellValue || !filterValue) return false;
+            return String(cellValue).toLowerCase() === String(filterValue).toLowerCase();
+          }
+        };
       }
       if (d.operador === '<' || d.operador === '<=' || d.operador === '>' || d.operador === '>=') {
         return { field: d.campo, type: d.operador, value: d.valor };
       }
-      return { field: d.campo, type: 'like', value: d.valor };
+      return {
+        field: d.campo,
+        type: 'like',
+        value: d.valor,
+        func: (filterValue, cellValue) => {
+          if (!cellValue) return false;
+          return String(cellValue).toLowerCase().includes(String(filterValue).toLowerCase());
+        }
+      };
     });
 }
 
@@ -49,8 +74,7 @@ function filtroRangoFechas(fechaInicio, fechaFin, incluirSinFecha = false) {
 }
 
 function filtroRangoCarga(hoy) {
-  const inicio = new Date(hoy);
-  inicio.setHours(0, 0, 0, 0);
+  const inicio = inicioDelDia(hoy);
   const fin = new Date(hoy);
   fin.setDate(fin.getDate() + 1);
   fin.setHours(23, 59, 59, 999);
@@ -65,9 +89,7 @@ function filtroRangoCarga(hoy) {
 function filtroRangoDescarga(hoy) {
   const fin = new Date(hoy);
   fin.setHours(23, 59, 59, 999);
-  const inicio = new Date(hoy);
-  inicio.setDate(inicio.getDate() - 1);
-  inicio.setHours(0, 0, 0, 0);
+  const inicio = inicioDelDia(new Date(new Date(hoy).getTime() - 86400000));
 
   return (valor) => {
     if (!valor) return false;

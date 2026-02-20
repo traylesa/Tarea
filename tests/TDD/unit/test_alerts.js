@@ -3,6 +3,10 @@
  * TDD: Estos tests se escriben ANTES del codigo (fase RED)
  */
 
+// Importar constantes primero (deben estar en scope global antes de alerts.js)
+const constants = require('../../../src/extension/constants.js');
+Object.assign(global, constants);
+
 const {
   evaluarAlertas,
   deduplicar,

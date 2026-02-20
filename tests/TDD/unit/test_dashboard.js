@@ -3,6 +3,10 @@
  * Sprint 5: Dashboard operativo
  */
 
+// Importar constantes primero (deben estar en scope global antes de dashboard.js)
+const constants = require('../../../src/extension/constants.js');
+Object.assign(global, constants);
+
 const {
   calcularKPIsTurno,
   calcularGraficoSemanal,

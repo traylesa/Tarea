@@ -68,8 +68,8 @@ function formatearEstado(cell) {
     if (estado.clase_css) cell.getElement().classList.add(estado.clase_css);
     return estado.icono + ' ' + estado.nombre;
   }
-  cell.getElement().classList.add('estado-sin');
-  return '\u26AA ' + (val || 'SIN');
+  cell.getElement().classList.add('estado-nuevo');
+  return '\u25CF ' + (val || 'NUEVO');
 }
 
 function formatearFase(cell) {
@@ -631,6 +631,14 @@ async function persistirCambio(cell) {
       }
     }
   }
+
+  // Re-renderizar action bar tras cambio de fase/estado
+  if (tabla && (campo === 'fase' || campo === 'estado') && typeof renderActionBar === 'function') {
+    var seleccionados = tabla.getSelectedData();
+    if (seleccionados.length === 1) {
+      renderActionBar(seleccionados[0]);
+    }
+  }
 }
 
 async function ejecutarAccionRegla(accion, rowData) {
@@ -672,19 +680,84 @@ async function ejecutarAccionRegla(accion, rowData) {
       break;
 
     case 'CAMBIAR_FASE':
-      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
+      if (params.fase && rowData.messageId) {
+        var idxF = registros.findIndex(function(r) { return r.messageId === rowData.messageId; });
+        if (idxF >= 0) {
+          registros[idxF].fase = params.fase;
+          await chrome.storage.local.set({ registros: registros });
+          var urlF = obtenerUrlActiva();
+          if (urlF) {
+            fetch(urlF + '?action=actualizarCampo', {
+              method: 'POST', credentials: 'omit',
+              body: JSON.stringify({ messageId: rowData.messageId, campo: 'fase', valor: params.fase })
+            }).catch(function() {});
+          }
+          if (tabla) await renderTabla();
+          mostrarToast('Fase cambiada a ' + params.fase, 'info');
+        }
+      }
       break;
 
     case 'CAMBIAR_ESTADO':
-      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
+      if (params.estado && rowData.messageId) {
+        var idxE = registros.findIndex(function(r) { return r.messageId === rowData.messageId; });
+        if (idxE >= 0) {
+          registros[idxE].estado = params.estado;
+          await chrome.storage.local.set({ registros: registros });
+          var urlE = obtenerUrlActiva();
+          if (urlE) {
+            fetch(urlE + '?action=actualizarCampo', {
+              method: 'POST', credentials: 'omit',
+              body: JSON.stringify({ messageId: rowData.messageId, campo: 'estado', valor: params.estado })
+            }).catch(function() {});
+          }
+          if (tabla) await renderTabla();
+          mostrarToast('Estado cambiado a ' + params.estado, 'info');
+        }
+      }
       break;
 
     case 'PRESELECCIONAR_PLANTILLA':
-      // Se procesa en obtenerAccionesDesdeReglas → action bar contextual
+      if (params.nombrePlantilla && typeof abrirModalRespuesta === 'function') {
+        abrirModalRespuesta();
+        setTimeout(function() {
+          var plantilla = plantillasGuardadas.find(function(p) {
+            return p.alias === params.nombrePlantilla;
+          });
+          if (plantilla) {
+            var select = document.getElementById('respuesta-plantilla');
+            if (select) {
+              select.value = plantilla.id;
+              if (typeof alSeleccionarPlantillaRespuesta === 'function') {
+                alSeleccionarPlantillaRespuesta();
+              }
+            }
+          }
+        }, 100);
+      }
       break;
 
     case 'INICIAR_SECUENCIA':
-      // Se procesa en verificarSecuencias (background.js)
+      if (params.nombreSecuencia && typeof crearSecuencia === 'function' &&
+          typeof SECUENCIAS_PREDEFINIDAS !== 'undefined') {
+        var configSeq = SECUENCIAS_PREDEFINIDAS[params.nombreSecuencia];
+        if (configSeq) {
+          try {
+            var storSeq = await chrome.storage.local.get('tarealog_secuencias');
+            var listaSeq = storSeq.tarealog_secuencias || [];
+            var nuevaSeq = crearSecuencia(
+              rowData.codCar || '0',
+              rowData.threadId || '',
+              params.nombreSecuencia,
+              configSeq.pasos,
+              new Date()
+            );
+            listaSeq.push(nuevaSeq);
+            await chrome.storage.local.set({ tarealog_secuencias: listaSeq });
+            mostrarToast('Secuencia iniciada: ' + params.nombreSecuencia, 'info');
+          } catch (e) { /* silencioso si falta codCar/threadId */ }
+        }
+      }
       break;
   }
 }

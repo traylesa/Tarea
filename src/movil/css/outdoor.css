@@ -10,6 +10,7 @@ body.outdoor .card-tiempo { font-size: 16px; }
 body.outdoor .card-banner { font-size: 16px; }
 body.outdoor .chip { font-size: 16px; padding: 12px 20px; border-width: 3px; }
 body.outdoor .chip-fase { font-size: 16px; }
+body.outdoor .chip-estado { font-size: 14px; padding: 2px 6px; }
 
 body.outdoor .btn {
   padding: 16px 32px;

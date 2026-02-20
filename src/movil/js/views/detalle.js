@@ -48,19 +48,25 @@ var VistaDetalle = {
 
     var scrollable = document.createElement('div');
     scrollable.className = 'contenido';
+    contenedor.appendChild(scrollable);
 
     // === FICHA DATOS PRINCIPALES (siempre visible) ===
+    try {
     var ficha = document.createElement('div');
     ficha.className = 'detalle-ficha';
 
     // Fila fase + estado
     var faseEstado = document.createElement('div');
     faseEstado.className = 'ficha-fila ficha-fila-badges';
-    var chipFase = '<span class="chip-fase chip-fase-' + CardUI._claseFase(principal.fase) + '" style="padding:3px 10px;font-size:12px">'
-      + CardUI._nombreFaseCorto(principal.fase) + ' ' + CardUI._nombreFase(principal.fase) + '</span>';
-    var estObj = typeof getDefaultEstados === 'function' ? obtenerEstadoPorCodigo(getDefaultEstados(), principal.estado) : null;
+    var clFase = typeof CardUI !== 'undefined' && CardUI._claseFase ? CardUI._claseFase(principal.fase) : 'default';
+    var nomCorto = typeof CardUI !== 'undefined' && CardUI._nombreFaseCorto ? CardUI._nombreFaseCorto(principal.fase) : (principal.fase || '--');
+    var nomLargo = typeof CardUI !== 'undefined' && CardUI._nombreFase ? CardUI._nombreFase(principal.fase) : '';
+    var chipFase = '<span class="chip-fase chip-fase-' + clFase + '" style="padding:3px 10px;font-size:12px">'
+      + nomCorto + ' ' + nomLargo + '</span>';
+    var estObj = typeof obtenerEstadoPorCodigo === 'function' && typeof getDefaultEstados === 'function'
+      ? obtenerEstadoPorCodigo(getDefaultEstados(), principal.estado) : null;
     var chipEstado = estObj
-      ? '<span class="ficha-estado ficha-estado-' + (estObj.clase_css || '') + '">' + estObj.icono + ' ' + estObj.nombre + '</span>'
+      ? '<span class="ficha-estado ficha-estado-' + principal.estado.toLowerCase() + '">' + estObj.icono + ' ' + estObj.nombre + '</span>'
       : '<span class="ficha-estado">' + (principal.estado || '--') + '</span>';
     faseEstado.innerHTML = chipFase + chipEstado;
     if (principal.fechaCorreo) {
@@ -171,7 +177,10 @@ var VistaDetalle = {
       });
     });
 
-    contenedor.appendChild(scrollable);
+    } catch (e) {
+      scrollable.innerHTML += '<div class="p-16" style="color:var(--color-danger)">Error renderizando detalle: ' + e.message + '</div>';
+      console.error('VistaDetalle error:', e);
+    }
 
     // Bottom bar dinámico via reglas
     var bottomBar = document.createElement('div');

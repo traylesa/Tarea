@@ -3,6 +3,10 @@
  * Sprint 3: HU-07 (Recordatorios manuales) + HU-08 (Sugerencias automaticas)
  */
 
+// Importar constantes primero (deben estar en scope global antes de reminders.js)
+const constants = require('../../../src/extension/constants.js');
+Object.assign(global, constants);
+
 const {
   crearRecordatorio,
   eliminarRecordatorio,
@@ -100,11 +104,11 @@ describe('reminders.js', () => {
       expect(new Date(fecha).getTime()).toBe(AHORA.getTime() + 240 * 60000);
     });
 
-    test('preset manana retorna siguiente dia a las 09:00', () => {
+    test('preset manana retorna siguiente dia a las 09:00 local', () => {
       const fecha = new Date(calcularFechaDisparo('manana', AHORA));
-      expect(fecha.getUTCDate()).toBe(16);
-      expect(fecha.getUTCHours()).toBe(9);
-      expect(fecha.getUTCMinutes()).toBe(0);
+      expect(fecha.getDate()).toBe(AHORA.getDate() + 1);
+      expect(fecha.getHours()).toBe(9);
+      expect(fecha.getMinutes()).toBe(0);
     });
 
     test('preset desconocido usa 1h por defecto', () => {
@@ -209,8 +213,8 @@ describe('reminders.js', () => {
       const resultado = aplicarSnooze('r1', 'manana', lista, AHORA);
       const rec = resultado.find(r => r.id === 'r1');
       const disparo = new Date(rec.fechaDisparo);
-      expect(disparo.getUTCDate()).toBe(16);
-      expect(disparo.getUTCHours()).toBe(9);
+      expect(disparo.getDate()).toBe(AHORA.getDate() + 1);
+      expect(disparo.getHours()).toBe(9);
     });
 
     test('retorna lista sin cambios si id no encontrado', () => {

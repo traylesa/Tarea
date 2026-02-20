@@ -1,9 +1,6 @@
 /**
  * Tests unitarios para fases-config.js
- * Ejecutar con: node tests/TDD/unit/test_fases_config.js
  */
-
-const assert = require('assert');
 
 const {
   getDefaultFases,
@@ -16,205 +13,154 @@ const {
   CLASES_CSS_VALIDAS
 } = require('../../../src/extension/fases-config.js');
 
-let passed = 0;
-let failed = 0;
+describe('fases-config', () => {
+  describe('getDefaultFases', () => {
+    test('retorna array de 13 fases', () => {
+      const fases = getDefaultFases();
+      expect(Array.isArray(fases)).toBe(true);
+      expect(fases).toHaveLength(13);
+    });
 
-function test(nombre, fn) {
-  try {
-    fn();
-    passed++;
-    console.log(`  PASS: ${nombre}`);
-  } catch (e) {
-    failed++;
-    console.log(`  FAIL: ${nombre}`);
-    console.log(`        ${e.message}`);
-  }
-}
+    test('cada fase tiene campos requeridos', () => {
+      getDefaultFases().forEach(f => {
+        expect(typeof f.codigo).toBe('string');
+        expect(typeof f.nombre).toBe('string');
+        expect(typeof f.orden).toBe('number');
+        expect(typeof f.es_critica).toBe('boolean');
+        expect(typeof f.clase_css).toBe('string');
+        expect(typeof f.activa).toBe('boolean');
+      });
+    });
 
-async function ejecutarTests() {
-  console.log('\n=== Tests fases-config.js ===\n');
+    test('codigos son unicos', () => {
+      const codigos = getDefaultFases().map(f => f.codigo);
+      expect(new Set(codigos).size).toBe(codigos.length);
+    });
 
-  // --- getDefaultFases ---
-
-  console.log('getDefaultFases():');
-
-  test('retorna array de 13 fases', () => {
-    const fases = getDefaultFases();
-    assert.ok(Array.isArray(fases));
-    assert.strictEqual(fases.length, 13);
-  });
-
-  test('cada fase tiene campos requeridos', () => {
-    const fases = getDefaultFases();
-    fases.forEach(f => {
-      assert.strictEqual(typeof f.codigo, 'string');
-      assert.strictEqual(typeof f.nombre, 'string');
-      assert.strictEqual(typeof f.orden, 'number');
-      assert.strictEqual(typeof f.es_critica, 'boolean');
-      assert.strictEqual(typeof f.clase_css, 'string');
-      assert.strictEqual(typeof f.activa, 'boolean');
+    test('incluye fase vacia como primera', () => {
+      const primera = getDefaultFases().find(f => f.orden === 0);
+      expect(primera).toBeDefined();
+      expect(primera.codigo).toBe('');
+      expect(primera.nombre).toBe('--');
     });
   });
 
-  test('codigos son unicos', () => {
-    const fases = getDefaultFases();
-    const codigos = fases.map(f => f.codigo);
-    assert.strictEqual(new Set(codigos).size, codigos.length);
+  describe('validarFases', () => {
+    test('acepta fases validas (defaults)', () => {
+      const resultado = validarFases(getDefaultFases());
+      expect(resultado.valido).toBe(true);
+      expect(resultado.errores).toHaveLength(0);
+    });
+
+    test('rechaza codigo duplicado', () => {
+      const fases = [
+        { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
+        { codigo: '00', nombre: 'B', orden: 2, es_critica: false, clase_css: '', activa: true }
+      ];
+      const resultado = validarFases(fases);
+      expect(resultado.valido).toBe(false);
+      expect(resultado.errores.some(e => e.includes('duplicado') || e.includes('unico'))).toBe(true);
+    });
+
+    test('rechaza orden duplicado', () => {
+      const fases = [
+        { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
+        { codigo: '01', nombre: 'B', orden: 1, es_critica: false, clase_css: '', activa: true }
+      ];
+      const resultado = validarFases(fases);
+      expect(resultado.valido).toBe(false);
+      expect(resultado.errores.some(e => e.includes('orden'))).toBe(true);
+    });
+
+    test('rechaza clase_css invalida', () => {
+      const fases = [
+        { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: 'clase-inventada', activa: true }
+      ];
+      const resultado = validarFases(fases);
+      expect(resultado.valido).toBe(false);
+      expect(resultado.errores.some(e => e.includes('clase'))).toBe(true);
+    });
+
+    test('acepta clase_css vacia', () => {
+      const fases = [
+        { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true }
+      ];
+      expect(validarFases(fases).valido).toBe(true);
+    });
+
+    test('rechaza array vacio', () => {
+      expect(validarFases([]).valido).toBe(false);
+    });
   });
 
-  test('incluye fase vacia como primera', () => {
-    const fases = getDefaultFases();
-    const primera = fases.find(f => f.orden === 0);
-    assert.ok(primera);
-    assert.strictEqual(primera.codigo, '');
-    assert.strictEqual(primera.nombre, '--');
+  describe('obtenerFasePorCodigo', () => {
+    test('retorna fase correcta por codigo', () => {
+      const fase = obtenerFasePorCodigo(getDefaultFases(), '05');
+      expect(fase).toBeDefined();
+      expect(fase.codigo).toBe('05');
+      expect(fase.nombre).toContain('Incidencia');
+    });
+
+    test('retorna null para codigo inexistente', () => {
+      expect(obtenerFasePorCodigo(getDefaultFases(), '99')).toBeNull();
+    });
   });
 
-  // --- validarFases ---
+  describe('obtenerClaseCSS', () => {
+    test('retorna clase correcta para fase con clase', () => {
+      expect(obtenerClaseCSS(getDefaultFases(), '05')).toBe('fase-incidencia');
+    });
 
-  console.log('\nvalidarFases():');
-
-  test('acepta fases validas (defaults)', () => {
-    const resultado = validarFases(getDefaultFases());
-    assert.strictEqual(resultado.valido, true);
-    assert.strictEqual(resultado.errores.length, 0);
+    test('retorna string vacio para fase sin clase especial', () => {
+      expect(obtenerClaseCSS(getDefaultFases(), '00')).toBe('');
+    });
   });
 
-  test('rechaza codigo duplicado', () => {
-    const fases = [
-      { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
-      { codigo: '00', nombre: 'B', orden: 2, es_critica: false, clase_css: '', activa: true }
-    ];
-    const resultado = validarFases(fases);
-    assert.strictEqual(resultado.valido, false);
-    assert.ok(resultado.errores.some(e => e.includes('duplicado') || e.includes('unico')));
+  describe('esFaseCritica', () => {
+    test('identifica fases criticas correctamente', () => {
+      const fases = getDefaultFases();
+      expect(esFaseCritica(fases, '05')).toBe(true);
+      expect(esFaseCritica(fases, '25')).toBe(true);
+    });
+
+    test('retorna false para fases no criticas', () => {
+      const fases = getDefaultFases();
+      expect(esFaseCritica(fases, '00')).toBe(false);
+      expect(esFaseCritica(fases, '19')).toBe(false);
+    });
   });
 
-  test('rechaza orden duplicado', () => {
-    const fases = [
-      { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
-      { codigo: '01', nombre: 'B', orden: 1, es_critica: false, clase_css: '', activa: true }
-    ];
-    const resultado = validarFases(fases);
-    assert.strictEqual(resultado.valido, false);
-    assert.ok(resultado.errores.some(e => e.includes('orden')));
+  describe('obtenerFasesOrdenadas', () => {
+    test('ordena por campo orden ascendente', () => {
+      const fases = [
+        { codigo: 'B', nombre: 'B', orden: 3, es_critica: false, clase_css: '', activa: true },
+        { codigo: 'A', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
+        { codigo: 'C', nombre: 'C', orden: 2, es_critica: false, clase_css: '', activa: true }
+      ];
+      const ordenadas = obtenerFasesOrdenadas(fases);
+      expect(ordenadas[0].codigo).toBe('A');
+      expect(ordenadas[1].codigo).toBe('C');
+      expect(ordenadas[2].codigo).toBe('B');
+    });
   });
 
-  test('rechaza clase_css invalida', () => {
-    const fases = [
-      { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: 'clase-inventada', activa: true }
-    ];
-    const resultado = validarFases(fases);
-    assert.strictEqual(resultado.valido, false);
-    assert.ok(resultado.errores.some(e => e.includes('clase')));
+  describe('fasesAMapaLegacy', () => {
+    test('genera objeto compatible {codigo: label}', () => {
+      const mapa = fasesAMapaLegacy(getDefaultFases());
+      expect(typeof mapa).toBe('object');
+      expect(mapa['']).toBe('--');
+      expect(mapa['00']).toBe('00 Espera');
+      expect(mapa['05']).toBe('05 Incidencia');
+    });
+
+    test('solo incluye fases activas', () => {
+      const fases = [
+        { codigo: '00', nombre: 'Espera', orden: 1, es_critica: false, clase_css: '', activa: true },
+        { codigo: '01', nombre: 'Inactiva', orden: 2, es_critica: false, clase_css: '', activa: false }
+      ];
+      const mapa = fasesAMapaLegacy(fases);
+      expect('00' in mapa).toBe(true);
+      expect('01' in mapa).toBe(false);
+    });
   });
-
-  test('acepta clase_css vacia', () => {
-    const fases = [
-      { codigo: '00', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true }
-    ];
-    const resultado = validarFases(fases);
-    assert.strictEqual(resultado.valido, true);
-  });
-
-  test('rechaza array vacio', () => {
-    const resultado = validarFases([]);
-    assert.strictEqual(resultado.valido, false);
-  });
-
-  // --- obtenerFasePorCodigo ---
-
-  console.log('\nobtenerFasePorCodigo():');
-
-  test('retorna fase correcta por codigo', () => {
-    const fases = getDefaultFases();
-    const fase = obtenerFasePorCodigo(fases, '05');
-    assert.ok(fase);
-    assert.strictEqual(fase.codigo, '05');
-    assert.ok(fase.nombre.includes('Incidencia'));
-  });
-
-  test('retorna null para codigo inexistente', () => {
-    const fases = getDefaultFases();
-    const fase = obtenerFasePorCodigo(fases, '99');
-    assert.strictEqual(fase, null);
-  });
-
-  // --- obtenerClaseCSS ---
-
-  console.log('\nobtenerClaseCSS():');
-
-  test('retorna clase correcta para fase con clase', () => {
-    const fases = getDefaultFases();
-    const clase = obtenerClaseCSS(fases, '05');
-    assert.strictEqual(clase, 'fase-incidencia');
-  });
-
-  test('retorna string vacio para fase sin clase especial', () => {
-    const fases = getDefaultFases();
-    const clase = obtenerClaseCSS(fases, '00');
-    assert.strictEqual(clase, '');
-  });
-
-  // --- esFaseCritica ---
-
-  console.log('\nesFaseCritica():');
-
-  test('identifica fases criticas correctamente', () => {
-    const fases = getDefaultFases();
-    assert.strictEqual(esFaseCritica(fases, '05'), true);
-    assert.strictEqual(esFaseCritica(fases, '25'), true);
-  });
-
-  test('retorna false para fases no criticas', () => {
-    const fases = getDefaultFases();
-    assert.strictEqual(esFaseCritica(fases, '00'), false);
-    assert.strictEqual(esFaseCritica(fases, '19'), false);
-  });
-
-  // --- obtenerFasesOrdenadas ---
-
-  console.log('\nobtenerFasesOrdenadas():');
-
-  test('ordena por campo orden ascendente', () => {
-    const fases = [
-      { codigo: 'B', nombre: 'B', orden: 3, es_critica: false, clase_css: '', activa: true },
-      { codigo: 'A', nombre: 'A', orden: 1, es_critica: false, clase_css: '', activa: true },
-      { codigo: 'C', nombre: 'C', orden: 2, es_critica: false, clase_css: '', activa: true }
-    ];
-    const ordenadas = obtenerFasesOrdenadas(fases);
-    assert.strictEqual(ordenadas[0].codigo, 'A');
-    assert.strictEqual(ordenadas[1].codigo, 'C');
-    assert.strictEqual(ordenadas[2].codigo, 'B');
-  });
-
-  // --- fasesAMapaLegacy ---
-
-  console.log('\nfasesAMapaLegacy():');
-
-  test('genera objeto compatible {codigo: label}', () => {
-    const fases = getDefaultFases();
-    const mapa = fasesAMapaLegacy(fases);
-    assert.strictEqual(typeof mapa, 'object');
-    assert.strictEqual(mapa[''], '--');
-    assert.strictEqual(mapa['00'], '00 Espera');
-    assert.strictEqual(mapa['05'], '05 Incidencia');
-  });
-
-  test('solo incluye fases activas', () => {
-    const fases = [
-      { codigo: '00', nombre: 'Espera', orden: 1, es_critica: false, clase_css: '', activa: true },
-      { codigo: '01', nombre: 'Inactiva', orden: 2, es_critica: false, clase_css: '', activa: false }
-    ];
-    const mapa = fasesAMapaLegacy(fases);
-    assert.ok('00' in mapa);
-    assert.ok(!('01' in mapa));
-  });
-
-  // --- Resultado ---
-
-  console.log(`\n=== Resultado: ${passed} passed, ${failed} failed ===\n`);
-  process.exit(failed > 0 ? 1 : 0);
-}
-
-ejecutarTests();
+});

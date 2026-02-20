@@ -4,7 +4,13 @@
  * Sprint 5: Secuencias programadas por carga/hilo
  */
 
-var MAX_PASOS = 3;
+// Importar constantes en entorno Node (Jest)
+if (typeof module !== 'undefined' && typeof require === 'function') {
+  var constants = require('./constants.js');
+  var MAX_PASOS_SECUENCIA = constants.MAX_PASOS_SECUENCIA;
+  var MS_POR_HORA = constants.MS_POR_HORA;
+}
+// En navegador, MAX_PASOS_SECUENCIA y MS_POR_HORA vienen de constants.js via <script>
 
 var ESTADOS_SECUENCIA = {
   ACTIVA: 'ACTIVA',
@@ -68,8 +74,8 @@ function crearSecuencia(codCar, threadId, nombre, pasos, ahora) {
   if (!pasos || pasos.length === 0) {
     throw new Error('Se requiere al menos un paso en pasos');
   }
-  if (pasos.length > MAX_PASOS) {
-    throw new Error('Se permite un maximo de ' + MAX_PASOS + ' pasos');
+  if (pasos.length > MAX_PASOS_SECUENCIA) {
+    throw new Error('Se permite un maximo de ' + MAX_PASOS_SECUENCIA + ' pasos');
   }
 
   var tsBase = ahora.getTime();
@@ -79,7 +85,7 @@ function crearSecuencia(codCar, threadId, nombre, pasos, ahora) {
       plantilla: p.plantilla,
       horasEspera: p.horasEspera,
       estado: ESTADOS_PASO.PENDIENTE,
-      fechaProgramada: new Date(tsBase + p.horasEspera * 3600000).toISOString()
+      fechaProgramada: new Date(tsBase + p.horasEspera * MS_POR_HORA).toISOString()
     };
   });
 
@@ -170,7 +176,7 @@ if (typeof module !== 'undefined' && module.exports) {
     cancelarSecuencia: cancelarSecuencia,
     obtenerSecuenciasActivas: obtenerSecuenciasActivas,
     obtenerPredefinida: obtenerPredefinida,
-    MAX_PASOS: MAX_PASOS,
+    MAX_PASOS: MAX_PASOS_SECUENCIA, // Alias para compatibilidad con tests
     ESTADOS_SECUENCIA: ESTADOS_SECUENCIA,
     ESTADOS_PASO: ESTADOS_PASO,
     SECUENCIAS_PREDEFINIDAS: SECUENCIAS_PREDEFINIDAS

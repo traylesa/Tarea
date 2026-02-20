@@ -1,17 +1,23 @@
 const GAS_URL = ''; // URL de la Web App desplegada (configurar tras deploy)
 
 const ESTADO_CLASSES = {
-  ENVIADO: 'estado-ok',
-  RECIBIDO: 'estado-ok',
-  GESTIONADO: 'estado-ok',
-  ALERTA: 'estado-alerta'
+  NUEVO: 'estado-nuevo',
+  ENVIADO: 'estado-enviado',
+  RECIBIDO: 'estado-recibido',
+  PENDIENTE: 'estado-pendiente',
+  GESTIONADO: 'estado-gestionado',
+  ALERTA: 'estado-alerta',
+  CERRADO: 'estado-cerrado'
 };
 
 const ESTADO_ICONS = {
-  ENVIADO: '\u{1F7E2}',
-  RECIBIDO: '\u{1F7E2}',
-  GESTIONADO: '\u{1F7E2}',
-  ALERTA: '\u{1F534}',
+  NUEVO: '\u25CF',
+  ENVIADO: '\u2197',
+  RECIBIDO: '\u2199',
+  PENDIENTE: '\u25D4',
+  GESTIONADO: '\u2713',
+  ALERTA: '\u25B2',
+  CERRADO: '\u2714',
   DEFAULT: '\u26AA'
 };
 
@@ -55,7 +61,7 @@ function debounce(fn, ms) {
 
 function formatearEstado(cell) {
   const val = cell.getValue() || 'SIN';
-  const clase = ESTADO_CLASSES[val] || 'estado-sin';
+  const clase = ESTADO_CLASSES[val] || 'estado-nuevo';
   const icono = ESTADO_ICONS[val] || ESTADO_ICONS.DEFAULT;
   cell.getElement().classList.add(clase);
   return `${icono} ${val}`;

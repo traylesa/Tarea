@@ -1,8 +1,62 @@
 
-## este es el resultado:
+## este es el resultado al darle a guardar:
+Regla 1: Accion 1: tipo desconocido "PROPAGAR_HILO"
 
-de:	traylesa@traylesa.com
-para:	davidarbol@matiasarbol.com
-fecha:	14 feb 2026, 23:54
-asunto:	Re: RE: Ref. Carga: MAQUINARIA de parte de PACO, carga en SYLCON S.A - Jumilla para GRUPO YBARRA ALIMENTACIÓN, S.L - DOS HERMANAS - Att:
-enviado por:	traylesa.com
+Regla 2: Accion 1: tipo desconocido "PROPAGAR_HILO"
+
+Regla 3: Accion 1: tipo desconocido "PROPAGAR_HILO"
+
+Regla 4: Accion 1: tipo desconocido "SUGERIR_RECORDATORIO"
+
+Regla 5: Accion 1: tipo desconocido "SUGERIR_RECORDATORIO"
+
+Regla 6: Accion 1: tipo desconocido "CAMBIAR_FASE"
+
+Regla 7: Accion 1: tipo desconocido "CAMBIAR_FASE"
+
+
+## Listado de Reglas de Acciones
+Define que ocurre al cambiar fase, estado o codCar. Las reglas de sistema se pueden desactivar pero no eliminar.
+
+1
+Propagar fase al hilo
+sistema
+ on
+✎
+⧉
+2
+Propagar estado al hilo
+sistema
+ on
+✎
+⧉
+3
+Propagar codCar al hilo
+sistema
+ on
+✎
+⧉
+10
+Sugerir: Verificar descarga
+sistema
+ on
+✎
+⧉
+11
+Sugerir: Reclamar POD
+sistema
+ on
+✎
+⧉
+20
+Confirmar descarga → Vacio
+sistema
+ on
+✎
+⧉
+21
+Marcar documentado
+sistema
+ on
+✎
+⧉

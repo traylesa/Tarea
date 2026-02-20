@@ -84,10 +84,13 @@ main { padding: 8px; }
 }
 
 /* Estados en celdas Tabulator */
-.tabulator-cell.estado-ok { color: #0d7c3d; }
-.tabulator-cell.estado-alerta { color: #d93025; font-weight: bold; }
-.tabulator-cell.estado-admin { color: #666; }
-.tabulator-cell.estado-sin { color: #999; }
+.tabulator-cell.estado-nuevo { color: #0D47A1; font-weight: 500; }
+.tabulator-cell.estado-enviado { color: #1565C0; }
+.tabulator-cell.estado-recibido { color: #E65100; font-weight: 500; }
+.tabulator-cell.estado-pendiente { color: #F57F17; }
+.tabulator-cell.estado-gestionado { color: #2E7D32; }
+.tabulator-cell.estado-alerta { color: #C62828; font-weight: bold; }
+.tabulator-cell.estado-cerrado { color: #757575; }
 
 /* Celdas editables */
 .tabulator-cell[tabulator-field="estado"],

@@ -111,23 +111,133 @@ describe('templates', () => {
   });
 
   describe('sanitizarHtml', () => {
-    test('elimina etiquetas script', () => {
+    // Tags seguros preservados
+    test('preserva tags de formato basico', () => {
+      const html = '<p>Hola <strong>mundo</strong> <em>test</em></p>';
+      expect(sanitizarHtml(html)).toBe('<p>Hola <strong>mundo</strong> <em>test</em></p>');
+    });
+
+    test('preserva tags de lista', () => {
+      const html = '<ul><li>Item 1</li><li>Item 2</li></ul>';
+      expect(sanitizarHtml(html)).toBe('<ul><li>Item 1</li><li>Item 2</li></ul>');
+    });
+
+    test('preserva tags de tabla', () => {
+      const html = '<table><tr><td>Celda</td></tr></table>';
+      expect(sanitizarHtml(html)).toBe('<table><tr><td>Celda</td></tr></table>');
+    });
+
+    test('preserva enlaces con href https', () => {
+      const html = '<a href="https://example.com">Link</a>';
+      expect(sanitizarHtml(html)).toBe('<a href="https://example.com">Link</a>');
+    });
+
+    test('preserva imagenes con src https', () => {
+      const html = '<img src="https://example.com/img.png" alt="foto">';
+      expect(sanitizarHtml(html)).toContain('src="https://example.com/img.png"');
+      expect(sanitizarHtml(html)).toContain('alt="foto"');
+    });
+
+    test('preserva br y hr', () => {
+      expect(sanitizarHtml('<br>')).toBe('<br>');
+      expect(sanitizarHtml('<hr>')).toBe('<hr>');
+    });
+
+    test('preserva atributos class y style', () => {
+      const html = '<span class="rojo" style="color:red">Texto</span>';
+      expect(sanitizarHtml(html)).toBe('<span class="rojo" style="color:red">Texto</span>');
+    });
+
+    // Tags peligrosos eliminados
+    test('elimina script con contenido', () => {
       const html = '<p>Hola</p><script>alert("xss")</script>';
       expect(sanitizarHtml(html)).toBe('<p>Hola</p>');
     });
 
-    test('elimina atributos on*', () => {
+    test('elimina iframe', () => {
+      const html = '<p>Texto</p><iframe src="evil.com"></iframe>';
+      expect(sanitizarHtml(html)).toBe('<p>Texto</p>');
+    });
+
+    test('elimina object', () => {
+      const html = '<object data="malware.swf"></object><p>OK</p>';
+      expect(sanitizarHtml(html)).toBe('<p>OK</p>');
+    });
+
+    test('elimina embed', () => {
+      const html = '<embed src="bad.swf"><p>OK</p>';
+      expect(sanitizarHtml(html)).toBe('<p>OK</p>');
+    });
+
+    test('elimina form', () => {
+      const html = '<form action="evil"><input type="text"></form>';
+      expect(sanitizarHtml(html)).not.toContain('<form');
+    });
+
+    test('elimina style tag (no atributo)', () => {
+      const html = '<style>body{display:none}</style><p>Visible</p>';
+      expect(sanitizarHtml(html)).toBe('<p>Visible</p>');
+    });
+
+    // Atributos peligrosos
+    test('elimina atributos onclick', () => {
       const html = '<p onclick="alert(1)">Click</p>';
       expect(sanitizarHtml(html)).toBe('<p>Click</p>');
     });
 
-    test('permite etiquetas seguras', () => {
-      const html = '<p>Hola <strong>mundo</strong></p>';
-      expect(sanitizarHtml(html)).toBe('<p>Hola <strong>mundo</strong></p>');
+    test('elimina atributos onerror', () => {
+      const html = '<img src="x" onerror="alert(1)">';
+      const result = sanitizarHtml(html);
+      expect(result).not.toContain('onerror');
+      expect(result).toContain('<img');
+    });
+
+    test('elimina atributos on* sin comillas', () => {
+      const html = '<p onmouseover=alert(1)>Hover</p>';
+      expect(sanitizarHtml(html)).not.toContain('onmouseover');
+    });
+
+    // URLs peligrosas
+    test('elimina href javascript:', () => {
+      const html = '<a href="javascript:alert(1)">Click</a>';
+      const result = sanitizarHtml(html);
+      expect(result).not.toContain('javascript:');
+      expect(result).toContain('Click');
+    });
+
+    test('elimina href data:', () => {
+      const html = '<a href="data:text/html,<script>alert(1)</script>">Link</a>';
+      const result = sanitizarHtml(html);
+      expect(result).not.toContain('data:');
+    });
+
+    test('elimina src javascript:', () => {
+      const html = '<img src="javascript:alert(1)">';
+      expect(sanitizarHtml(html)).not.toContain('javascript:');
+    });
+
+    // Casos borde
+    test('maneja null', () => {
+      expect(sanitizarHtml(null)).toBe('');
+    });
+
+    test('maneja undefined', () => {
+      expect(sanitizarHtml(undefined)).toBe('');
     });
 
     test('maneja texto vacio', () => {
       expect(sanitizarHtml('')).toBe('');
+    });
+
+    test('maneja texto plano sin HTML', () => {
+      expect(sanitizarHtml('Hola mundo')).toBe('Hola mundo');
+    });
+
+    test('maneja tags desconocidos conservando contenido', () => {
+      const html = '<custom>Texto interno</custom>';
+      const result = sanitizarHtml(html);
+      expect(result).toContain('Texto interno');
+      expect(result).not.toContain('<custom');
     });
   });
 });

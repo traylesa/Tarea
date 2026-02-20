@@ -35,6 +35,14 @@
 - Nombres verbos para funciones: `obtenerUsuario()`, `validarEmail()`
 - Nombres sustantivos para variables: `usuario`, `totalPedidos`
 
+### Fechas/Horas (CONVENCION OBLIGATORIA)
+- **Almacenamiento:** Siempre `toISOString()` (UTC) para persistencia en storage/sheets
+- **Comparacion "mismo dia":** Siempre hora LOCAL (`getFullYear/getMonth/getDate`) via `date-utils.js`
+- **Comparacion "hora config":** Hora LOCAL (`getHours/getMinutes`) — el usuario configura hora local (ej: matutino 08:00)
+- **Duraciones (horas, cooldown):** Timestamps `getTime()` (timezone-agnostic)
+- **Formato string fecha:** `YYYY-MM-DD` via `obtenerFechaLocal()` — NO usar `toISOString().slice(0,10)` (seria UTC)
+- **Modulo centralizado:** `date-utils.js` — OBLIGATORIO para toda logica de fechas. NO reimplementar
+
 ---
 
 ## 2. Tablas/Entidades
@@ -96,10 +104,26 @@ Registro principal de correos procesados con vinculacion a cargas.
 - `SIN_CLASIFICAR` - No se pudo determinar tipo
 
 ### ESTADO_REGISTRO
-- `ENVIADO` - Correo enviado al transportista
-- `RECIBIDO` - Respuesta recibida del transportista
+- `NUEVO` - Email procesado por sistema, sin revisar por operador
+- `ENVIADO` - Correo enviado por nosotros al transportista
+- `RECIBIDO` - Respuesta recibida del transportista, pendiente revision
+- `PENDIENTE` - Esperando respuesta del transportista
 - `GESTIONADO` - Correo procesado y gestionado
-- `ALERTA` - Requiere atencion
+- `ALERTA` - Requiere atencion urgente
+- `CERRADO` - Documentado y archivado, sin mas acciones
+
+### CONFIG_ESTADO_REGISTRO
+Configuracion visual de un estado de registro (objeto configurable).
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `codigo` | string | Codigo unico UPPER_CASE (ej: 'NUEVO') |
+| `nombre` | string | Nombre legible (ej: 'Nuevo') |
+| `icono` | string (unicode) | Caracter unico por forma: ● ↗ ↙ ◔ ✓ ▲ ✔ |
+| `abreviatura` | string (3 chars) | Codigo corto para chip movil: NUE, ENV, REC, PEN, GES, ALE, CER |
+| `clase_css` | string | Clase visual: estado-nuevo, estado-enviado, etc. |
+| `orden` | number | Posicion de ordenacion (1-7) |
+| `activo` | boolean | Si aparece en selects y chips |
 
 ### TIPO_VINCULACION
 - `AUTOMATICA` - Vinculado por adjunto PDF (Caso A)
@@ -357,6 +381,127 @@ Configuracion de horario en que el trigger procesa envios programados (almacenad
 | horaInicio | number | Hora inicio (0-23) |
 | horaFin | number | Hora fin (1-24) |
 
+### CONSTANTES_PROYECTO
+Modulo centralizado de constantes (`src/extension/constants.js`). Elimina "numeros magicos" del codigo.
+
+**Constantes de tiempo (milisegundos):**
+
+| Constante | Valor | Uso |
+|-----------|-------|-----|
+| `MS_POR_SEGUNDO` | 1000 | Milisegundos por segundo |
+| `MS_POR_MINUTO` | 60000 | Milisegundos por minuto |
+| `MS_POR_HORA` | 3600000 | Milisegundos por hora |
+| `MS_POR_DIA` | 86400000 | Milisegundos por dia |
+
+**Constantes de tiempo (unidades base):**
+
+| Constante | Valor |
+|-----------|-------|
+| `SEGUNDOS_POR_MINUTO` | 60 |
+| `MINUTOS_POR_HORA` | 60 |
+| `HORAS_POR_DIA` | 24 |
+| `DIAS_POR_SEMANA` | 7 |
+
+**Limites operacionales:**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `MAX_RECORDATORIOS` | 50 | Maximo recordatorios simultaneos |
+| `MAX_PASOS_SECUENCIA` | 3 | Maximo pasos en secuencia follow-up |
+| `MAX_ENTRADAS_HISTORIAL_POR_CARGA` | 100 | Maximo entradas historial por carga |
+| `DIAS_RETENCION_HISTORIAL` | 30 | Dias antes de rotar historial |
+
+**Timeouts y cooldowns:**
+
+| Constante | Valor (ms) | Descripcion |
+|-----------|-----------|-------------|
+| `TIMEOUT_BARRIDO_MS` | 300000 | Timeout fetch al GAS (5 min) |
+| `COOLDOWN_ALERTA_MS` | 3600000 | Cooldown deduplicacion alertas (1h) |
+| `INTERVALO_VERIFICACION_RECORDATORIOS_MS` | 60000 | Intervalo alarm recordatorios (1min) |
+| `INTERVALO_VERIFICACION_SECUENCIAS_MS` | 900000 | Intervalo alarm secuencias (15min) |
+
+**Procesamiento por lotes:**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `LIMITE_LOTE_PROCESAMIENTO` | 50 | Max mensajes por ejecucion GAS |
+| `TAMANO_TANDA_ENVIO` | 15 | Emails por tanda en envio masivo |
+
+**Umbrales alertas (defaults):**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `UMBRAL_SILENCIO_HORAS` | 4 | Horas sin respuesta para alerta R2 |
+| `UMBRAL_ESTANCAMIENTO_HORAS` | 24 | Horas en misma fase para alerta R3 |
+| `UMBRAL_DOCS_DIAS` | 2 | Dias sin documentar para alerta R4 |
+| `UMBRAL_URGENCIA_CARGA_HORAS` | 3 | Horas antes carga para nivel CRITICO |
+
+**Dashboard:**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `VENTANA_SEMANAL_DIAS` | 6 | Dias anteriores en grafico (hoy + 6 = 7 dias) |
+
+**Presets temporales (minutos):**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `PRESET_15_MIN` | 15 | Preset snooze/recordatorio 15 min |
+| `PRESET_30_MIN` | 30 | Preset snooze/recordatorio 30 min |
+| `PRESET_1_HORA` | 60 | Preset snooze/recordatorio 1 hora |
+| `PRESET_2_HORAS` | 120 | Preset snooze/recordatorio 2 horas |
+| `PRESET_4_HORAS` | 240 | Preset snooze/recordatorio 4 horas |
+
+**Horarios especiales:**
+
+| Constante | Valor | Descripcion |
+|-----------|-------|-------------|
+| `HORA_MATUTINO_DEFAULT` | '08:00' | Hora default resumen matutino |
+| `HORA_REPORTE_DEFAULT` | '18:00' | Hora default reporte fin turno |
+| `HORA_MANANA_DEFAULT` | 9 | Hora para recordatorios "manana" |
+
+**Carga:** `<script>` en panel.html (antes de date-utils.js), `importScripts` en background.js (antes de date-utils.js)
+
+**Modulos que lo usan:** alerts.js, reminders.js, dashboard.js, action-log.js, sequences.js, date-utils.js, config.js
+
+### FUNCIONES_DATE_UTILS
+Modulo centralizado de utilidades de fecha (`src/extension/date-utils.js`). Todas las funciones usan hora LOCAL del navegador para comparaciones de dia/hora.
+
+| Funcion | Parametros | Retorno | Descripcion |
+|---------|-----------|---------|-------------|
+| `esMismoDia` | (fecha1, fecha2) | boolean | Compara si dos fechas caen en el mismo dia LOCAL. Acepta Date, string ISO o timestamp |
+| `obtenerFechaLocal` | (fecha) | string `YYYY-MM-DD` | Fecha formateada en zona LOCAL (NO UTC) |
+| `inicioDelDia` | (fecha) | Date | Date con hora 00:00:00.000 LOCAL |
+| `horasTranscurridas` | (desde, hasta) | number | Horas entre dos fechas (timezone-agnostic via getTime) |
+| `sumarMinutos` | (fecha, minutos) | Date | Nueva fecha con minutos sumados |
+| `mananaPorLaManana` | (ahora) | Date | Dia siguiente a las 09:00:00 LOCAL |
+| `crearHoraLocal` | (fecha, horaStr) | Date | Date con hora HH:MM LOCAL sobre la fecha dada |
+
+**Modulos que lo usan:** dashboard.js, alert-summary.js, alerts.js, shift-report.js, reminders.js, filters.js
+
+**Carga:** `<script>` en panel.html (antes de filters.js), `importScripts` en background.js (antes de alerts.js)
+
+### PRESET_RECORDATORIO
+Periodos predefinidos para crear/posponer recordatorios.
+
+| Clave | Minutos | Descripcion |
+|-------|---------|-------------|
+| `15min` | 15 | Cuarto de hora |
+| `30min` | 30 | Media hora |
+| `1h` | 60 | Una hora |
+| `2h` | 120 | Dos horas |
+| `4h` | 240 | Cuatro horas |
+| `manana` | -1 (especial) | Dia siguiente a las 09:00 LOCAL via `mananaPorLaManana()` |
+
+### CONFIG_ROBUSTEZ
+Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config).
+
+| Campo | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| `timeoutBarridoMs` | number | 300000 | Timeout AbortController para fetch al GAS (5 min) |
+| `limiteLoteProcesamiento` | number | 50 | Max mensajes por ejecucion GAS (hayMas=true si excede) |
+| `tamanoTandaEnvio` | number | 15 | Tamano de tanda para envio masivo de emails |
+
 ---
 
 ## 4. Validaciones
@@ -403,11 +548,18 @@ Configuracion de horario en que el trigger procesa envios programados (almacenad
 - **Secuencia de follow-up:** Serie de emails automaticos (max 3 pasos) que se envian si no hay respuesta, con detencion automatica al recibir respuesta en threadId
 - **Dashboard Mi Turno:** Panel de control personal con KPIs (cargas activas, alertas, recordatorios, cerradas), grafico semanal y acceso rapido a cargas pendientes
 - **Reporte fin de turno:** Resumen automatico de actividad del dia con cargas gestionadas, incidencias activas y recordatorios pendientes
+- **date-utils.js:** Modulo centralizado de funciones de fecha/hora. Toda comparacion de "mismo dia", "hoy" u "hora configurada" DEBE usar este modulo. Convencion: hora LOCAL para comparaciones de dia/hora, timestamps para duraciones, toISOString para almacenamiento
+- **Hora local:** Zona horaria del navegador del usuario (tipicamente Europe/Madrid, UTC+1/UTC+2). Usada para determinar "hoy", "manana", hora de alarma matutina y hora de carga
+- **Robustez:** Conjunto de mecanismos de tolerancia a fallos: timeout con AbortController, procesamiento por lotes, envio por tandas, reintentos con backoff exponencial (resilience.js)
+- **Tanda:** Subconjunto de items procesados secuencialmente para evitar sobrecargar el backend GAS (ej: 15 emails por tanda en envio masivo)
+- **Toast:** Notificacion efimera en la UI que informa resultado de operaciones (exito verde, error rojo, info azul). Se auto-elimina tras 5 segundos
 
 ---
 
 ## 6. Historial de Cambios
 
+- **2026-02-15:** Agregado modulo constants.js (CONSTANTES_PROYECTO) con 41 constantes: tiempo (8), limites (4), timeouts (4), lotes (2), umbrales (4), dashboard (1), presets (5), horarios (3). Reemplazadas constantes magicas en 7 modulos
+- **2026-02-15:** Agregado modulo date-utils.js (FUNCIONES_DATE_UTILS), convencion fechas LOCAL vs UTC, PRESET_RECORDATORIO, CONFIG_ROBUSTEZ, glosario date-utils/hora local/robustez/tanda/toast
 - **2026-02-15:** Sprint 5: Agregadas entidades ENTRADA_HISTORIAL, SECUENCIA_FOLLOWUP, PASO_SECUENCIA, enums TIPO_ACCION, ESTADO_SECUENCIA, ESTADO_PASO, storage keys tarealog_historial/tarealog_secuencias, glosario historial/secuencia/dashboard/reporte
 - **2026-02-15:** Sprint 4: Agregadas entidades ACCION_CONTEXTUAL, NOTA_CARGA, enum GRUPO_FASE, storage key tarealog_notas, glosario accion contextual/nota de carga/grupo de fase
 - **2026-02-15:** Sprint 3: Agregada entidad RECORDATORIO, SUGERENCIA_RECORDATORIO, storage keys tarealog_recordatorios/tarealog_recordatorios_vencidos, glosario recordatorio/snooze/sugerencia
@@ -425,6 +577,6 @@ Configuracion de horario en que el trigger procesa envios programados (almacenad
 
 ---
 
-**Ultima actualizacion:** 2026-02-15
+**Ultima actualizacion:** 2026-02-15 (date-utils + robustez)
 **Mantenido por:** Coordinacion entre expedientes
 **Consultas:** Antes de crear CUALQUIER nombre nuevo en codigo/diseno

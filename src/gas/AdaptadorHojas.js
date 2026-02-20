@@ -66,6 +66,31 @@ function _normalizarValorCampo(campo, valor) {
   return valor;
 }
 
+/**
+ * Ejecutar UNA VEZ desde editor GAS: Run > migrarFasesATexto
+ * Reformatea toda la columna fase como texto con padding 2 digitos.
+ */
+function migrarFasesATexto() {
+  var hoja = obtenerHoja(HOJA_SEGUIMIENTO);
+  var datos = hoja.getDataRange().getValues();
+  var headers = datos[0];
+  var idxFase = headers.indexOf('fase');
+  if (idxFase === -1) { Logger.log('Columna fase no encontrada'); return; }
+
+  var col = idxFase + 1;
+  var corregidos = 0;
+  for (var i = 1; i < datos.length; i++) {
+    var val = datos[i][idxFase];
+    if (val === '' || val === undefined || val === null) continue;
+    var normalizado = String(val).padStart(2, '0');
+    var celda = hoja.getRange(i + 1, col);
+    celda.setNumberFormat('@');
+    celda.setValue(normalizado);
+    corregidos++;
+  }
+  Logger.log('migrarFasesATexto: ' + corregidos + ' celdas corregidas');
+}
+
 function guardarRegistro(registro) {
   const hoja = obtenerHoja(HOJA_SEGUIMIENTO);
   // Normalizar fase antes de grabar

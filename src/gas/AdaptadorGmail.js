@@ -10,9 +10,10 @@ function cargarIdsProcesados(idsExistentes) {
   Logger.log('IDs ya procesados cargados: ' + _idsYaProcesados.size);
 }
 
-function obtenerMensajesNuevos(ultimoTimestamp) {
+function obtenerMensajesNuevos(ultimoTimestamp, limite) {
+  var maxMensajes = limite || 0;
   const query = _construirQuery(ultimoTimestamp);
-  Logger.log('Gmail query: ' + query);
+  Logger.log('Gmail query: ' + query + (maxMensajes ? ' (limite: ' + maxMensajes + ')' : ''));
   const threads = _buscarThreads(query);
   if (!threads) {
     Logger.log('No se encontraron threads (null/error)');
@@ -23,7 +24,9 @@ function obtenerMensajesNuevos(ultimoTimestamp) {
   const mensajes = [];
   var saltados = 0;
   for (const thread of threads) {
+    if (maxMensajes && mensajes.length >= maxMensajes) break;
     for (const msg of thread.getMessages()) {
+      if (maxMensajes && mensajes.length >= maxMensajes) break;
       const id = msg.getId();
       if (_idsYaProcesados.has(id)) {
         saltados++;

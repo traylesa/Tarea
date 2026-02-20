@@ -71,7 +71,7 @@ function filtrarPorTipo(historial, tipo) {
 function rotarHistorial(almacen, diasMax, ahora) {
   if (!almacen) return {};
 
-  var limiteMs = diasMax * 24 * 60 * 60 * 1000;
+  var limiteMs = diasMax * MS_POR_DIA;
   var ahoraMs = ahora.getTime();
   var nuevoAlmacen = {};
 

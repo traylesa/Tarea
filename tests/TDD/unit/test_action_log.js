@@ -3,6 +3,10 @@
  * Sprint 5: Historial de acciones (action-log)
  */
 
+// Importar constantes primero (deben estar en scope global antes de action-log.js)
+const constants = require('../../../src/extension/constants.js');
+Object.assign(global, constants);
+
 const {
   registrarAccion,
   obtenerHistorial,

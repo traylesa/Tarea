@@ -10,9 +10,9 @@ function esMismoDia(fecha1, fecha2) {
   if (!fecha1 || !fecha2) return false;
   var d1 = new Date(fecha1);
   var d2 = new Date(fecha2);
-  return d1.getUTCFullYear() === d2.getUTCFullYear()
-    && d1.getUTCMonth() === d2.getUTCMonth()
-    && d1.getUTCDate() === d2.getUTCDate();
+  return d1.getFullYear() === d2.getFullYear()
+    && d1.getMonth() === d2.getMonth()
+    && d1.getDate() === d2.getDate();
 }
 
 function calcularKPIsDia(registros, ahora) {

@@ -4,14 +4,12 @@
  * Sprint 3: HU-07 (manuales) + HU-08 (sugerencias automaticas)
  */
 
-var MAX_RECORDATORIOS = 50;
-
 var PRESETS = {
-  '15min': 15,
-  '30min': 30,
-  '1h': 60,
-  '2h': 120,
-  '4h': 240,
+  '15min': PRESET_15_MIN,
+  '30min': PRESET_30_MIN,
+  '1h': PRESET_1_HORA,
+  '2h': PRESET_2_HORAS,
+  '4h': PRESET_4_HORAS,
   'manana': -1
 };
 
@@ -28,14 +26,12 @@ function calcularFechaDisparo(preset, ahora) {
   var minutos = PRESETS[preset];
 
   if (preset === 'manana') {
-    var manana = new Date(ahora);
-    manana.setUTCDate(manana.getUTCDate() + 1);
-    manana.setUTCHours(9, 0, 0, 0);
+    var manana = mananaPorLaManana(ahora);
     return manana.toISOString();
   }
 
   if (!minutos || minutos < 0) minutos = 60;
-  return new Date(ahora.getTime() + minutos * 60000).toISOString();
+  return new Date(ahora.getTime() + minutos * MS_POR_MINUTO).toISOString();
 }
 
 function crearRecordatorio(texto, codCar, preset, ahora, listaExistente) {
@@ -119,7 +115,7 @@ function aceptarSugerencia(sugerencia, codCar, ahora) {
     codCar: codCar !== undefined ? codCar : null,
     texto: sugerencia.texto,
     fechaCreacion: ahora.toISOString(),
-    fechaDisparo: new Date(ahora.getTime() + sugerencia.horasAntes * 3600000).toISOString(),
+    fechaDisparo: new Date(ahora.getTime() + sugerencia.horasAntes * MS_POR_HORA).toISOString(),
     snoozeCount: 0,
     origen: 'sugerido'
   };
