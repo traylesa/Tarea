@@ -7,9 +7,7 @@
   --color-warning: #F57C00;
   --color-danger: #D32F2F;
   --color-info: #1565C0;
-  --color-fase-incidencia: #D32F2F;
-  --color-fase-ok: #2E7D32;
-  --color-fase-default: #616161;
+  /* Fases: ver src/shared/visual-status.css */
   --banner-critico: #D32F2F;
   --banner-alto: #F57C00;
   --banner-medio: #1565C0;

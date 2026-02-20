@@ -88,26 +88,7 @@
   margin-bottom: 1px;
 }
 
-/* Chip estado: pill coloreada con icono + abreviatura */
-.chip-estado {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 4px;
-  border-radius: 6px;
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  letter-spacing: 0.3px;
-}
-
-.chip-estado-nuevo      { background: #BBDEFB; color: #0D47A1; }
-.chip-estado-enviado    { background: #E3F2FD; color: #1565C0; }
-.chip-estado-recibido   { background: #FFF3E0; color: #E65100; }
-.chip-estado-pendiente  { background: #FFF8E1; color: #F57F17; }
-.chip-estado-gestionado { background: #E8F5E9; color: #2E7D32; }
-.chip-estado-alerta     { background: #FFEBEE; color: #C62828; }
-.chip-estado-cerrado    { background: #F5F5F5; color: #757575; }
+/* Chips y colores estado: ver src/shared/estados.css */
 
 /* Linea asunto */
 .card-asunto {
@@ -129,19 +110,7 @@
   margin-bottom: 2px;
 }
 
-.chip-fase {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 5px;
-  border-radius: 8px;
-  font-size: 9px;
-  font-weight: 600;
-  color: white;
-}
-
-.chip-fase-default { background: var(--color-fase-default); }
-.chip-fase-ok { background: var(--color-fase-ok); }
-.chip-fase-incidencia { background: var(--color-fase-incidencia); }
+/* Chips fase: ver src/shared/visual-status.css */
 
 .card-tiempo {
   font-size: 9px;
@@ -402,24 +371,7 @@
   word-break: break-word;
 }
 
-.ficha-estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
-  background: var(--bg-secondary);
-}
-
-.ficha-estado-nuevo      { background: #BBDEFB; color: #0D47A1; }
-.ficha-estado-enviado    { background: #E3F2FD; color: #1565C0; }
-.ficha-estado-recibido   { background: #FFF3E0; color: #E65100; }
-.ficha-estado-pendiente  { background: #FFF8E1; color: #F57F17; }
-.ficha-estado-gestionado { background: #E8F5E9; color: #2E7D32; }
-.ficha-estado-alerta     { background: #FFEBEE; color: #C62828; }
-.ficha-estado-cerrado    { background: #F5F5F5; color: #757575; }
+/* Ficha estado: ver src/shared/visual-status.css */
 
 /* Cuerpo email expandible */
 .detalle-cuerpo-email {

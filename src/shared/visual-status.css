@@ -1,0 +1,114 @@
+/**
+ * visual-status.css - Colores unificados de ESTADOS y FASES.
+ * Single source of truth para extension Chrome y PWA movil.
+ *
+ * Cambiar un color aqui lo cambia en TODOS los contextos:
+ * - Tabulator cells (extension escritorio)
+ * - Chips en cards (PWA movil)
+ * - Fichas en detalle (PWA movil)
+ */
+
+/* ================================================================
+   ESTADOS DE REGISTRO
+   ================================================================ */
+
+:root {
+  /* --- Estado: colores --- */
+  --estado-nuevo-bg: #BBDEFB;      --estado-nuevo-fg: #0D47A1;
+  --estado-enviado-bg: #E3F2FD;    --estado-enviado-fg: #1565C0;
+  --estado-recibido-bg: #FFF3E0;   --estado-recibido-fg: #E65100;
+  --estado-pendiente-bg: #FFF8E1;  --estado-pendiente-fg: #F57F17;
+  --estado-gestionado-bg: #E8F5E9; --estado-gestionado-fg: #2E7D32;
+  --estado-alerta-bg: #FFEBEE;     --estado-alerta-fg: #C62828;
+  --estado-cerrado-bg: #EEEEEE;    --estado-cerrado-fg: #757575;
+
+  /* --- Fase: colores --- */
+  --fase-default-bg: #616161;     --fase-default-fg: white;
+  --fase-ok-bg: #2E7D32;          --fase-ok-fg: white;
+  --fase-incidencia-bg: #D32F2F;  --fase-incidencia-fg: white;
+}
+
+/* --- Clases base estado (color texto) --- */
+.estado-nuevo      { color: var(--estado-nuevo-fg); font-weight: 500; }
+.estado-enviado    { color: var(--estado-enviado-fg); }
+.estado-recibido   { color: var(--estado-recibido-fg); font-weight: 500; }
+.estado-pendiente  { color: var(--estado-pendiente-fg); }
+.estado-gestionado { color: var(--estado-gestionado-fg); }
+.estado-alerta     { color: var(--estado-alerta-fg); font-weight: bold; }
+.estado-cerrado    { color: var(--estado-cerrado-fg); }
+
+/* --- Tabulator cells: estados --- */
+.tabulator-cell.estado-nuevo      { color: var(--estado-nuevo-fg); font-weight: 500; }
+.tabulator-cell.estado-enviado    { color: var(--estado-enviado-fg); }
+.tabulator-cell.estado-recibido   { color: var(--estado-recibido-fg); font-weight: 500; }
+.tabulator-cell.estado-pendiente  { color: var(--estado-pendiente-fg); }
+.tabulator-cell.estado-gestionado { color: var(--estado-gestionado-fg); }
+.tabulator-cell.estado-alerta     { color: var(--estado-alerta-fg); font-weight: bold; }
+.tabulator-cell.estado-cerrado    { color: var(--estado-cerrado-fg); }
+
+/* --- Chips estado: pill coloreada (cards movil + extension) --- */
+.chip-estado {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.chip-estado-nuevo      { background: var(--estado-nuevo-bg);      color: var(--estado-nuevo-fg); }
+.chip-estado-enviado    { background: var(--estado-enviado-bg);    color: var(--estado-enviado-fg); }
+.chip-estado-recibido   { background: var(--estado-recibido-bg);   color: var(--estado-recibido-fg); }
+.chip-estado-pendiente  { background: var(--estado-pendiente-bg);  color: var(--estado-pendiente-fg); }
+.chip-estado-gestionado { background: var(--estado-gestionado-bg); color: var(--estado-gestionado-fg); }
+.chip-estado-alerta     { background: var(--estado-alerta-bg);     color: var(--estado-alerta-fg); }
+.chip-estado-cerrado    { background: var(--estado-cerrado-bg);    color: var(--estado-cerrado-fg); }
+
+/* --- Ficha estado: badge en vista detalle --- */
+.ficha-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ficha-estado-nuevo      { background: var(--estado-nuevo-bg);      color: var(--estado-nuevo-fg); }
+.ficha-estado-enviado    { background: var(--estado-enviado-bg);    color: var(--estado-enviado-fg); }
+.ficha-estado-recibido   { background: var(--estado-recibido-bg);   color: var(--estado-recibido-fg); }
+.ficha-estado-pendiente  { background: var(--estado-pendiente-bg);  color: var(--estado-pendiente-fg); }
+.ficha-estado-gestionado { background: var(--estado-gestionado-bg); color: var(--estado-gestionado-fg); }
+.ficha-estado-alerta     { background: var(--estado-alerta-bg);     color: var(--estado-alerta-fg); }
+.ficha-estado-cerrado    { background: var(--estado-cerrado-bg);    color: var(--estado-cerrado-fg); }
+
+/* ================================================================
+   FASES DE TRANSPORTE
+   ================================================================ */
+
+/* --- Clases base fase (color texto en Tabulator) --- */
+.fase-incidencia { color: var(--fase-incidencia-bg); font-weight: bold; }
+.fase-ok         { color: var(--fase-ok-bg); }
+
+/* --- Tabulator cells: fases --- */
+.tabulator-cell.fase-incidencia { color: var(--fase-incidencia-bg); font-weight: bold; }
+.tabulator-cell.fase-ok         { color: var(--fase-ok-bg); }
+
+/* --- Chips fase: pill en cards movil --- */
+.chip-fase {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  color: white;
+}
+
+.chip-fase-default    { background: var(--fase-default-bg); }
+.chip-fase-ok         { background: var(--fase-ok-bg); }
+.chip-fase-incidencia { background: var(--fase-incidencia-bg); }

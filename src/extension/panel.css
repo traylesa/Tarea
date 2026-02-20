@@ -214,13 +214,7 @@ main {
   font-size: 12px;
 }
 
-.tabulator-cell.estado-nuevo { color: #0D47A1; font-weight: 500; }
-.tabulator-cell.estado-enviado { color: #1565C0; }
-.tabulator-cell.estado-recibido { color: #E65100; font-weight: 500; }
-.tabulator-cell.estado-pendiente { color: #F57F17; }
-.tabulator-cell.estado-gestionado { color: #2E7D32; }
-.tabulator-cell.estado-alerta { color: #C62828; font-weight: bold; }
-.tabulator-cell.estado-cerrado { color: #757575; }
+/* Estados: ver src/shared/estados.css */
 
 /* Celdas editables */
 .tabulator-cell[tabulator-field="estado"],
@@ -234,15 +228,7 @@ main {
   outline-offset: -1px;
 }
 
-/* Fases logisticas */
-.tabulator-cell.fase-incidencia {
-  color: #d93025;
-  font-weight: bold;
-}
-
-.tabulator-cell.fase-ok {
-  color: #0d7c3d;
-}
+/* Fases: ver src/shared/visual-status.css */
 
 .tabulator .tabulator-placeholder span {
   color: #999;
