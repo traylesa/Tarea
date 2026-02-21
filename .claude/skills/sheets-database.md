@@ -2,16 +2,19 @@
 
 **Proposito**: Patrones CRUD sobre Google Sheets via GAS, incluyendo auto-sync de headers, hojas dinamicas y consultas por fila.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-15
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
 ## Contexto del Proyecto
 
-TareaLog usa 3 hojas de Google Sheets como backend:
-- **SEGUIMIENTO**: Registros principales (28 columnas, ~500 filas/mes)
+TareaLog usa 6 hojas de Google Sheets como backend:
+- **SEGUIMIENTO**: Registros principales (29 columnas, ~500 filas/mes)
 - **DB_HILOS**: Cache threadId→codCar (3 columnas)
 - **PROGRAMADOS**: Cola de envios programados (13 columnas)
+- **NOTAS**: Notas rapidas por carga (5 columnas)
+- **RECORDATORIOS**: Recordatorios con snooze (8 columnas)
+- **HISTORIAL**: Historial de acciones por carga (5 columnas)
 
 La hoja se selecciona dinamicamente desde la extension (PropertiesService).
 
@@ -136,7 +139,7 @@ const HEADERS_SEGUIMIENTO = [
   'fechaCorreo', 'tipoTarea', 'estado', 'fase', 'alerta',
   'vinculacion', 'referencia', 'para', 'cc', 'cco', 'interlocutor',
   'cuerpo', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega',
-  'zona', 'zDest', 'procesadoAt'
+  'zona', 'zDest', 'bandeja', 'procesadoAt'
 ];
 
 const HOJA_PROGRAMADOS = 'PROGRAMADOS';
@@ -145,6 +148,15 @@ const HEADERS_PROGRAMADOS = [
   'cc', 'bcc', 'fechaProgramada', 'estado',
   'fechaEnvio', 'errorDetalle', 'creadoPor', 'creadoAt'
 ];
+
+const HOJA_NOTAS = 'NOTAS';
+const HEADERS_NOTAS = ['clave', 'id', 'texto', 'fechaCreacion', 'tipo'];
+
+const HOJA_RECORDATORIOS = 'RECORDATORIOS';
+const HEADERS_RECORDATORIOS = ['id', 'clave', 'texto', 'asunto', 'fechaDisparo', 'preset', 'origen', 'estado'];
+
+const HOJA_HISTORIAL = 'HISTORIAL';
+const HEADERS_HISTORIAL = ['id', 'clave', 'tipo', 'descripcion', 'fechaCreacion'];
 ```
 
 ---
@@ -175,6 +187,7 @@ const HEADERS_PROGRAMADOS = [
 
 - **Diccionario dominio**: `docs/DICCIONARIO_DOMINIO.md` §Hojas, §Campos
 - **Arquitectura**: `docs/ARCHITECTURE.md` §Backend GAS
+- **Trazabilidad hilos**: `.claude/skills/trazabilidad-hilos.md` (DB_HILOS, ThreadManager)
 - **Quotas GAS**: https://developers.google.com/apps-script/guides/services/quotas
 
 ---

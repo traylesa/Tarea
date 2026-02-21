@@ -2,7 +2,7 @@
 
 **Proposito**: Modulos de productividad del operador: recordatorios con snooze, secuencias de follow-up automaticas, dashboard KPIs, historial de acciones, notas por carga, acciones contextuales y reporte de turno.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-16
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
@@ -19,7 +19,7 @@
 | `src/extension/action-bar.js` | Acciones contextuales por fase (logica pura) | ~70 |
 | `src/extension/background.js` | Orquestador: alarmas Chrome, evaluacion periodica | - |
 
-**Tests** (`tests/TDD/unit/`): test_reminders (42), test_sequences (26), test_dashboard (10), test_action_log (15), test_shift_report (11), test_notes (30), test_action_bar (27) — Total: 161 tests
+**Tests** (`tests/TDD/unit/`): test_reminders, test_sequences, test_dashboard, test_action_log, test_shift_report, test_notes, test_action_bar — Parte de los 827 tests totales (37 suites)
 
 ---
 
@@ -147,7 +147,7 @@ Cerrado: `estado === 'GESTIONADO' && fase === '30'`
 
 ```javascript
 var TIPOS_ACCION = ['EMAIL', 'FASE', 'RECORDATORIO', 'NOTA'];
-var MAX_ENTRADAS_POR_CARGA = 200;
+var MAX_ENTRADAS_POR_CARGA = 100;  // MAX_ENTRADAS_HISTORIAL_POR_CARGA en constants.js
 ```
 
 ### Storage
@@ -240,6 +240,7 @@ Config: `config.reporteTurno = { activado: true, hora: '18:00' }`
 - **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Fases, §Estados
 - **Alertas**: `.claude/skills/alertas-proactivas.md` (complementario)
 - **Config defaults**: `src/extension/config.js` §recordatorios, §secuencias, §reporteTurno
+- **Sistema configuracion**: `.claude/skills/sistema-configuracion.md` (persistencia y sync GAS)
 - **Constantes**: `src/extension/constants.js`
 - **Fechas**: `src/extension/date-utils.js`
 

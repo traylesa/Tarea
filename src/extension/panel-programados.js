@@ -49,13 +49,18 @@ function renderTablaProgramados() {
       '<td>' + formatearFechaCorta(p.fechaEnvio) + '</td>' +
       '<td></td>';
 
+    tr.addEventListener('click', function(e) {
+      if (e.target.tagName === 'BUTTON') return;
+      abrirModalProgramado(p);
+    });
+
     if (p.estado === 'PENDIENTE') {
       var btn = document.createElement('button');
       btn.className = 'btn-secundario';
       btn.textContent = 'Cancelar';
       btn.style.fontSize = '11px';
       btn.style.padding = '2px 8px';
-      btn.addEventListener('click', function() { cancelarProgramado(p.id); });
+      btn.addEventListener('click', function(e) { e.stopPropagation(); cancelarProgramado(p.id); });
       tr.lastChild.appendChild(btn);
     } else if (p.estado === 'ERROR' && p.errorDetalle) {
       tr.lastChild.textContent = p.errorDetalle.substring(0, 40);
@@ -129,7 +134,7 @@ async function programarEnvioMasivo() {
 
       var body = {
         threadId: dest.threadId,
-        interlocutor: dest.email || dest.emailRemitente || '',
+        interlocutor: dest.interlocutor || dest.email || dest.emailRemitente || '',
         asunto: dest.asunto, cuerpo: cuerpoFinal,
         cc: dest.cc || '', bcc: dest.cco || '',
         fechaProgramada: fechaProg.toISOString()
@@ -205,6 +210,219 @@ async function cargarHorarioLaboral() {
       document.getElementById('cfg-hora-fin').value = h.horaFin;
     }
   } catch (e) { /* usar defaults */ }
+}
+
+// --- Modal detalle programado ---
+
+var _programadoActual = null;
+
+function abrirModalProgramado(prog) {
+  _programadoActual = prog;
+  var editable = esEditable(prog);
+  var modal = document.getElementById('modal-programado');
+  var estado = formatearEstadoProgramado(prog.estado);
+
+  document.getElementById('prog-modal-titulo').textContent =
+    editable ? 'Editar Envio Programado' : 'Detalle Envio Programado';
+
+  document.getElementById('prog-estado-badge').innerHTML =
+    '<span class="prog-estado-inline ' + estado.clase + '">' + estado.html + '</span>';
+
+  document.getElementById('prog-interlocutor').value = prog.interlocutor || '--';
+  document.getElementById('prog-asunto').value = prog.asunto || '';
+  document.getElementById('prog-cc').value = prog.cc || '';
+  document.getElementById('prog-bcc').value = prog.bcc || '';
+
+  // Fecha
+  var inputFecha = document.getElementById('prog-fecha');
+  if (prog.fechaProgramada) {
+    var d = new Date(prog.fechaProgramada);
+    var local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    inputFecha.value = local.toISOString().slice(0, 16);
+  } else {
+    inputFecha.value = '';
+  }
+
+  // Cuerpo: editable=textarea, readonly=preview HTML
+  var textarea = document.getElementById('prog-cuerpo');
+  var preview = document.getElementById('prog-preview-cuerpo');
+  if (editable) {
+    textarea.value = prog.cuerpo || '';
+    textarea.classList.remove('hidden');
+    preview.classList.add('hidden');
+  } else {
+    textarea.classList.add('hidden');
+    preview.innerHTML = prog.cuerpo || '<em>Sin contenido</em>';
+    preview.classList.remove('hidden');
+  }
+
+  // Campos editables/readonly
+  ['prog-asunto', 'prog-cc', 'prog-bcc', 'prog-fecha'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.readOnly = !editable;
+    el.disabled = !editable;
+    el.style.background = editable ? '' : '#f5f5f5';
+    el.style.color = editable ? '' : '#666';
+  });
+
+  // Info envio (solo no-pendientes)
+  var infoEnvio = document.getElementById('prog-info-envio');
+  if (!editable) {
+    infoEnvio.classList.remove('hidden');
+    document.getElementById('prog-fecha-envio').textContent =
+      prog.fechaEnvio ? 'Enviado: ' + formatearFechaCorta(prog.fechaEnvio) : '';
+    document.getElementById('prog-creado-por').textContent =
+      prog.creadoPor ? 'Creado por: ' + prog.creadoPor : '';
+  } else {
+    infoEnvio.classList.add('hidden');
+  }
+
+  // Error detalle
+  var errorDiv = document.getElementById('prog-error-detalle');
+  if (prog.estado === 'ERROR' && prog.errorDetalle) {
+    errorDiv.textContent = prog.errorDetalle;
+    errorDiv.classList.remove('hidden');
+  } else {
+    errorDiv.classList.add('hidden');
+  }
+
+  // Botones segun estado
+  document.getElementById('btn-guardar-programado').classList.toggle('hidden', !editable);
+  document.getElementById('btn-enviar-ahora').classList.toggle('hidden', !editable);
+  document.getElementById('btn-cancelar-programado-modal').classList.toggle('hidden', !editable);
+  document.getElementById('btn-reprogramar').classList.toggle('hidden', prog.estado !== 'ERROR');
+
+  document.getElementById('prog-modal-error').classList.add('hidden');
+  modal.classList.remove('hidden');
+}
+
+function cerrarModalProgramado() {
+  _programadoActual = null;
+  document.getElementById('modal-programado').classList.add('hidden');
+}
+
+function abrirModalProgramadoPorThread(threadId) {
+  var pendientes = buscarPendientesPorThread(programadosCache, threadId);
+  if (pendientes.length > 0) {
+    abrirModalProgramado(pendientes[0]);
+  } else {
+    var todos = buscarPorThread(programadosCache, threadId);
+    if (todos.length > 0) {
+      abrirModalProgramado(todos[0]);
+    } else {
+      var panel = document.getElementById('panel-programados');
+      if (panel.classList.contains('hidden')) togglePanelProgramados();
+    }
+  }
+}
+
+async function guardarCambiosProgramado() {
+  if (!_programadoActual) return;
+  var errorEl = document.getElementById('prog-modal-error');
+
+  var cambios = {};
+  var nuevoAsunto = document.getElementById('prog-asunto').value;
+  var nuevoCuerpo = document.getElementById('prog-cuerpo').value;
+  var nuevoCC = document.getElementById('prog-cc').value;
+  var nuevoBCC = document.getElementById('prog-bcc').value;
+  var nuevaFecha = document.getElementById('prog-fecha').value;
+
+  if (nuevoAsunto !== (_programadoActual.asunto || '')) cambios.asunto = nuevoAsunto;
+  if (nuevoCuerpo !== (_programadoActual.cuerpo || '')) cambios.cuerpo = nuevoCuerpo;
+  if (nuevoCC !== (_programadoActual.cc || '')) cambios.cc = nuevoCC;
+  if (nuevoBCC !== (_programadoActual.bcc || '')) cambios.bcc = nuevoBCC;
+
+  if (nuevaFecha) {
+    var fechaISO = new Date(nuevaFecha).toISOString();
+    if (fechaISO !== _programadoActual.fechaProgramada) cambios.fechaProgramada = fechaISO;
+  }
+
+  var v = validarEdicionProgramado(cambios);
+  if (!v.valido) {
+    errorEl.textContent = v.error;
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  var btn = document.getElementById('btn-guardar-programado');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    var response = await fetch(url + '?action=actualizarProgramadoCampos', {
+      method: 'POST', credentials: 'omit',
+      body: JSON.stringify({ id: _programadoActual.id, campos: cambios })
+    });
+    var data = await response.json();
+    if (data.ok) {
+      cerrarModalProgramado();
+      await cargarProgramados();
+      if (tabla) tabla.redraw(true);
+    } else {
+      errorEl.textContent = data.error || 'Error al guardar';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+}
+
+async function enviarProgramadoAhora() {
+  if (!_programadoActual) return;
+  var errorEl = document.getElementById('prog-modal-error');
+
+  var url = obtenerUrlActiva();
+  if (!url) return;
+
+  var btn = document.getElementById('btn-enviar-ahora');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    var response = await fetch(url + '?action=enviarProgramadoAhora', {
+      method: 'POST', credentials: 'omit',
+      body: JSON.stringify({ id: _programadoActual.id })
+    });
+    var data = await response.json();
+    if (data.ok) {
+      cerrarModalProgramado();
+      await cargarProgramados();
+      if (tabla) tabla.redraw(true);
+    } else {
+      errorEl.textContent = data.error || 'Error al enviar';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar ahora';
+  }
+}
+
+async function cancelarProgramadoDesdeModal() {
+  if (!_programadoActual) return;
+  await cancelarProgramado(_programadoActual.id);
+  cerrarModalProgramado();
+}
+
+function reprogramarProgramado() {
+  if (!_programadoActual || _programadoActual.estado !== 'ERROR') return;
+  // Reutilizar modal de respuesta precargado con datos del programado fallido
+  cerrarModalProgramado();
+  abrirModalRespuesta();
+  document.getElementById('respuesta-asunto').value = _programadoActual.asunto || '';
+  document.getElementById('respuesta-cuerpo').value = _programadoActual.cuerpo || '';
+  document.getElementById('chk-programar-envio').checked = true;
+  toggleCheckboxProgramar();
 }
 
 async function guardarHorarioLaboralUI() {

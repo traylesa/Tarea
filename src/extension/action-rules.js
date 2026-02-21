@@ -117,9 +117,9 @@ function validarRegla(regla) {
     errores.push('El nombre es obligatorio');
   }
 
-  var camposValidos = ['fase', 'estado', 'codCar'];
+  var camposValidos = ['fase', 'estado', 'codCar', 'tipoTarea', 'vinculacion', 'alerta', 'bandeja', 'interlocutor', 'zona'];
   if (!regla.condicion || camposValidos.indexOf(regla.condicion.campo) === -1) {
-    errores.push('El campo debe ser fase, estado o codCar');
+    errores.push('El campo debe ser uno de: ' + camposValidos.join(', '));
   }
 
   if (!regla.acciones || !Array.isArray(regla.acciones) || regla.acciones.length === 0) {

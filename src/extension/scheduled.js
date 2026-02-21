@@ -40,13 +40,54 @@ function contarPorEstado(lista) {
   return conteo;
 }
 
+var CAMPOS_EDITABLES_PROG = ['asunto', 'cuerpo', 'cc', 'bcc', 'fechaProgramada'];
+
+function esEditable(prog) {
+  return !!(prog && prog.estado === 'PENDIENTE');
+}
+
+function validarEdicionProgramado(cambios) {
+  if (!cambios || typeof cambios !== 'object') return { valido: false, error: 'Cambios requeridos' };
+  var claves = Object.keys(cambios);
+  if (claves.length === 0) return { valido: false, error: 'Sin cambios' };
+
+  for (var i = 0; i < claves.length; i++) {
+    if (CAMPOS_EDITABLES_PROG.indexOf(claves[i]) === -1) {
+      return { valido: false, error: 'Campo no editable: ' + claves[i] };
+    }
+  }
+
+  if (cambios.fechaProgramada) {
+    var f = new Date(cambios.fechaProgramada);
+    if (isNaN(f.getTime())) return { valido: false, error: 'Fecha invalida' };
+  }
+
+  return { valido: true };
+}
+
+function buscarPorThread(lista, threadId) {
+  if (!lista || !threadId) return [];
+  return lista.filter(function(p) { return p.threadId === threadId; });
+}
+
+function buscarPendientesPorThread(lista, threadId) {
+  return buscarPorThread(lista, threadId).filter(function(p) {
+    return p.estado === 'PENDIENTE';
+  });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     ESTADOS_PROGRAMADO: ESTADOS_PROGRAMADO,
+    CAMPOS_EDITABLES_PROG: CAMPOS_EDITABLES_PROG,
     formatearEstadoProgramado: formatearEstadoProgramado,
     filtrarProgramados: filtrarProgramados,
     ordenarPorFechaProgramada: ordenarPorFechaProgramada,
     formatearFechaCorta: formatearFechaCorta,
-    contarPorEstado: contarPorEstado
+    contarPorEstado: contarPorEstado,
+    esEditable: esEditable,
+    validarEdicionProgramado: validarEdicionProgramado,
+    buscarPorThread: buscarPorThread,
+    buscarPendientesPorThread: buscarPendientesPorThread
   };
 }

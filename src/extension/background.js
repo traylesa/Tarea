@@ -268,7 +268,7 @@ async function verificarRecordatorios() {
         type: 'basic',
         iconUrl: 'icons/icon128.png',
         title: 'Recordatorio' + (rec.codCar ? ' — Carga ' + rec.codCar : ''),
-        message: rec.texto,
+        message: rec.texto + (rec.asunto ? '\n' + rec.asunto : ''),
         buttons: [
           { title: 'Snooze 15min' },
           { title: 'Hecho' }

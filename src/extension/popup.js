@@ -217,7 +217,7 @@ const guardarPrefsDebounced = debounce(guardarPreferencias, 500);
 
 async function cargarPreferencias() {
   const result = await chrome.storage.local.get(STORAGE_KEY_PREFS);
-  return result[STORAGE_KEY_PREFS] || null;
+  return result[STORAGE_KEY_PREFS] || (typeof DEFAULT_PREFS_REJILLA !== 'undefined' ? DEFAULT_PREFS_REJILLA : null);
 }
 
 function aplicarPreferencias(columnas, prefs) {

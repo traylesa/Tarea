@@ -42,6 +42,8 @@ function obtenerMensajesNuevos(ultimoTimestamp, limite) {
 
 function construirMensaje(gmailMessage) {
   var thread = gmailMessage.getThread();
+  var labels = thread.getLabels().map(function(l) { return l.getName(); });
+  var bandeja = labels.length > 0 ? labels.join(', ') : (thread.isInInbox() ? 'INBOX' : 'OTRO');
   return {
     messageId: gmailMessage.getId(),
     threadId: thread.getId(),
@@ -53,7 +55,8 @@ function construirMensaje(gmailMessage) {
     subject: gmailMessage.getSubject(),
     body: gmailMessage.getPlainBody(),
     date: gmailMessage.getDate().toISOString(),
-    attachments: gmailMessage.getAttachments().map(a => a.getName())
+    attachments: gmailMessage.getAttachments().map(a => a.getName()),
+    bandeja: bandeja
   };
 }
 

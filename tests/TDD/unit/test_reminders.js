@@ -17,6 +17,8 @@ const {
   evaluarPendientes,
   generarSugerencia,
   aceptarSugerencia,
+  buscarPorCodCar,
+  buscarActivosPorCodCar,
   PRESETS,
   MAX_RECORDATORIOS,
   SUGERENCIAS_POR_FASE
@@ -35,10 +37,22 @@ describe('reminders.js', () => {
       expect(rec.id).toMatch(/^rec_/);
       expect(rec.texto).toBe('Llamar a Garcia');
       expect(rec.codCar).toBe(168345);
+      expect(rec.asunto).toBeNull();
       expect(rec.snoozeCount).toBe(0);
       expect(rec.origen).toBe('manual');
       expect(rec.fechaCreacion).toBe(AHORA.toISOString());
       expect(rec.fechaDisparo).toBeDefined();
+    });
+
+    test('incluye asunto cuando se proporciona', () => {
+      const rec = crearRecordatorio('Revisar docs', 168345, '1h', AHORA, [], 'RE: Carga 168345 - Albaran');
+      expect(rec.asunto).toBe('RE: Carga 168345 - Albaran');
+      expect(rec.codCar).toBe(168345);
+    });
+
+    test('asunto es null si no se proporciona', () => {
+      const rec = crearRecordatorio('Tarea', 100, '1h', AHORA);
+      expect(rec.asunto).toBeNull();
     });
 
     test('genera id unico en cada llamada', () => {
@@ -217,6 +231,14 @@ describe('reminders.js', () => {
       expect(disparo.getHours()).toBe(9);
     });
 
+    test('preserva asunto en snooze', () => {
+      const lista = [
+        { id: 'r1', fechaDisparo: '2026-02-15T09:00:00.000Z', snoozeCount: 0, asunto: 'RE: Carga 168345' }
+      ];
+      const resultado = aplicarSnooze('r1', '15min', lista, AHORA);
+      expect(resultado[0].asunto).toBe('RE: Carga 168345');
+    });
+
     test('retorna lista sin cambios si id no encontrado', () => {
       const lista = [{ id: 'r1', fechaDisparo: AHORA.toISOString(), snoozeCount: 0 }];
       const resultado = aplicarSnooze('r99', '15min', lista, AHORA);
@@ -317,6 +339,18 @@ describe('reminders.js', () => {
       const esperado = AHORA.getTime() + 24 * 3600000;
       expect(new Date(rec.fechaDisparo).getTime()).toBe(esperado);
     });
+
+    test('incluye asunto cuando se proporciona', () => {
+      const sug = { texto: 'Verificar descarga', horasAntes: 8 };
+      const rec = aceptarSugerencia(sug, 168400, AHORA, 'Carga 168400 - Destino BCN');
+      expect(rec.asunto).toBe('Carga 168400 - Destino BCN');
+    });
+
+    test('asunto es null si no se proporciona', () => {
+      const sug = { texto: 'Verificar descarga', horasAntes: 8 };
+      const rec = aceptarSugerencia(sug, 168400, AHORA);
+      expect(rec.asunto).toBeNull();
+    });
   });
 
   // --- Constantes ---
@@ -333,6 +367,60 @@ describe('reminders.js', () => {
     test('SUGERENCIAS_POR_FASE tiene fases 19 y 29', () => {
       expect(SUGERENCIAS_POR_FASE['19']).toBeDefined();
       expect(SUGERENCIAS_POR_FASE['29']).toBeDefined();
+    });
+  });
+
+  // --- buscarPorCodCar ---
+
+  describe('buscarPorCodCar', () => {
+    var lista = [
+      crearRecordatorio('Rec A', '100', '1h', AHORA, []),
+      crearRecordatorio('Rec B', '200', '1h', AHORA, []),
+      crearRecordatorio('Rec C', '100', '2h', AHORA, [])
+    ];
+
+    test('encuentra recordatorios por codCar', () => {
+      var r = buscarPorCodCar(lista, '100');
+      expect(r).toHaveLength(2);
+    });
+
+    test('codCar sin recordatorios retorna vacio', () => {
+      expect(buscarPorCodCar(lista, '999')).toHaveLength(0);
+    });
+
+    test('lista null retorna vacio', () => {
+      expect(buscarPorCodCar(null, '100')).toHaveLength(0);
+    });
+
+    test('codCar null retorna vacio', () => {
+      expect(buscarPorCodCar(lista, null)).toHaveLength(0);
+    });
+  });
+
+  // --- buscarActivosPorCodCar ---
+
+  describe('buscarActivosPorCodCar', () => {
+    var futuro = new Date(AHORA.getTime() + 2 * 60 * 60000); // +2h
+    var lista = [
+      crearRecordatorio('Activo', '100', '4h', AHORA, []),
+      crearRecordatorio('Otro carga', '200', '4h', AHORA, [])
+    ];
+    // Agregar uno vencido manualmente
+    lista.push({
+      id: 'rec_vencido', codCar: '100', texto: 'Vencido',
+      fechaCreacion: AHORA.toISOString(),
+      fechaDisparo: new Date(AHORA.getTime() - 60000).toISOString(),
+      snoozeCount: 0, origen: 'manual'
+    });
+
+    test('solo retorna activos de la carga', () => {
+      var r = buscarActivosPorCodCar(lista, '100', AHORA);
+      expect(r).toHaveLength(1);
+      expect(r[0].texto).toBe('Activo');
+    });
+
+    test('carga sin activos retorna vacio', () => {
+      expect(buscarActivosPorCodCar(lista, '999', AHORA)).toHaveLength(0);
     });
   });
 });

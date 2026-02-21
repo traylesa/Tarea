@@ -110,6 +110,42 @@ var VistaConfig = {
       ToastUI.mostrar('Rate limit guardado', { tipo: 'exito' });
     });
 
+    // Estado inicial
+    var eiDiv = document.createElement('div');
+    eiDiv.style.cssText = 'padding:16px;border-bottom:1px solid #E0E0E0';
+    eiDiv.innerHTML = '<div style="font-weight:bold;margin-bottom:4px">Estado inicial de emails</div>'
+      + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">'
+      + 'Estado que se asigna a correos nuevos al procesarlos</div>';
+
+    var eiSelect = document.createElement('select');
+    eiSelect.style.cssText = 'width:100%;font-size:16px;min-height:48px;padding:8px;border:1px solid #CCC;border-radius:4px';
+    var estados = typeof getDefaultEstados === 'function' ? getDefaultEstados() : [];
+    estados.forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e.codigo;
+      opt.textContent = (e.icono || '') + ' ' + e.nombre;
+      if (e.codigo === (config.estadoInicial || 'NUEVO')) opt.selected = true;
+      eiSelect.appendChild(opt);
+    });
+    if (estados.length === 0) {
+      eiSelect.innerHTML = '<option value="NUEVO">NUEVO</option><option value="RECIBIDO">RECIBIDO</option>';
+      eiSelect.value = config.estadoInicial || 'NUEVO';
+    }
+    eiSelect.addEventListener('change', function() {
+      config.estadoInicial = eiSelect.value;
+      Store.guardarConfig(config);
+      API.post('configurarEstadoInicial', { estadoInicial: eiSelect.value })
+        .then(function() {
+          Feedback.vibrar('corto');
+          ToastUI.mostrar('Estado inicial: ' + eiSelect.value, { tipo: 'exito' });
+        })
+        .catch(function(e) {
+          ToastUI.mostrar('Error GAS: ' + e.message, { tipo: 'error' });
+        });
+    });
+    eiDiv.appendChild(eiSelect);
+    scrollable.appendChild(eiDiv);
+
     // Modo outdoor
     var outdoorDiv = document.createElement('div');
     outdoorDiv.style.cssText = 'padding:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #E0E0E0';

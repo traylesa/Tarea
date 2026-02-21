@@ -25,7 +25,7 @@ const HEADERS_SEGUIMIENTO = [
   'tipoTarea', 'estado', 'fase', 'alerta', 'vinculacion', 'referencia',
   'para', 'cc', 'cco', 'interlocutor', 'cuerpo',
   'fCarga', 'hCarga', 'fEntrega', 'hEntrega', 'zona', 'zDest',
-  'procesadoAt'
+  'bandeja', 'procesadoAt'
 ];
 
 // Headers DB_HILOS
@@ -44,7 +44,7 @@ const HOJA_NOTAS = 'NOTAS';
 const HEADERS_NOTAS = ['clave', 'id', 'texto', 'fechaCreacion', 'tipo'];
 
 const HOJA_RECORDATORIOS = 'RECORDATORIOS';
-const HEADERS_RECORDATORIOS = ['id', 'clave', 'texto', 'fechaDisparo', 'preset', 'origen', 'estado'];
+const HEADERS_RECORDATORIOS = ['id', 'clave', 'texto', 'asunto', 'fechaDisparo', 'preset', 'origen', 'estado'];
 
 const HOJA_HISTORIAL = 'HISTORIAL';
 const HEADERS_HISTORIAL = ['id', 'clave', 'tipo', 'descripcion', 'fechaCreacion'];
@@ -95,6 +95,15 @@ function obtenerHorarioLaboral() {
 
 function guardarHorarioLaboral(horario) {
   PropertiesService.getScriptProperties().setProperty('HORARIO_LABORAL', JSON.stringify(horario));
+}
+
+function obtenerEstadoInicial() {
+  var props = PropertiesService.getScriptProperties();
+  return props.getProperty('ESTADO_INICIAL') || 'NUEVO';
+}
+
+function guardarEstadoInicial(estado) {
+  PropertiesService.getScriptProperties().setProperty('ESTADO_INICIAL', estado);
 }
 
 function estaEnHorarioLaboral() {

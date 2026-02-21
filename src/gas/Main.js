@@ -71,7 +71,7 @@ function processMessage(message, threadManager, erpReader) {
     asunto: message.subject,
     fechaCorreo: message.date,
     tipoTarea: metadata.tipo,
-    estado: auditResult.alerta ? 'ALERTA' : 'RECIBIDO',
+    estado: auditResult.alerta ? 'ALERTA' : (typeof obtenerEstadoInicial === 'function' ? obtenerEstadoInicial() : 'NUEVO'),
     alerta: auditResult.alerta,
     vinculacion,
     referencia: cargaData?.referencia || null,
@@ -80,6 +80,7 @@ function processMessage(message, threadManager, erpReader) {
     cco: message.bcc || '',
     interlocutor: calcularInterlocutor(message),
     cuerpo: message.body || '',
+    bandeja: message.bandeja || '',
     procesadoAt: new Date().toISOString()
   };
 }

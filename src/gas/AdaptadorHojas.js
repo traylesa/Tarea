@@ -208,6 +208,40 @@ function actualizarProgramado(fila, campo, valor) {
   hoja.getRange(fila, col + 1).setValue(valor);
 }
 
+function actualizarProgramadoPorId(id, campos) {
+  var hoja = obtenerHoja(HOJA_PROGRAMADOS);
+  var datos = hoja.getDataRange().getValues();
+  var headers = datos[0];
+  var colId = headers.indexOf('id');
+
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i][colId] === id) {
+      Object.keys(campos).forEach(function(campo) {
+        var col = headers.indexOf(campo);
+        if (col !== -1) hoja.getRange(i + 1, col + 1).setValue(campos[campo]);
+      });
+      return true;
+    }
+  }
+  return false;
+}
+
+function leerProgramadoPorId(id) {
+  var hoja = obtenerHoja(HOJA_PROGRAMADOS);
+  var datos = hoja.getDataRange().getValues();
+  var headers = datos[0];
+  var colId = headers.indexOf('id');
+
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i][colId] === id) {
+      var obj = { _fila: i + 1 };
+      headers.forEach(function(h, j) { obj[h] = datos[i][j]; });
+      return obj;
+    }
+  }
+  return null;
+}
+
 function leerTodosProgramados() {
   var hoja = obtenerHoja(HOJA_PROGRAMADOS);
   var datos = hoja.getDataRange().getValues();

@@ -3,6 +3,7 @@
 
 var DEFAULTS_CONFIG = {
   gasUrl: '',
+  estadoInicial: 'NUEVO',
   intervaloMinutos: 15,
   emailsPorMinuto: 10,
   patrones: {

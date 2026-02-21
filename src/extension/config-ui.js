@@ -29,6 +29,11 @@ async function inicializarConfigUI() {
   if (typeof renderListaReglasConfig === 'function') renderListaReglasConfig();
   cargarSpreadsheetInfo();
   cargarGmailQueryInfo();
+  poblarSelectEstadoInicial();
+  // Valor local guardado en config
+  var selectEstIni = document.getElementById('config-estado-inicial');
+  if (selectEstIni && config.estadoInicial) selectEstIni.value = config.estadoInicial;
+  cargarEstadoInicialInfo();
 }
 
 function leerFormulario() {
@@ -44,6 +49,7 @@ function leerFormulario() {
 
   return {
     gasUrl: gasUrl,
+    estadoInicial: document.getElementById('config-estado-inicial').value || 'NUEVO',
     intervaloMinutos: parseInt(document.getElementById('cfg-intervalo').value, 10) || 0,
     emailsPorMinuto: parseInt(document.getElementById('cfg-emails-por-minuto').value, 10) || 10,
     rutaCsvErp: document.getElementById('cfg-ruta-csv').value.trim(),
@@ -607,6 +613,84 @@ function aplicarEjemploQuery(e) {
   }
 }
 
+// --- Estado Inicial ---
+
+function poblarSelectEstadoInicial() {
+  var select = document.getElementById('config-estado-inicial');
+  if (!select) return;
+  select.innerHTML = '';
+
+  var estados = (typeof estadosEditando !== 'undefined' && estadosEditando.length > 0)
+    ? estadosEditando : (typeof getDefaultEstados === 'function' ? getDefaultEstados() : []);
+
+  estados.filter(function(e) { return e.activo; }).forEach(function(e) {
+    var opt = document.createElement('option');
+    opt.value = e.codigo;
+    opt.textContent = e.icono + ' ' + e.codigo + ' - ' + e.nombre;
+    select.appendChild(opt);
+  });
+}
+
+async function cargarEstadoInicialInfo() {
+  var select = document.getElementById('config-estado-inicial');
+  if (!select) return;
+
+  // Cargar valor actual del servicio GAS
+  var servicioActivo = typeof obtenerServicioActivo === 'function' ? obtenerServicioActivo(serviciosGas) : null;
+  if (!servicioActivo) return;
+
+  try {
+    var url = servicioActivo.url + '?action=obtenerEstadoInicial';
+    var resp = await fetch(url, { credentials: 'omit' });
+    var data = await resp.json();
+    if (data.ok && data.estadoInicial) {
+      select.value = data.estadoInicial;
+    }
+  } catch (_) {
+    // Silencioso
+  }
+}
+
+async function guardarEstadoInicialUI() {
+  var select = document.getElementById('config-estado-inicial');
+  var infoEl = document.getElementById('estado-inicial-info');
+  var errorEl = document.getElementById('estado-inicial-error');
+  infoEl.classList.add('hidden');
+  errorEl.classList.add('hidden');
+
+  var valor = select.value;
+  if (!valor) return;
+
+  var servicioActivo = typeof obtenerServicioActivo === 'function' ? obtenerServicioActivo(serviciosGas) : null;
+  if (!servicioActivo) {
+    errorEl.textContent = 'Configura un servicio GAS primero';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    var url = servicioActivo.url + '?action=configurarEstadoInicial';
+    var resp = await fetch(url, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estadoInicial: valor })
+    });
+    var data = await resp.json();
+    if (data.ok) {
+      infoEl.textContent = 'Estado inicial guardado: ' + data.estadoInicial;
+      infoEl.classList.remove('hidden');
+      setTimeout(function() { infoEl.classList.add('hidden'); }, 3000);
+    } else {
+      errorEl.textContent = data.error || 'Error al guardar';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    errorEl.textContent = 'Error de conexion: ' + err.message;
+    errorEl.classList.remove('hidden');
+  }
+}
+
 // --- Spreadsheet Selector ---
 
 function extraerSpreadsheetId(input) {
@@ -721,6 +805,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Gmail Query
   document.getElementById('btn-guardar-gmail-query').addEventListener('click', guardarGmailQueryUI);
   document.querySelector('.gmail-query-ejemplos').addEventListener('click', aplicarEjemploQuery);
+
+  // Estado inicial
+  document.getElementById('config-estado-inicial').addEventListener('change', guardarEstadoInicialUI);
 
   // Spreadsheet
   document.getElementById('btn-detectar-spreadsheet').addEventListener('click', detectarSpreadsheet);

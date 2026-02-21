@@ -6,6 +6,7 @@ function doGet(e) {
 
     if (action === 'getRegistros') return accionGetRegistros();
     if (action === 'obtenerConfig') return accionObtenerConfig();
+    if (action === 'obtenerEstadoInicial') return accionObtenerEstadoInicial();
     if (action === 'getProgramados') return accionGetProgramados();
     if (action === 'getHorarioLaboral') return accionGetHorarioLaboral();
     if (action === 'getNotas') return accionGetNotas();
@@ -31,6 +32,8 @@ function doPost(e) {
     if (action === 'configurarGmailQuery') return accionConfigurarGmailQuery(body);
     if (action === 'programarEnvio') return accionProgramarEnvio(body);
     if (action === 'cancelarProgramado') return accionCancelarProgramado(body);
+    if (action === 'actualizarProgramadoCampos') return accionActualizarProgramadoCampos(body);
+    if (action === 'enviarProgramadoAhora') return accionEnviarProgramadoAhora(body);
     if (action === 'guardarHorarioLaboral') return accionGuardarHorarioLaboral(body);
     if (action === 'guardarNota') return accionGuardarNota(body);
     if (action === 'eliminarNota') return accionEliminarNota(body);
@@ -39,6 +42,7 @@ function doPost(e) {
     if (action === 'actualizarEstadoRecordatorio') return accionActualizarEstadoRecordatorio(body);
     if (action === 'registrarHistorial') return accionRegistrarHistorial(body);
     if (action === 'actualizarCampoPorThread') return accionActualizarCampoPorThread(body);
+    if (action === 'configurarEstadoInicial') return accionConfigurarEstadoInicial(body);
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -57,7 +61,20 @@ function accionObtenerConfig() {
   var id = obtenerSpreadsheetId();
   var nombre = SpreadsheetApp.openById(id).getName();
   var gmailQuery = obtenerGmailQuery();
-  return respuestaJson({ ok: true, spreadsheetId: id, spreadsheetNombre: nombre, gmailQuery: gmailQuery });
+  var estadoInicial = obtenerEstadoInicial();
+  return respuestaJson({ ok: true, spreadsheetId: id, spreadsheetNombre: nombre, gmailQuery: gmailQuery, estadoInicial: estadoInicial });
+}
+
+function accionObtenerEstadoInicial() {
+  return respuestaJson({ ok: true, estadoInicial: obtenerEstadoInicial() });
+}
+
+function accionConfigurarEstadoInicial(body) {
+  if (!body.estadoInicial || typeof body.estadoInicial !== 'string') {
+    return respuestaError('estadoInicial es requerido (texto)');
+  }
+  guardarEstadoInicial(body.estadoInicial.trim().toUpperCase());
+  return respuestaJson({ ok: true, estadoInicial: body.estadoInicial.trim().toUpperCase() });
 }
 
 // --- Acciones POST ---
@@ -322,6 +339,59 @@ function accionCancelarProgramado(body) {
   return respuestaError('Programado no encontrado: ' + body.id);
 }
 
+function accionActualizarProgramadoCampos(body) {
+  if (!body.id) return respuestaError('id es requerido');
+  if (!body.campos || typeof body.campos !== 'object') return respuestaError('campos es requerido');
+
+  var camposPermitidos = ['asunto', 'cuerpo', 'cc', 'bcc', 'fechaProgramada'];
+  var claves = Object.keys(body.campos);
+  for (var i = 0; i < claves.length; i++) {
+    if (camposPermitidos.indexOf(claves[i]) === -1) {
+      return respuestaError('Campo no editable: ' + claves[i]);
+    }
+  }
+
+  if (body.campos.fechaProgramada) {
+    var f = new Date(body.campos.fechaProgramada);
+    if (isNaN(f.getTime())) return respuestaError('fechaProgramada invalida');
+  }
+
+  var prog = leerProgramadoPorId(body.id);
+  if (!prog) return respuestaError('Programado no encontrado: ' + body.id);
+  if (prog.estado !== 'PENDIENTE') return respuestaError('Solo se pueden editar envios PENDIENTE');
+
+  actualizarProgramadoPorId(body.id, body.campos);
+  return respuestaJson({ ok: true });
+}
+
+function accionEnviarProgramadoAhora(body) {
+  if (!body.id) return respuestaError('id es requerido');
+
+  var prog = leerProgramadoPorId(body.id);
+  if (!prog) return respuestaError('Programado no encontrado: ' + body.id);
+  if (prog.estado !== 'PENDIENTE') return respuestaError('Solo se pueden enviar programados PENDIENTE');
+
+  var emailsPropios = obtenerEmailsPropios();
+  var destinatarios = {
+    to: prog.interlocutor,
+    cc: prog.cc || '',
+    bcc: prog.bcc || ''
+  };
+
+  try {
+    var resultado = enviarRespuesta(prog.threadId, prog.asunto, prog.cuerpo, destinatarios, emailsPropios);
+    if (resultado) {
+      actualizarProgramadoPorId(body.id, { estado: 'ENVIADO', fechaEnvio: new Date().toISOString() });
+      return respuestaJson({ ok: true });
+    }
+    actualizarProgramadoPorId(body.id, { estado: 'ERROR', errorDetalle: 'enviarRespuesta retorno null' });
+    return respuestaError('No se pudo enviar el correo');
+  } catch (err) {
+    actualizarProgramadoPorId(body.id, { estado: 'ERROR', errorDetalle: err.message });
+    return respuestaError('Error al enviar: ' + err.message);
+  }
+}
+
 function accionGuardarHorarioLaboral(body) {
   if (!body.horario) return respuestaError('horario es requerido');
   var h = body.horario;
@@ -368,6 +438,7 @@ function accionGuardarRecordatorio(body) {
     id: body.id || 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     clave: String(body.clave || ''),
     texto: body.texto,
+    asunto: body.asunto || '',
     fechaDisparo: body.fechaDisparo || '',
     preset: body.preset || '',
     origen: body.origen || 'manual',

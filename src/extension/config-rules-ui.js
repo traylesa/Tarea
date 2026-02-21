@@ -135,7 +135,25 @@ function _poblarSelectValores() {
   } else if (campoSel === 'estado' && typeof estadosEditando !== 'undefined') {
     opciones = estadosEditando.filter(function(e) { return e.activo; })
       .map(function(e) { return { cod: e.codigo, nom: e.nombre }; });
+  } else if (campoSel === 'tipoTarea') {
+    opciones = [
+      { cod: 'CARGA', nom: 'Carga' },
+      { cod: 'ADMIN', nom: 'Administrativo' },
+      { cod: 'GENERAL', nom: 'General' }
+    ];
+  } else if (campoSel === 'vinculacion') {
+    opciones = [
+      { cod: 'AUTOMATICA', nom: 'Automatica' },
+      { cod: 'HILO', nom: 'Por hilo' },
+      { cod: 'MANUAL', nom: 'Manual' },
+      { cod: 'SIN_VINCULAR', nom: 'Sin vincular' }
+    ];
+  } else if (campoSel === 'alerta') {
+    opciones = [
+      { cod: 'ALERTA_SUPLANTACION', nom: 'Suplantacion' }
+    ];
   }
+  // bandeja, interlocutor, zona: solo texto libre (Cualquiera *)
 
   opciones.forEach(function(o) {
     var opt = document.createElement('option');

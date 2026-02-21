@@ -1,7 +1,7 @@
 # Skill: Desarrollo Mobile PWA
 
 **Proposito**: Guia tecnica para desarrollar la version movil PWA de TareaLog, consumiendo el backend GAS existente con experiencia mobile-first optimizada para operadores de trafico en campo.
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-16
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
@@ -129,39 +129,43 @@ try {
 
 ## Reutilizacion de Modulos
 
-14 modulos de logica pura de la extension Chrome se importan directamente via `<script>` tags en `index.html`. Estan en `src/extension/` y NO se copian:
+18 modulos de logica pura se mantienen como COPIAS en `src/movil/lib/` (NO referencias a `../extension/`). Al modificar un modulo en la extension, SINCRONIZAR manualmente la copia movil:
 
 ```html
-<!-- Referencia relativa desde src/movil/ a src/extension/ -->
-<script src="../extension/constants.js"></script>
-<script src="../extension/date-utils.js"></script>
-<script src="../extension/alerts.js"></script>
-<script src="../extension/templates.js"></script>
-<script src="../extension/filters.js"></script>
-<script src="../extension/reminders.js"></script>
-<script src="../extension/sequences.js"></script>
-<script src="../extension/notes.js"></script>
-<script src="../extension/action-bar.js"></script>
-<script src="../extension/dashboard.js"></script>
-<script src="../extension/action-log.js"></script>
-<script src="../extension/shift-report.js"></script>
-<script src="../extension/alert-summary.js"></script>
-<script src="../extension/resilience.js"></script>
+<script src="./lib/constants.js"></script>
+<script src="./lib/date-utils.js"></script>
+<script src="./lib/alerts.js"></script>
+<script src="./lib/templates.js"></script>
+<script src="./lib/filters.js"></script>
+<script src="./lib/reminders.js"></script>
+<script src="./lib/sequences.js"></script>
+<script src="./lib/notes.js"></script>
+<script src="./lib/fases-config.js"></script>
+<script src="./lib/action-bar.js"></script>
+<script src="./lib/dashboard.js"></script>
+<script src="./lib/action-log.js"></script>
+<script src="./lib/shift-report.js"></script>
+<script src="./lib/alert-summary.js"></script>
+<script src="./lib/resilience.js"></script>
+<script src="./lib/estados-config.js"></script>
+<script src="./lib/bulk-reply.js"></script>
+<script src="./lib/action-rules.js"></script>
 ```
 
 **Patron dual-compat**: Cada modulo exporta con `if (typeof module !== 'undefined') module.exports = {...}`, lo que permite usarlos en Jest (Node) y en browser (globales via script tags).
 
-**REGLA**: Nunca duplicar logica. Si necesitas modificar un modulo compartido, verificar que no rompa la extension Chrome ni los tests Jest.
+**REGLA**: Al modificar logica pura en `src/extension/`, copiar cambios a `src/movil/lib/` y verificar que no rompa tests Jest.
 
 ---
 
 ## Patrones UI Mobile
 
-### Navegacion: 3 tabs bottom nav
+### Navegacion: 4 tabs bottom nav
 
-1. **Todo** (lista unificada + alertas inline + badge numerico)
-2. **Programados** (envios programados + recordatorios activos)
-3. **Config** (URL backend, umbrales, modo outdoor)
+1. **Mi Turno** (dashboard KPIs turno, resumen estado, grafico semanal)
+2. **Todo** (lista unificada + alertas inline + badge numerico)
+3. **Programados** (envios programados + recordatorios activos)
+4. **Config** (URL backend, umbrales, modo outdoor, estado inicial)
 
 Router SPA en `app.js` con `App.navegar('todo')`. Contenido se renderiza en `#app-contenido`.
 
@@ -309,7 +313,7 @@ Claves `localStorage` (prefijo `tarealog_`):
 
 ### DESPUES de implementar
 
-1. Verificar que los 368+ tests Jest existentes siguen pasando (`npx jest`)
+1. Verificar que los 827 tests Jest existentes (37 suites) siguen pasando (`npx jest`)
 2. Probar en Chrome DevTools modo responsive (< 640px)
 3. Verificar modo outdoor activado/desactivado
 4. Comprobar fallback offline (SW devuelve error graceful)
@@ -326,5 +330,5 @@ Claves `localStorage` (prefijo `tarealog_`):
 | Skill backend GAS | `.claude/skills/gas-deploy.md` |
 | Skill extension Chrome | `.claude/skills/chrome-extension-mv3.md` |
 | Skill dual-compat | `.claude/skills/dual-compat-modules.md` |
-| Tests existentes | `tests/TDD/unit/` (368+ tests, 14 suites) |
+| Tests existentes | `tests/TDD/unit/` (827 tests, 37 suites) |
 | Backend GAS | `src/gas/` (11 archivos, clasp deploy) |

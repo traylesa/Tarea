@@ -2,7 +2,7 @@
 
 **Proposito**: Sistema de reglas que evalua registros y genera alertas con niveles de prioridad, notificaciones Chrome, badge y resumen matutino.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-15
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
@@ -122,14 +122,10 @@ Evita notificar la misma alerta repetidamente. Cooldown configurable (default 1h
 ```javascript
 config.alertas = {
   activado: true,
-  silencioUmbralH: 4,        // R2: horas sin respuesta
-  estancamientoMaxH: {       // R3: horas max por fase
-    '01': 24,
-    '10': 48,
-    '29': 72
-  },
-  docsUmbralDias: 2,         // R4: dias sin documentar
-  cooldownMs: 3600000         // 1 hora entre alertas iguales
+  silencioUmbralH: 12,       // R2: horas sin respuesta (default constants.js)
+  estancamientoMaxH: 48,     // R3: horas max estancamiento (default constants.js)
+  docsUmbralDias: 3,         // R4: dias sin documentar (default constants.js)
+  cooldownMs: 3600000        // 1 hora entre alertas iguales
 };
 ```
 
@@ -160,6 +156,8 @@ config.alertas = {
 
 - **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Estados, §Fases
 - **Config alertas**: `src/extension/config.js` §alertas
+- **Productividad**: `.claude/skills/productividad-avanzada.md` (recordatorios, secuencias)
+- **Motor reglas**: `.claude/skills/motor-reglas-acciones.md` (acciones disparadas por alertas)
 - **Tests**: `tests/TDD/unit/test_alerts.js`, `test_alert_summary.js`
 
 ---

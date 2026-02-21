@@ -2,11 +2,16 @@
 
 const {
   ESTADOS_PROGRAMADO,
+  CAMPOS_EDITABLES_PROG,
   formatearEstadoProgramado,
   filtrarProgramados,
   ordenarPorFechaProgramada,
   formatearFechaCorta,
-  contarPorEstado
+  contarPorEstado,
+  esEditable,
+  validarEdicionProgramado,
+  buscarPorThread,
+  buscarPendientesPorThread
 } = require('../../../src/extension/scheduled');
 
 // --- Datos de prueba ---
@@ -244,5 +249,135 @@ describe('contarPorEstado', () => {
     ];
     var result = contarPorEstado(lista);
     expect(result.PENDIENTE).toBe(1);
+  });
+});
+
+// === Nuevas funciones: edicion y busqueda ===
+
+describe('esEditable', () => {
+  test('PENDIENTE es editable', () => {
+    expect(esEditable(crearProgramado({ estado: 'PENDIENTE' }))).toBe(true);
+  });
+
+  test('ENVIADO no es editable', () => {
+    expect(esEditable(crearProgramado({ estado: 'ENVIADO' }))).toBe(false);
+  });
+
+  test('ERROR no es editable', () => {
+    expect(esEditable(crearProgramado({ estado: 'ERROR' }))).toBe(false);
+  });
+
+  test('CANCELADO no es editable', () => {
+    expect(esEditable(crearProgramado({ estado: 'CANCELADO' }))).toBe(false);
+  });
+
+  test('null retorna false', () => {
+    expect(esEditable(null)).toBe(false);
+  });
+
+  test('undefined retorna false', () => {
+    expect(esEditable(undefined)).toBe(false);
+  });
+});
+
+describe('validarEdicionProgramado', () => {
+  test('cambios validos aceptados', () => {
+    var r = validarEdicionProgramado({ asunto: 'Nuevo asunto' });
+    expect(r.valido).toBe(true);
+  });
+
+  test('multiples campos validos', () => {
+    var r = validarEdicionProgramado({ asunto: 'X', cuerpo: 'Y', cc: 'a@b.com' });
+    expect(r.valido).toBe(true);
+  });
+
+  test('campo no editable rechazado', () => {
+    var r = validarEdicionProgramado({ estado: 'ENVIADO' });
+    expect(r.valido).toBe(false);
+    expect(r.error).toContain('estado');
+  });
+
+  test('campo id rechazado', () => {
+    var r = validarEdicionProgramado({ id: 'nuevo_id' });
+    expect(r.valido).toBe(false);
+  });
+
+  test('sin cambios rechazado', () => {
+    var r = validarEdicionProgramado({});
+    expect(r.valido).toBe(false);
+    expect(r.error).toContain('Sin cambios');
+  });
+
+  test('null rechazado', () => {
+    var r = validarEdicionProgramado(null);
+    expect(r.valido).toBe(false);
+  });
+
+  test('fecha invalida rechazada', () => {
+    var r = validarEdicionProgramado({ fechaProgramada: 'no-es-fecha' });
+    expect(r.valido).toBe(false);
+    expect(r.error).toContain('Fecha invalida');
+  });
+
+  test('fecha valida aceptada', () => {
+    var r = validarEdicionProgramado({ fechaProgramada: '2026-03-01T10:00:00.000Z' });
+    expect(r.valido).toBe(true);
+  });
+
+  test('todos los campos editables aceptados', () => {
+    var cambios = {};
+    CAMPOS_EDITABLES_PROG.forEach(function(c) { cambios[c] = 'test'; });
+    // fechaProgramada necesita formato valido
+    cambios.fechaProgramada = '2026-03-01T10:00:00Z';
+    var r = validarEdicionProgramado(cambios);
+    expect(r.valido).toBe(true);
+  });
+});
+
+describe('buscarPorThread', () => {
+  var lista = [
+    crearProgramado({ id: 'p1', threadId: 'thread_A' }),
+    crearProgramado({ id: 'p2', threadId: 'thread_B' }),
+    crearProgramado({ id: 'p3', threadId: 'thread_A' }),
+    crearProgramado({ id: 'p4', threadId: 'thread_C' })
+  ];
+
+  test('encuentra programados del thread', () => {
+    var r = buscarPorThread(lista, 'thread_A');
+    expect(r).toHaveLength(2);
+    expect(r[0].id).toBe('p1');
+    expect(r[1].id).toBe('p3');
+  });
+
+  test('thread sin programados retorna vacio', () => {
+    expect(buscarPorThread(lista, 'thread_X')).toHaveLength(0);
+  });
+
+  test('lista null retorna vacio', () => {
+    expect(buscarPorThread(null, 'thread_A')).toHaveLength(0);
+  });
+
+  test('threadId null retorna vacio', () => {
+    expect(buscarPorThread(lista, null)).toHaveLength(0);
+  });
+});
+
+describe('buscarPendientesPorThread', () => {
+  var lista = [
+    crearProgramado({ id: 'p1', threadId: 'thread_A', estado: 'PENDIENTE' }),
+    crearProgramado({ id: 'p2', threadId: 'thread_A', estado: 'ENVIADO' }),
+    crearProgramado({ id: 'p3', threadId: 'thread_A', estado: 'PENDIENTE' }),
+    crearProgramado({ id: 'p4', threadId: 'thread_B', estado: 'PENDIENTE' })
+  ];
+
+  test('solo retorna pendientes del thread', () => {
+    var r = buscarPendientesPorThread(lista, 'thread_A');
+    expect(r).toHaveLength(2);
+    r.forEach(function(p) { expect(p.estado).toBe('PENDIENTE'); });
+  });
+
+  test('thread sin pendientes retorna vacio', () => {
+    var lista2 = [crearProgramado({ threadId: 'thread_X', estado: 'ENVIADO' })];
+    expect(buscarPendientesPorThread(lista2, 'thread_X')).toHaveLength(0);
   });
 });

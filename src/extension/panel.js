@@ -399,8 +399,7 @@ function formatearRecordatoriosCell(cell) {
   span.style.cursor = 'pointer';
   span.addEventListener('click', function(e) {
     e.stopPropagation();
-    var panel = document.getElementById('panel-recordatorios');
-    if (panel.classList.contains('hidden')) togglePanelRecordatorios();
+    abrirDetallePorCodCar(codCar, row.asunto);
   });
   return span;
 }
@@ -426,8 +425,7 @@ function formatearProgramadosCell(cell) {
   span.style.cursor = 'pointer';
   span.addEventListener('click', function(e) {
     e.stopPropagation();
-    var panel = document.getElementById('panel-programados');
-    if (panel.classList.contains('hidden')) togglePanelProgramados();
+    abrirModalProgramadoPorThread(threadId);
   });
   return span;
 }
@@ -448,7 +446,7 @@ const guardarPrefsDebounced = debounce(guardarPreferencias, 500);
 
 async function cargarPreferencias() {
   const result = await chrome.storage.local.get(STORAGE_KEY_PREFS);
-  return result[STORAGE_KEY_PREFS] || null;
+  return result[STORAGE_KEY_PREFS] || (typeof DEFAULT_PREFS_REJILLA !== 'undefined' ? DEFAULT_PREFS_REJILLA : null);
 }
 
 function aplicarPreferencias(columnas, prefs) {
@@ -1990,6 +1988,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-actualizar-programados').addEventListener('click', cargarProgramados);
   document.getElementById('filtro-programados').addEventListener('change', renderTablaProgramados);
   document.getElementById('chk-programar-envio').addEventListener('change', toggleCheckboxProgramar);
+  document.getElementById('btn-guardar-programado').addEventListener('click', guardarCambiosProgramado);
+  document.getElementById('btn-enviar-ahora').addEventListener('click', enviarProgramadoAhora);
+  document.getElementById('btn-cancelar-programado-modal').addEventListener('click', cancelarProgramadoDesdeModal);
+  document.getElementById('btn-reprogramar').addEventListener('click', reprogramarProgramado);
+  document.getElementById('btn-cerrar-programado').addEventListener('click', cerrarModalProgramado);
 
   // Horario laboral
   document.getElementById('btn-guardar-horario').addEventListener('click', guardarHorarioLaboralUI);
@@ -1998,6 +2001,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-toggle-recordatorios').addEventListener('click', togglePanelRecordatorios);
   document.getElementById('btn-guardar-recordatorio').addEventListener('click', guardarRecordatorioUI);
   document.getElementById('btn-cancelar-recordatorio').addEventListener('click', cerrarModalRecordatorio);
+  document.getElementById('btn-rec-det-guardar').addEventListener('click', guardarDesdeDetalle);
+  document.getElementById('btn-rec-det-snooze').addEventListener('click', snoozeDesdeDetalle);
+  document.getElementById('btn-rec-det-completar').addEventListener('click', completarDesdeDetalle);
+  document.getElementById('btn-rec-det-cerrar').addEventListener('click', cerrarDetalleRecordatorio);
 
   // Dashboard
   document.getElementById('btn-toggle-dashboard').addEventListener('click', toggleDashboard);

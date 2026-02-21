@@ -52,7 +52,7 @@ function renderActionBar(rowData) {
     var btnRec = document.createElement('button');
     btnRec.className = 'btn-accion-ctx';
     btnRec.textContent = 'Recordar';
-    btnRec.addEventListener('click', function() { abrirModalRecordatorio(claveNota); });
+    btnRec.addEventListener('click', function() { abrirModalRecordatorio(claveNota, rowData.asunto); });
     botones.appendChild(btnRec);
   }
 

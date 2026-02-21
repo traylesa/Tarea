@@ -87,6 +87,7 @@ var VistaDetalle = {
       { label: 'F. Carga', valor: VistaDetalle._formatearFechaHora(principal.fCarga, principal.hCarga), icono: '\uD83D\uDCC5' },
       { label: 'F. Entrega', valor: VistaDetalle._formatearFechaHora(principal.fEntrega, principal.hEntrega), icono: '\uD83C\uDFC1' },
       { label: 'Zona', valor: [principal.zona, principal.zDest].filter(Boolean).join(' \u2192 '), icono: '\uD83D\uDCCD' },
+      { label: 'Bandeja', valor: principal.bandeja, icono: '\uD83D\uDCE5' },
       { label: 'Msgs en hilo', valor: principal.mensajesEnHilo, icono: '\u2709' },
       { label: 'Alerta', valor: principal.alerta, icono: '\u26A0' }
     ];

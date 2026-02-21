@@ -2,7 +2,7 @@
 
 **Proposito**: Documentar el sistema de vinculacion entre hilos de Gmail y codigos de carga, incluyendo cache en memoria, persistencia en Sheets y los 3 flujos de vinculacion.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-16
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 

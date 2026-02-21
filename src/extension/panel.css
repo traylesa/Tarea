@@ -1133,6 +1133,36 @@ footer {
 .prog-error { color: #d93025; font-weight: 600; }
 .prog-cancelado { color: #999; }
 
+.prog-preview-html {
+  margin-top: 8px;
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#modal-programado .modal-content input[readonly] { cursor: default; }
+#modal-programado .prog-readonly input,
+#modal-programado .prog-readonly textarea {
+  background: #f5f5f5;
+  color: #666;
+  pointer-events: none;
+}
+
+.prog-estado-inline {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tabla-prog tr { cursor: pointer; }
+
 #modal-fase select,
 #modal-estado select {
   width: 100%;

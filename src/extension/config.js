@@ -88,6 +88,7 @@ function getDefaults() {
       left: null,
       top: null
     },
+    estadoInicial: 'NUEVO',
     emailsPorMinuto: 10,
     fases: _getDefaultFases(),
     estados: _getDefaultEstados(),

@@ -265,6 +265,15 @@ describe('action-rules.js', () => {
       expect(res.errores[0]).toContain('campo');
     });
 
+    test.each([
+      'fase', 'estado', 'codCar', 'tipoTarea', 'vinculacion',
+      'alerta', 'bandeja', 'interlocutor', 'zona'
+    ])('acepta campo valido: %s', (campo) => {
+      var regla = { nombre: 'Test', condicion: { campo: campo }, acciones: [{ tipo: 'PROPAGAR_HILO' }] };
+      var res = validarRegla(regla);
+      expect(res.valido).toBe(true);
+    });
+
     test('rechaza tipo de accion desconocido', () => {
       var regla = { nombre: 'X', condicion: { campo: 'fase' }, acciones: [{ tipo: 'INEXISTENTE' }] };
       var res = validarRegla(regla);

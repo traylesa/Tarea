@@ -34,7 +34,7 @@ function calcularFechaDisparo(preset, ahora) {
   return new Date(ahora.getTime() + minutos * MS_POR_MINUTO).toISOString();
 }
 
-function crearRecordatorio(texto, codCar, preset, ahora, listaExistente) {
+function crearRecordatorio(texto, codCar, preset, ahora, listaExistente, asunto) {
   if (!texto || !texto.trim()) {
     throw new Error('El texto del recordatorio es obligatorio');
   }
@@ -46,6 +46,7 @@ function crearRecordatorio(texto, codCar, preset, ahora, listaExistente) {
   return {
     id: _generarId(),
     codCar: codCar !== undefined ? codCar : null,
+    asunto: asunto || null,
     texto: texto.trim(),
     fechaCreacion: ahora.toISOString(),
     fechaDisparo: calcularFechaDisparo(preset, ahora),
@@ -81,6 +82,7 @@ function aplicarSnooze(id, preset, lista, ahora) {
     return {
       id: r.id,
       codCar: r.codCar,
+      asunto: r.asunto || null,
       texto: r.texto,
       fechaCreacion: r.fechaCreacion,
       fechaDisparo: calcularFechaDisparo(preset, ahora),
@@ -109,16 +111,28 @@ function generarSugerencia(fase, config) {
   return { texto: sug.texto, horasAntes: sug.horasAntes };
 }
 
-function aceptarSugerencia(sugerencia, codCar, ahora) {
+function aceptarSugerencia(sugerencia, codCar, ahora, asunto) {
   return {
     id: _generarId(),
     codCar: codCar !== undefined ? codCar : null,
+    asunto: asunto || null,
     texto: sugerencia.texto,
     fechaCreacion: ahora.toISOString(),
     fechaDisparo: new Date(ahora.getTime() + sugerencia.horasAntes * MS_POR_HORA).toISOString(),
     snoozeCount: 0,
     origen: 'sugerido'
   };
+}
+
+function buscarPorCodCar(lista, codCar) {
+  if (!lista || !codCar) return [];
+  return lista.filter(function(r) { return r.codCar === codCar; });
+}
+
+function buscarActivosPorCodCar(lista, codCar, ahora) {
+  return buscarPorCodCar(lista, codCar).filter(function(r) {
+    return new Date(r.fechaDisparo).getTime() > ahora.getTime();
+  });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -132,6 +146,8 @@ if (typeof module !== 'undefined' && module.exports) {
     evaluarPendientes: evaluarPendientes,
     generarSugerencia: generarSugerencia,
     aceptarSugerencia: aceptarSugerencia,
+    buscarPorCodCar: buscarPorCodCar,
+    buscarActivosPorCodCar: buscarActivosPorCodCar,
     PRESETS: PRESETS,
     MAX_RECORDATORIOS: MAX_RECORDATORIOS,
     SUGERENCIAS_POR_FASE: SUGERENCIAS_POR_FASE

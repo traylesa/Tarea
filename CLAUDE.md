@@ -1,7 +1,7 @@
 # PruebaInicializa4
 
-**Estado:** Activo | **Fase:** Desarrollo | **Versión:** 0.2.0
-**Última actualización:** 2026-02-14
+**Estado:** Activo | **Fase:** Desarrollo | **Versión:** 0.3.1
+**Última actualización:** 2026-02-21
 
 ---
 
@@ -46,25 +46,29 @@ just diagnostico        # Diagnóstico completo
 
 ## 🎯 ESTADO ACTUAL
 
-### Versión: 0.2.0 (Backend GAS + UI completa)
+### Versión: 0.3.1 (Reglas ampliadas + Estado configurable + Bandeja)
 
 **Extension Chrome (Manifest V3):**
 - ✅ Panel con tabs: Datos, Plantillas, Config, Ayuda
 - ✅ Tabla Tabulator con 20+ columnas, edicion inline, agrupacion por hilo
+- ✅ Preferencias rejilla por defecto (orden, anchos, visibilidad predefinidos)
 - ✅ Filtros avanzados con tarjetas colapsables (fechas, fases, baterias, personalizados)
 - ✅ Plantillas de respuesta con pie comun global + export/import JSON
 - ✅ Edicion masiva (fase + estado a seleccionados)
 - ✅ Respuesta masiva (reply-all excluyendo email propio)
 - ✅ Selector de spreadsheet dinamico
+- ✅ Estado inicial de emails configurable desde Config (guardado en GAS)
+- ✅ Motor de reglas con 9 campos: fase, estado, codCar, tipoTarea, vinculacion, alerta, bandeja, interlocutor, zona
 
 **Backend GAS (Web App):**
 - ✅ 11 archivos desplegados via clasp (6 adaptadores + 5 logica pura)
-- ✅ Endpoints: getRegistros, procesarCorreos, actualizarCampo, vincularManual, enviarRespuesta, configurarSpreadsheet
+- ✅ Endpoints: getRegistros, procesarCorreos, actualizarCampo, vincularManual, enviarRespuesta, configurarSpreadsheet, obtenerEstadoInicial, configurarEstadoInicial
 - ✅ SPREADSHEET_ID dinamico via PropertiesService
 - ✅ Auto-sync headers en hojas SEGUIMIENTO y DB_HILOS
 - ✅ Interlocutor calculado (from+to minus email propio via Session.getEffectiveUser)
+- ✅ Campo bandeja extraido de etiquetas Gmail (labels/INBOX/OTRO)
 
-**Tests:** 67+ Jest pasando (logica pura dual-compatible GAS/Node)
+**Tests:** 827 Jest pasando, 37 suites (logica pura dual-compatible GAS/Node)
 
 **Ver detalle:** `just diagnostico`
 
@@ -98,6 +102,9 @@ PruebaInicializa4/
 | `productividad-avanzada.md` | Dominio | Recordatorios, secuencias, dashboard, historial, notas |
 | `trazabilidad-hilos.md` | Backend | ThreadManager, DB_HILOS, vinculacion auto/manual/hilo |
 | `pwa-mobile-development.md` | Mobile | PWA, integracion GAS, UI mobile-first, accesibilidad campo |
+| `motor-reglas-acciones.md` | Dominio | Reglas parametrizables, 9 campos, 8 tipos accion, evaluacion |
+| `sistema-configuracion.md` | Arquitectura | Defaults, validacion, export/import, migracion, sync GAS |
+| `envios-programados.md` | Dominio | Cola envios, horario laboral, rate limiting, trigger GAS |
 
 ---
 

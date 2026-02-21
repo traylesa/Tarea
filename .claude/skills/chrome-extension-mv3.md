@@ -2,7 +2,7 @@
 
 **Proposito**: Patrones especificos de la extension TareaLog en MV3: service worker, ventanas, storage, alarmas y comunicacion entre contextos.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-15
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
@@ -83,20 +83,33 @@ var result = await chrome.storage.local.get(['registros', 'ultimoBarrido']);
 MV3 con CSP restrictiva: los scripts se cargan con `<script src>` en orden (no ES modules). El service worker usa `importScripts()`.
 
 ```html
-<!-- panel.html — El ORDEN importa -->
-<script src="fases-config.js"></script>   <!-- 1. Datos puros -->
-<script src="config.js"></script>          <!-- 2. Config (storage) -->
-<script src="filters.js"></script>         <!-- 3. Logica pura -->
-<script src="scheduled.js"></script>       <!-- 4. Logica pura -->
-<script src="bulk-reply.js"></script>      <!-- 5. Logica pura -->
-<script src="panel.js"></script>           <!-- 6. UI (usa todo lo anterior) -->
-<script src="config-ui.js"></script>       <!-- 7. UI config (usa panel.js) -->
+<!-- panel.html — El ORDEN importa (dependencias antes) -->
+<script src="constants.js"></script>       <!-- 1. Constantes globales -->
+<script src="date-utils.js"></script>      <!-- 2. Utilidades fecha -->
+<script src="fases-config.js"></script>    <!-- 3. Datos fases -->
+<script src="estados-config.js"></script>  <!-- 4. Datos estados -->
+<script src="config.js"></script>          <!-- 5. Config (storage) -->
+<script src="filters.js"></script>         <!-- 6. Logica pura -->
+<script src="scheduled.js"></script>       <!-- 7. Logica pura -->
+<script src="bulk-reply.js"></script>      <!-- 8. Logica pura -->
+<script src="reminders.js"></script>       <!-- 9. Recordatorios -->
+<script src="action-rules.js"></script>    <!-- 10. Motor reglas -->
+<script src="templates.js"></script>       <!-- 11. Plantillas -->
+<script src="alerts.js"></script>          <!-- 12. Alertas -->
+<script src="panel.js"></script>           <!-- 13. UI principal -->
+<script src="config-ui.js"></script>       <!-- 14. UI config -->
+<script src="config-rules-ui.js"></script> <!-- 15. UI reglas -->
+<script src="panel-programados.js"></script> <!-- 16. UI programados -->
+<script src="panel-recordatorios.js"></script> <!-- 17. UI recordatorios -->
+<script src="panel-acciones.js"></script>  <!-- 18. UI acciones -->
 ```
 
 ```javascript
 // background.js (service worker)
-importScripts('alerts.js');
-importScripts('alert-summary.js');
+importScripts('constants.js', 'date-utils.js');
+importScripts('alerts.js', 'alert-summary.js');
+importScripts('reminders.js', 'sequences.js', 'shift-report.js');
+importScripts('scheduled.js');
 ```
 
 ---

@@ -2,7 +2,7 @@
 
 **Proposito**: Guia completa para desplegar codigo Google Apps Script via clasp, evitando errores comunes de la Web App.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-15
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
 
 ---
 
@@ -15,9 +15,17 @@ TareaLog usa GAS como backend (Web App). El codigo vive en `src/gas/` y se sube 
 | Archivo | Rol |
 |---------|-----|
 | `src/gas/.clasp.json` | Configuracion clasp (scriptId) |
-| `src/gas/appsscript.json` | Manifest GAS (timeZone, webapp) |
-| `src/gas/Codigo.js` | Punto de entrada: doGet/doPost |
-| `src/gas/Configuracion.js` | Constantes, PropertiesService |
+| `src/gas/appsscript.json` | Manifest GAS (timeZone, webapp, ANYONE_ANONYMOUS) |
+| `src/gas/Codigo.js` | Punto de entrada: doGet/doPost (20+ endpoints) |
+| `src/gas/Configuracion.js` | Constantes, headers, PropertiesService (6 hojas) |
+| `src/gas/Main.js` | processMessage + calcularInterlocutor |
+| `src/gas/AdaptadorHojas.js` | CRUD Sheets + auto-sync headers |
+| `src/gas/AdaptadorGmail.js` | Lectura Gmail + enviarRespuesta + bandeja |
+| `src/gas/ThreadManager.js` | Cache threadId→codCar en memoria |
+| `src/gas/EmailParser.js` | Extraccion metadata de emails |
+| `src/gas/Auditor.js` | Auditoria de seguridad (suplantacion) |
+| `src/gas/ERPReader.js` | Lectura datos ERP |
+| `src/gas/SLAChecker.js` | Verificacion SLA |
 
 ---
 

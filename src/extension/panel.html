@@ -354,6 +354,15 @@
         </fieldset>
 
         <fieldset>
+          <legend>Estado inicial de emails</legend>
+          <label for="config-estado-inicial">Estado al procesar correos nuevos</label>
+          <select id="config-estado-inicial" style="width:100%"></select>
+          <small style="color:#666;">Estado asignado automaticamente a los correos recien procesados</small>
+          <div id="estado-inicial-info" class="hidden" style="margin-top:4px;color:#27ae60;font-size:11px"></div>
+          <div id="estado-inicial-error" class="hidden" style="margin-top:4px;color:#e74c3c;font-size:11px"></div>
+        </fieldset>
+
+        <fieldset>
           <legend>Resumen matutino</legend>
           <label>
             <input type="checkbox" id="cfg-resumen-activado" checked>
@@ -520,6 +529,47 @@
 
   <!-- Panel Mis Recordatorios (colapsable, antes de tabla) -->
 
+  <!-- Modal Detalle Recordatorio -->
+  <div id="modal-recordatorio-detalle" class="modal hidden">
+    <div class="modal-content" style="min-width:400px;max-width:500px">
+      <h2>Detalle Recordatorio</h2>
+      <div id="rec-det-info" style="margin-bottom:8px;font-size:12px;color:#666"></div>
+
+      <div id="rec-det-contexto" style="margin-bottom:12px;padding:8px;background:#f0f4ff;border-radius:4px;font-size:12px">
+        <div id="rec-det-codcar" style="font-weight:600"></div>
+        <div id="rec-det-asunto" style="color:#555;margin-top:2px"></div>
+      </div>
+
+      <label>Texto:</label>
+      <input type="text" id="rec-det-texto" class="input-full">
+
+      <label>Cuando:</label>
+      <select id="rec-det-preset" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin-bottom:16px">
+        <option value="15min">En 15 minutos</option>
+        <option value="30min">En 30 minutos</option>
+        <option value="1h">En 1 hora</option>
+        <option value="2h">En 2 horas</option>
+        <option value="4h">En 4 horas</option>
+        <option value="manana">Manana a las 9:00</option>
+      </select>
+
+      <div style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;color:#666">
+        <div>Disparo: <strong id="rec-det-disparo"></strong></div>
+        <div>Snooze: <strong id="rec-det-snooze"></strong></div>
+        <div id="rec-det-origen-wrap">Origen: <strong id="rec-det-origen"></strong></div>
+      </div>
+
+      <div id="rec-det-error" class="errores hidden" style="margin-bottom:8px"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-rec-det-guardar" class="btn-primario">Guardar</button>
+        <button type="button" id="btn-rec-det-snooze" class="btn-secundario">Posponer</button>
+        <button type="button" id="btn-rec-det-completar" class="btn-secundario">Completar</button>
+        <button type="button" id="btn-rec-det-cerrar">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Notas -->
   <div id="modal-notas" class="modal hidden">
     <div class="modal-content" style="min-width:400px;max-width:500px">
@@ -544,6 +594,56 @@
       <div class="modal-actions" style="margin-top:12px">
         <button id="btn-copiar-reporte" class="btn-primario">Copiar</button>
         <button id="btn-cerrar-reporte">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Programado -->
+  <div id="modal-programado" class="modal hidden">
+    <div class="modal-content" style="min-width:480px;max-width:600px">
+      <h2 id="prog-modal-titulo">Detalle Envio Programado</h2>
+      <div id="prog-estado-badge" style="margin-bottom:8px"></div>
+
+      <label>Interlocutor:</label>
+      <input type="text" id="prog-interlocutor" readonly style="background:#f5f5f5;color:#666">
+
+      <label>Asunto:</label>
+      <input type="text" id="prog-asunto" class="input-full">
+
+      <div style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label>CC:</label>
+          <input type="text" id="prog-cc">
+        </div>
+        <div style="flex:1">
+          <label>BCC:</label>
+          <input type="text" id="prog-bcc">
+        </div>
+      </div>
+
+      <label>Programado para:</label>
+      <input type="datetime-local" id="prog-fecha" class="input-full">
+
+      <label>Mensaje:</label>
+      <textarea id="prog-cuerpo" rows="6" style="width:100%;font-family:inherit;font-size:12px;padding:8px;border:1px solid #ddd;border-radius:4px;resize:vertical"></textarea>
+
+      <div id="prog-preview-cuerpo" class="prog-preview-html hidden"></div>
+
+      <div id="prog-info-envio" class="hidden" style="margin-top:8px;font-size:12px;color:#666">
+        <div id="prog-fecha-envio"></div>
+        <div id="prog-creado-por"></div>
+      </div>
+
+      <div id="prog-error-detalle" class="hidden" style="margin-top:8px;padding:8px;background:#fde8e8;border-radius:4px;color:#d93025;font-size:12px"></div>
+
+      <div id="prog-modal-error" class="errores hidden" style="margin-top:8px"></div>
+
+      <div class="modal-actions" style="margin-top:12px">
+        <button type="button" id="btn-guardar-programado" class="btn-primario">Guardar</button>
+        <button type="button" id="btn-enviar-ahora" class="btn-secundario">Enviar ahora</button>
+        <button type="button" id="btn-reprogramar" class="btn-secundario hidden">Reprogramar</button>
+        <button type="button" id="btn-cancelar-programado-modal" class="btn-secundario">Cancelar envio</button>
+        <button type="button" id="btn-cerrar-programado">Cerrar</button>
       </div>
     </div>
   </div>
@@ -621,6 +721,12 @@
           <option value="fase">Fase</option>
           <option value="estado">Estado</option>
           <option value="codCar">Codigo de Carga</option>
+          <option value="tipoTarea">Tipo Tarea</option>
+          <option value="vinculacion">Vinculacion</option>
+          <option value="alerta">Alerta</option>
+          <option value="bandeja">Bandeja</option>
+          <option value="interlocutor">Interlocutor</option>
+          <option value="zona">Zona</option>
         </select>
         <label for="regla-valor">A valor:</label>
         <select id="regla-valor" style="width:100%">
