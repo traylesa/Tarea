@@ -1,7 +1,7 @@
 // sw.js - Service Worker para cache offline y notificaciones
 'use strict';
 
-var CACHE_NAME = 'tarealog-v10';
+var CACHE_NAME = 'tarealog-v11';
 var CACHE_URLS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ var CACHE_URLS = [
   './css/cards.css',
   './css/outdoor.css',
   './css/mi-turno.css',
+  './css/kanban.css',
   './manifest.json',
   './js/app.js',
   './js/api.js',
@@ -24,6 +25,7 @@ var CACHE_URLS = [
   './js/views/detalle.js',
   './js/views/programados.js',
   './js/views/config.js',
+  './js/views/kanban.js',
   './lib/constants.js',
   './lib/date-utils.js',
   './lib/alerts.js',
@@ -41,7 +43,9 @@ var CACHE_URLS = [
   './lib/action-log.js',
   './lib/shift-report.js',
   './lib/alert-summary.js',
-  './lib/resilience.js'
+  './lib/resilience.js',
+  './lib/kanban.js',
+  './lib/sortable/Sortable.min.js'
 ];
 
 // Instalar: cachear archivos estaticos
