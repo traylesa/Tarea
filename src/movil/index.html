@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/cards.css">
   <link rel="stylesheet" href="css/outdoor.css">
   <link rel="stylesheet" href="css/mi-turno.css">
+  <link rel="stylesheet" href="css/kanban.css">
 </head>
 <body>
   <div class="app">
@@ -31,6 +32,10 @@
         <span style="font-size:20px">&#9776;</span>
         <span>Todo</span>
         <span class="nav-badge" id="badge-todo" style="display:none"></span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="kanban" onclick="App.navegar('kanban')">
+        <span style="font-size:20px">&#9634;</span>
+        <span>Tablero</span>
       </a>
       <a class="bottom-nav-item" data-ruta="programados" onclick="App.navegar('programados')">
         <span style="font-size:20px">&#128339;</span>
@@ -55,6 +60,8 @@
   <script src="./lib/fases-config.js"></script>
   <script src="./lib/estados-config.js"></script>
   <script src="./lib/action-bar.js"></script>
+  <script src="./lib/kanban.js"></script>
+  <script src="./lib/sortable/Sortable.min.js"></script>
   <script src="./lib/action-rules.js"></script>
   <script src="./lib/bulk-reply.js"></script>
   <script src="./lib/dashboard.js"></script>
@@ -82,6 +89,7 @@
   <script src="js/views/todo.js"></script>
   <script src="js/views/detalle.js"></script>
   <script src="js/views/programados.js"></script>
+  <script src="js/views/kanban.js"></script>
   <script src="js/views/config.js"></script>
 
   <!-- App principal (ultimo) -->

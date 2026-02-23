@@ -44,6 +44,8 @@ let pieComun = '';
 let filtroGlobalActivo = false;
 const CAMPOS_BUSCABLES = ['estado', 'fase', 'codCar', 'nombreTransportista', 'emailRemitente', 'interlocutor', 'asunto', 'tipoTarea', 'vinculacion', 'fechaCorreo', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega', 'zona', 'zDest'];
 let fasesCardActivas = null;
+let estadosCardActivos = null;
+let filtroEstadosFn = null;
 let almacenNotas = {};
 let almacenHistorial = {};
 const STORAGE_KEY_NOTAS = 'tarealog_notas';
@@ -637,6 +639,12 @@ async function persistirCambio(cell) {
       renderActionBar(seleccionados[0]);
     }
   }
+
+  // Sync tablero Kanban si esta visible
+  var tabTablero = document.getElementById('tab-tablero');
+  if (tabTablero && tabTablero.classList.contains('active') && typeof renderKanban === 'function') {
+    renderKanban();
+  }
 }
 
 async function ejecutarAccionRegla(accion, rowData) {
@@ -951,6 +959,7 @@ async function aplicarConfigSesion() {
   poblarSelectFases();
   poblarSelectEstados();
   renderFaseCards();
+  renderEstadoCards();
 
   if (tabla) {
     tabla.destroy();
@@ -1126,6 +1135,11 @@ function aplicarTodosFiltros() {
     tabla.addFilter(filtroFasesFn);
   }
 
+  // 2b. Filtro de estados (cards)
+  if (estadosCardActivos !== null && filtroEstadosFn) {
+    tabla.addFilter(filtroEstadosFn);
+  }
+
   // 3. Filtros temporales (correo, carga, descarga)
   if (filtroCorreoActivo) {
     var correoDesde = document.getElementById('filtro-correo-desde').value;
@@ -1194,6 +1208,12 @@ function aplicarTodosFiltros() {
 
   actualizarConteo();
   actualizarBadgeFiltros();
+
+  // Re-renderizar Kanban si esta visible para mantener sync
+  var tabTablero = document.getElementById('tab-tablero');
+  if (tabTablero && tabTablero.classList.contains('active') && typeof renderKanban === 'function') {
+    renderKanban();
+  }
 }
 
 // Alias: los botones y events llaman a estas, que ahora delegan en aplicarTodosFiltros
@@ -1305,6 +1325,11 @@ function limpiarTodoCompleto() {
   fasesCardActivas = null;
   filtroFasesFn = null;
   document.querySelectorAll('.fase-card').forEach(function(c) { c.classList.add('active'); });
+
+  // Resetear estados (todos activos)
+  estadosCardActivos = null;
+  filtroEstadosFn = null;
+  document.querySelectorAll('.estado-card').forEach(function(c) { c.classList.add('active'); });
 
   // Resetear baterías
   filtrosBateriaActivos = null;
@@ -1531,6 +1556,79 @@ function aplicarFiltroFases() {
   var fn = filtroFases(fasesCardActivas);
   filtroFasesFn = function(data) { return fn(data.fase); };
 
+  aplicarTodosFiltros();
+}
+
+// --- Cards de estados ---
+
+function renderEstadoCards() {
+  var container = document.getElementById('estado-cards-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var btnAll = document.createElement('button');
+  btnAll.className = 'btn-fase-control';
+  btnAll.textContent = 'Todos';
+  btnAll.addEventListener('click', function() { toggleTodosEstados(true); });
+
+  var btnNone = document.createElement('button');
+  btnNone.className = 'btn-fase-control';
+  btnNone.textContent = 'Ninguno';
+  btnNone.addEventListener('click', function() { toggleTodosEstados(false); });
+
+  container.appendChild(btnAll);
+  container.appendChild(btnNone);
+
+  obtenerEstadosOrdenados(estadosActuales).forEach(function(est) {
+    if (est.activo === false) return;
+    var card = document.createElement('button');
+    card.className = 'estado-card';
+    if (!estadosCardActivos || estadosCardActivos.indexOf(est.codigo) !== -1) card.classList.add('active');
+    var claseCss = est.claseCss || 'estado-' + est.codigo.toLowerCase();
+    card.classList.add(claseCss);
+    card.textContent = (est.icono || '') + ' ' + (est.nombre || est.codigo);
+    card.dataset.codigo = est.codigo;
+    card.addEventListener('click', function() { toggleEstadoCard(card, est.codigo); });
+    container.appendChild(card);
+  });
+}
+
+function toggleEstadoCard(card, codigo) {
+  if (!estadosCardActivos) {
+    estadosCardActivos = estadosActuales
+      .filter(function(e) { return e.activo !== false; })
+      .map(function(e) { return e.codigo; });
+  }
+
+  var idx = estadosCardActivos.indexOf(codigo);
+  if (idx >= 0) {
+    estadosCardActivos.splice(idx, 1);
+    card.classList.remove('active');
+  } else {
+    estadosCardActivos.push(codigo);
+    card.classList.add('active');
+  }
+
+  aplicarFiltroEstados();
+}
+
+function toggleTodosEstados(marcar) {
+  if (marcar) {
+    estadosCardActivos = null;
+  } else {
+    estadosCardActivos = [];
+  }
+
+  document.querySelectorAll('.estado-card').forEach(function(card) {
+    card.classList.toggle('active', marcar);
+  });
+
+  aplicarFiltroEstados();
+}
+
+function aplicarFiltroEstados() {
+  var fn = filtroEstados(estadosCardActivos);
+  filtroEstadosFn = function(data) { return fn(data.estado); };
   aplicarTodosFiltros();
 }
 
@@ -1858,17 +1956,32 @@ function inicializarTabs() {
       tab.classList.add('active');
       document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
 
-      if (tab.dataset.tab === 'datos' && tabla) {
+      var tabActual = tab.dataset.tab;
+
+      // Barra filtros compartida: visible en Datos y Tablero
+      var barra = document.getElementById('barra-filtros-compartida');
+      var tabsConFiltro = ['datos', 'tablero'];
+      if (barra) barra.classList.toggle('hidden', tabsConFiltro.indexOf(tabActual) === -1);
+
+      // Botones solo-tabla: ocultar en Tablero
+      document.querySelectorAll('.btn-solo-tabla').forEach(function(el) {
+        el.classList.toggle('hidden', tabActual === 'tablero');
+      });
+
+      if (tabActual === 'datos' && tabla) {
         tabla.redraw(true);
       }
-      if (tab.dataset.tab === 'plantillas') {
+      if (tabActual === 'plantillas') {
         renderListaPlantillas();
       }
-      if (tab.dataset.tab === 'config') {
+      if (tabActual === 'config') {
         renderListaServicios();
         cargarHorarioLaboral();
       }
-      if (tab.dataset.tab === 'ayuda') {
+      if (tabActual === 'tablero') {
+        renderKanban();
+      }
+      if (tabActual === 'ayuda') {
         inicializarAyuda();
       }
     });
@@ -1913,6 +2026,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await cargarDatos();
   renderBaterias();
   renderFaseCards();
+  renderEstadoCards();
 
   // Controles principales
   document.getElementById('btn-refresh').addEventListener('click', ejecutarBarrido);

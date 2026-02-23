@@ -59,6 +59,9 @@ var App = {
       case 'detalle':
         VistaDetalle.renderizar(contenedor, param);
         break;
+      case 'kanban':
+        VistaKanban.renderizar(contenedor);
+        break;
       case 'programados':
         VistaProgramados.renderizar(contenedor);
         break;

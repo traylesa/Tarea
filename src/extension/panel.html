@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="lib/tabulator/tabulator_semanticui.min.css">
   <link rel="stylesheet" href="../shared/visual-status.css">
   <link rel="stylesheet" href="panel.css">
+  <link rel="stylesheet" href="kanban.css">
 </head>
 <body>
   <div id="toast-container"></div>
@@ -14,6 +15,7 @@
     <h1>TareaLog</h1>
     <nav id="tabs">
       <button class="tab active" data-tab="datos">Datos</button>
+      <button class="tab" data-tab="tablero">Tablero</button>
       <button class="tab" data-tab="plantillas">Plantillas</button>
       <button class="tab" data-tab="config">Configuracion</button>
       <button class="tab tab-help" data-tab="ayuda" title="Ayuda">?</button>
@@ -21,32 +23,22 @@
   </header>
 
   <main>
-    <!-- Tab Datos -->
-    <section id="tab-datos" class="tab-content active">
-      <!-- Barra de controles -->
+    <!-- Barra de filtros compartida (visible en Datos y Tablero) -->
+    <div id="barra-filtros-compartida">
       <div id="controls">
-        <button id="btn-refresh" title="Ejecutar barrido ahora">Ejecutar Ahora</button>
-        <select id="selector-servicio" title="Servicio GAS activo"></select>
+        <button id="btn-refresh" title="Ejecutar barrido ahora" class="btn-solo-tabla">Ejecutar Ahora</button>
+        <select id="selector-servicio" title="Servicio GAS activo" class="btn-solo-tabla"></select>
         <input type="text" id="filtro-global" placeholder="Buscar en todos los campos..." title="Busqueda rapida">
         <button id="btn-toggle-filtros" title="Mostrar/ocultar filtros avanzados">Filtros</button>
-        <button id="btn-toggle-agrupar" title="Agrupar por hilo">Agrupar por hilo</button>
-        <button id="btn-responder-seleccionados" title="Responder a los correos seleccionados" disabled>Responder seleccionados</button>
-        <button id="btn-toggle-programados" title="Ver envios programados">Programados</button>
-        <button id="btn-resumen" title="Abrir resumen de alertas">Resumen</button>
-        <button id="btn-toggle-recordatorios" title="Ver mis recordatorios">Recordatorios</button>
-        <button id="btn-toggle-dashboard" title="Ver panel de KPIs del turno">Mi Turno</button>
-        <button id="btn-reporte-turno" title="Generar reporte de fin de turno">Reporte</button>
+        <button id="btn-toggle-agrupar" title="Agrupar por hilo" class="btn-solo-tabla">Agrupar por hilo</button>
+        <button id="btn-responder-seleccionados" title="Responder a los correos seleccionados" disabled class="btn-solo-tabla">Responder seleccionados</button>
+        <button id="btn-toggle-programados" title="Ver envios programados" class="btn-solo-tabla">Programados</button>
+        <button id="btn-resumen" title="Abrir resumen de alertas" class="btn-solo-tabla">Resumen</button>
+        <button id="btn-toggle-recordatorios" title="Ver mis recordatorios" class="btn-solo-tabla">Recordatorios</button>
+        <button id="btn-toggle-dashboard" title="Ver panel de KPIs del turno" class="btn-solo-tabla">Mi Turno</button>
+        <button id="btn-reporte-turno" title="Generar reporte de fin de turno" class="btn-solo-tabla">Reporte</button>
         <button id="btn-limpiar-todo" title="Limpiar todos los filtros" class="btn-secundario hidden">Limpiar todo</button>
         <span id="badge-filtros" class="badge-filtros hidden">0 filtros</span>
-      </div>
-
-      <!-- Panel edicion masiva -->
-      <div id="panel-bulk" class="panel-bulk hidden">
-        <label><input type="checkbox" id="chk-bulk-fase"> Fase:</label>
-        <select id="bulk-fase" disabled></select>
-        <label><input type="checkbox" id="chk-bulk-estado"> Estado:</label>
-        <select id="bulk-estado" disabled></select>
-        <button id="btn-bulk-aplicar" class="btn-primario" disabled>Aplicar a seleccionados</button>
       </div>
 
       <!-- Panel filtros avanzados (colapsable) -->
@@ -97,6 +89,17 @@
           </div>
           <div class="filtro-seccion-cuerpo">
             <div id="fase-cards-container" class="fase-cards"></div>
+          </div>
+        </div>
+
+        <!-- Seccion: Estados -->
+        <div class="filtro-seccion" data-seccion="estados">
+          <div class="filtro-seccion-header abierta" data-toggle="estados">
+            <span class="filtro-seccion-icono"></span>
+            <span class="filtro-seccion-titulo">Estados</span>
+          </div>
+          <div class="filtro-seccion-cuerpo">
+            <div id="estado-cards-container" class="estado-cards"></div>
           </div>
         </div>
 
@@ -165,6 +168,18 @@
         </div>
 
         <button id="btn-aplicar-filtros" class="btn-primario">Aplicar Filtros</button>
+      </div>
+    </div>
+
+    <!-- Tab Datos -->
+    <section id="tab-datos" class="tab-content active">
+      <!-- Panel edicion masiva -->
+      <div id="panel-bulk" class="panel-bulk hidden">
+        <label><input type="checkbox" id="chk-bulk-fase"> Fase:</label>
+        <select id="bulk-fase" disabled></select>
+        <label><input type="checkbox" id="chk-bulk-estado"> Estado:</label>
+        <select id="bulk-estado" disabled></select>
+        <button id="btn-bulk-aplicar" class="btn-primario" disabled>Aplicar a seleccionados</button>
       </div>
 
       <!-- Panel envios programados (colapsable) -->
@@ -445,6 +460,17 @@
       </form>
     </section>
 
+    <!-- Tab Tablero -->
+    <section id="tab-tablero" class="tab-content">
+      <div class="kanban-controls">
+        <button id="btn-kanban-refresh" title="Actualizar tablero">Actualizar</button>
+        <label><input type="checkbox" id="chk-kanban-documentado"> Mostrar Documentado</label>
+        <label><input type="checkbox" id="chk-kanban-estados" checked> Estados</label>
+        <span id="kanban-total" class="kanban-total"></span>
+      </div>
+      <div id="kanban-board" class="kanban-board"></div>
+    </section>
+
     <!-- Tab Ayuda -->
     <section id="tab-ayuda" class="tab-content">
       <div id="panel-ayuda">
@@ -454,6 +480,14 @@
       </div>
     </section>
   </main>
+
+  <!-- Modal Detalle Kanban -->
+  <div id="modal-kanban-detalle" class="modal hidden">
+    <div class="modal-content modal-kanban-content">
+      <button class="modal-close" id="btn-cerrar-kanban-detalle">&times;</button>
+      <div id="kanban-detalle-body"></div>
+    </div>
+  </div>
 
   <!-- Modal Vincular -->
   <div id="modal-vincular" class="modal hidden">
@@ -786,12 +820,15 @@
   <script src="sequences.js"></script>
   <script src="shift-report.js"></script>
   <script src="help-content.js"></script>
+  <script src="lib/sortable/Sortable.min.js"></script>
+  <script src="kanban.js"></script>
   <script src="panel.js"></script>
   <script src="panel-plantillas.js"></script>
   <script src="panel-recordatorios.js"></script>
   <script src="panel-programados.js"></script>
   <script src="panel-acciones.js"></script>
   <script src="panel-dashboard.js"></script>
+  <script src="panel-kanban.js"></script>
   <script src="config-rules-ui.js"></script>
   <script src="config-ui.js"></script>
 </body>

@@ -1,0 +1,272 @@
+/**
+ * kanban.css - Estilos Kanban mobile-first para PWA.
+ * Columnas con scroll-snap horizontal, touch targets 48px+.
+ * Usa variables de app.css y visual-status.css.
+ */
+
+/* === Controles superiores === */
+.kanban-controls {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  align-items: center;
+}
+
+/* === Barra filtros movil === */
+.kanban-filtros-movil {
+  display: flex;
+  gap: 8px;
+  padding: 4px 12px;
+  align-items: center;
+}
+
+.kanban-filtros-movil input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  outline: none;
+}
+
+.kanban-filtros-movil input:focus {
+  border-color: var(--primary, #1565C0);
+}
+
+.btn-filtros-movil {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* === Board: scroll horizontal con snap === */
+.kanban-board {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  flex: 1;
+  align-items: flex-start;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* === Columna individual === */
+.kanban-columna {
+  width: 75vw;
+  min-width: 75vw;
+  flex-shrink: 0;
+  background: var(--bg-secondary, #F5F5F5);
+  border-radius: var(--radius, 8px);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 180px);
+  scroll-snap-align: start;
+}
+
+/* Header columna sticky */
+.kanban-columna-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: inherit;
+  border-radius: var(--radius, 8px) var(--radius, 8px) 0 0;
+}
+
+.kanban-columna-count {
+  background: rgba(0,0,0,0.12);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.kanban-columna-body {
+  padding: 6px 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 48px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Columna incidencia */
+.kanban-columna[data-grupo="incidencia"] { background: #fce4e4; }
+
+/* Columna documentado */
+.kanban-columna[data-grupo="documentado"] { opacity: 0.7; }
+
+/* === Grupo estado === */
+.kanban-estado-grupo { margin-bottom: 6px; }
+
+.kanban-estado-grupo-header {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-secondary, #424242);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+}
+
+.kanban-estado-grupo-header::before {
+  content: '\25BC';
+  font-size: 9px;
+  transition: transform 0.2s;
+}
+
+.kanban-estado-grupo.collapsed .kanban-estado-grupo-header::before {
+  transform: rotate(-90deg);
+}
+
+.kanban-estado-grupo.collapsed .kanban-estado-grupo-body {
+  min-height: 32px;
+  max-height: 32px;
+  overflow: hidden;
+  border: 1px dashed rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.02);
+  border-radius: 4px;
+}
+
+.kanban-estado-grupo.collapsed .kanban-tarjeta { display: none; }
+
+.kanban-estado-grupo-body { min-height: 8px; }
+
+/* === Tarjeta Kanban (touch-friendly) === */
+.kanban-tarjeta {
+  background: var(--bg-primary, white);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  cursor: grab;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+  min-height: 48px;
+  transition: box-shadow 0.15s;
+}
+
+/* Borde izquierdo por estado */
+.kanban-tarjeta[data-estado="NUEVO"]      { border-left-color: var(--estado-nuevo-bg, #BBDEFB); }
+.kanban-tarjeta[data-estado="ENVIADO"]    { border-left-color: var(--estado-enviado-fg, #1565C0); }
+.kanban-tarjeta[data-estado="RECIBIDO"]   { border-left-color: var(--estado-recibido-fg, #E65100); }
+.kanban-tarjeta[data-estado="PENDIENTE"]  { border-left-color: var(--estado-pendiente-fg, #F57F17); }
+.kanban-tarjeta[data-estado="GESTIONADO"] { border-left-color: var(--estado-gestionado-fg, #2E7D32); }
+.kanban-tarjeta[data-estado="ALERTA"]     { border-left-color: var(--estado-alerta-fg, #C62828); }
+.kanban-tarjeta[data-estado="CERRADO"]    { border-left-color: var(--estado-cerrado-fg, #757575); }
+
+/* SortableJS states */
+.kanban-tarjeta.sortable-ghost { opacity: 0.4; background: #c8dafc; }
+.kanban-tarjeta.sortable-drag { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+/* Contenido tarjeta */
+.kanban-tarjeta-codcar {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.kanban-tarjeta-transportista {
+  color: var(--text-secondary, #424242);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanban-tarjeta-asunto {
+  color: var(--text-primary, #000);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanban-tarjeta-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary, #424242);
+}
+
+.kanban-tarjeta-indicadores {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.kanban-tarjeta-indicador { opacity: 0.6; }
+
+/* Total del tablero */
+.kanban-total {
+  font-size: 13px;
+  color: var(--text-secondary, #424242);
+  margin-left: auto;
+}
+
+/* === Pull-to-refresh indicator === */
+.kanban-pull-indicator {
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: height 0.2s, opacity 0.2s;
+}
+
+.kanban-pull-indicator.activo {
+  height: 48px;
+  opacity: 1;
+}
+
+.kanban-pull-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0,0,0,0.1);
+  border-top-color: var(--primary, #1565C0);
+  border-radius: 50%;
+  animation: kanban-spin 0.6s linear infinite;
+}
+
+@keyframes kanban-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Dots de posicion === */
+.kanban-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.kanban-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.2);
+  transition: background 0.2s;
+}
+
+.kanban-dot.activo {
+  background: var(--primary, #1565C0);
+}
+
+/* === Long-press visual feedback === */
+.kanban-tarjeta:active {
+  cursor: grabbing;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}

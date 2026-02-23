@@ -98,6 +98,15 @@ function filtroRangoDescarga(hoy) {
   };
 }
 
+function filtroEstados(estadosActivos) {
+  if (!estadosActivos) return function() { return true; };
+  if (estadosActivos.length === 0) return function() { return false; };
+  return function(valor) {
+    if (!valor) return false;
+    return estadosActivos.indexOf(String(valor)) !== -1;
+  };
+}
+
 function filtroFases(fasesActivas) {
   if (!fasesActivas) return () => true;
   if (fasesActivas.length === 0) return () => false;
@@ -199,6 +208,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     construirFiltros, filtroRangoFechas, obtenerBaterias, limpiarFiltros,
     filtroGlobal, contarFiltrosActivos, filtroRangoCarga, filtroRangoDescarga,
-    filtroFases, aplicarCambioMasivo
+    filtroFases, filtroEstados, aplicarCambioMasivo
   };
 }

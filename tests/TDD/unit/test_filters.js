@@ -8,6 +8,7 @@ const {
   filtroRangoCarga,
   filtroRangoDescarga,
   filtroFases,
+  filtroEstados,
   aplicarCambioMasivo
 } = require('../../../src/extension/filters');
 
@@ -287,6 +288,43 @@ describe('filters', () => {
       expect(filtro(null)).toBe(true);
       expect(filtro('')).toBe(true);
       expect(filtro('11')).toBe(false);
+    });
+  });
+
+  describe('filtroEstados', () => {
+    test('null retorna siempre true (sin filtro)', () => {
+      const filtro = filtroEstados(null);
+      expect(filtro('NUEVO')).toBe(true);
+      expect(filtro('ALERTA')).toBe(true);
+      expect(filtro(null)).toBe(true);
+    });
+
+    test('array vacio retorna siempre false', () => {
+      const filtro = filtroEstados([]);
+      expect(filtro('NUEVO')).toBe(false);
+      expect(filtro('ALERTA')).toBe(false);
+    });
+
+    test('array con estados filtra correctamente', () => {
+      const filtro = filtroEstados(['NUEVO', 'PENDIENTE']);
+      expect(filtro('NUEVO')).toBe(true);
+      expect(filtro('PENDIENTE')).toBe(true);
+      expect(filtro('ALERTA')).toBe(false);
+      expect(filtro('GESTIONADO')).toBe(false);
+    });
+
+    test('valor null o undefined no pasa el filtro', () => {
+      const filtro = filtroEstados(['NUEVO']);
+      expect(filtro(null)).toBe(false);
+      expect(filtro(undefined)).toBe(false);
+      expect(filtro('')).toBe(false);
+    });
+
+    test('comparacion exacta (no substring)', () => {
+      const filtro = filtroEstados(['NUEVO']);
+      expect(filtro('NUEVO')).toBe(true);
+      expect(filtro('NUEVOS')).toBe(false);
+      expect(filtro('NU')).toBe(false);
     });
   });
 

@@ -957,6 +957,38 @@ footer {
   color: white;
 }
 
+/* --- Cards de estados --- */
+
+.estado-cards { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+
+.estado-card {
+  padding: 3px 10px;
+  border: 1px solid #d0d8e8;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  font-size: 11px;
+  color: #666;
+  transition: all 0.15s;
+}
+
+.estado-card.active { background: #e8f0fe; color: #1a73e8; border-color: #1a73e8; font-weight: 600; }
+
+.estado-card.estado-nuevo.active       { background: var(--estado-nuevo-bg, #E3F2FD);   color: var(--estado-nuevo-fg, #1565C0);   border-color: var(--estado-nuevo-fg, #1565C0); }
+.estado-card.estado-enviado.active     { background: var(--estado-enviado-bg, #E1F5FE);  color: var(--estado-enviado-fg, #0277BD);  border-color: var(--estado-enviado-fg, #0277BD); }
+.estado-card.estado-recibido.active    { background: var(--estado-recibido-bg, #FFF3E0); color: var(--estado-recibido-fg, #E65100); border-color: var(--estado-recibido-fg, #E65100); }
+.estado-card.estado-pendiente.active   { background: var(--estado-pendiente-bg, #FFF8E1); color: var(--estado-pendiente-fg, #F57F17); border-color: var(--estado-pendiente-fg, #F57F17); }
+.estado-card.estado-gestionado.active  { background: var(--estado-gestionado-bg, #E8F5E9); color: var(--estado-gestionado-fg, #2E7D32); border-color: var(--estado-gestionado-fg, #2E7D32); }
+.estado-card.estado-alerta.active      { background: var(--estado-alerta-bg, #FFEBEE);  color: var(--estado-alerta-fg, #C62828);  border-color: var(--estado-alerta-fg, #C62828); }
+.estado-card.estado-cerrado.active     { background: var(--estado-cerrado-bg, #F5F5F5); color: var(--estado-cerrado-fg, #757575); border-color: var(--estado-cerrado-fg, #757575); }
+
+/* --- Barra filtros compartida --- */
+
+#barra-filtros-compartida {
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+}
+
 /* --- Filtros temporales --- */
 
 .filtros-temporales {
