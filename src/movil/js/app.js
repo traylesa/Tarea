@@ -53,6 +53,7 @@ var App = {
     this._vistaActual = vista;
     var contenedor = document.getElementById('app-contenido');
     if (!contenedor) return;
+    contenedor.removeAttribute('style');
 
     switch (vista) {
       case 'mi-turno':

@@ -44,11 +44,12 @@ var VistaDetalle = {
     });
     header.appendChild(menuBtn);
 
+    // Layout: contenedor = scrollable completo, header sticky top, bar sticky bottom
+    contenedor.style.cssText = 'overflow-y:auto;-webkit-overflow-scrolling:touch;height:100%;display:block;';
     contenedor.appendChild(header);
 
     var scrollable = document.createElement('div');
-    scrollable.className = 'contenido contenido-con-bar';
-    contenedor.appendChild(scrollable);
+    scrollable.style.cssText = 'padding:2px 6px 0;';
 
     // === FICHA DATOS PRINCIPALES (siempre visible) ===
     try {
@@ -183,9 +184,14 @@ var VistaDetalle = {
       console.error('VistaDetalle error:', e);
     }
 
-    // Bottom bar dinámico via reglas
+    // Espaciador para que al hacer scroll el ultimo contenido no quede pegado al bar
+    var spacer = document.createElement('div');
+    spacer.style.height = '100px';
+    scrollable.appendChild(spacer);
+
+    // Bottom bar dinámico via reglas (sticky bottom dentro del scroll)
     var bottomBar = document.createElement('div');
-    bottomBar.className = 'bottom-bar bottom-bar-static';
+    bottomBar.style.cssText = 'position:sticky;bottom:0;display:flex;gap:8px;padding:12px 16px;background:white;border-top:1px solid #E0E0E0;z-index:90;';
 
     var config = Store.obtenerConfig();
     var reglas = config.reglasAcciones || (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);
@@ -243,7 +249,8 @@ var VistaDetalle = {
     });
     bottomBar.appendChild(btnRecord);
 
-    contenedor.appendChild(bottomBar);
+    scrollable.appendChild(bottomBar);
+    contenedor.appendChild(scrollable);
   },
 
   _formatearFechaHora: function(fecha, hora) {
