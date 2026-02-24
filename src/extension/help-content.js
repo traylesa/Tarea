@@ -23,8 +23,9 @@ const SECCIONES = [
       '<h4>Pestanas de la aplicacion</h4>' +
       '<ul>' +
       '<li><strong>Datos</strong> — Tabla principal con todos los registros, filtros y acciones.</li>' +
+      '<li><strong>Tablero</strong> — Vista Kanban tipo Trello con las cargas organizadas por fase.</li>' +
       '<li><strong>Plantillas</strong> — Crea y gestiona plantillas de respuesta con variables.</li>' +
-      '<li><strong>Config</strong> — Servicios GAS, hoja destino, alertas, fases y mas.</li>' +
+      '<li><strong>Config</strong> — Servicios GAS, hoja destino, apariencia, fases y mas.</li>' +
       '<li><strong>? (Ayuda)</strong> — Esta guia.</li>' +
       '</ul>' +
 
@@ -68,7 +69,8 @@ const SECCIONES = [
     titulo: 'Filtros',
     contenido:
       '<h3>Filtros avanzados</h3>' +
-      '<p>Pulsa el boton <strong>Filtros</strong> para abrir el panel lateral con tres sistemas de filtrado:</p>' +
+      '<p>Pulsa el boton <strong>Filtros</strong> para abrir el panel con cuatro secciones de filtrado. ' +
+      'Los filtros se comparten entre la tabla <strong>Datos</strong> y el <strong>Tablero</strong> Kanban.</p>' +
 
       '<h4>1. Fechas</h4>' +
       '<p>Filtra por rango en tres tipos de fecha:</p>' +
@@ -77,23 +79,46 @@ const SECCIONES = [
       '<li><strong>Carga</strong> — Fecha programada de carga.</li>' +
       '<li><strong>Entrega</strong> — Fecha de entrega/descarga.</li>' +
       '</ul>' +
-      '<p>Marca <strong>"Sin fecha"</strong> para incluir tambien registros sin fecha en ese campo.</p>' +
+      '<p>Marca la casilla del tipo de fecha para activar el rango. ' +
+      'Marca <strong>"Sin fecha"</strong> para incluir tambien registros sin fecha en ese campo.</p>' +
 
-      '<h4>2. Fases</h4>' +
-      '<p>Tarjetas visuales para cada fase logistica. Click para activar/desactivar. ' +
-      'Las fases criticas (incidencias) se destacan en rojo.</p>' +
+      '<h4>2. Tarjetas de fases</h4>' +
+      '<p>Cada fase logistica tiene una <strong>tarjeta</strong> (card). Funcionan como filtros interactivos:</p>' +
+      '<ul>' +
+      '<li><strong>Click en una tarjeta</strong> — La activa (resaltada en azul). Solo se muestran las cargas en esas fases.</li>' +
+      '<li><strong>Click de nuevo</strong> — La desactiva. Si no hay ninguna activa, se muestran todas.</li>' +
+      '<li>Las fases <strong>criticas</strong> (incidencias 05, 25) se destacan en rojo.</li>' +
+      '<li><strong>"Sin fase"</strong> (borde punteado) — Filtra registros que no tienen fase asignada.</li>' +
+      '</ul>' +
+      '<p>Botones de control rapido:</p>' +
+      '<ul>' +
+      '<li><strong>Todas</strong> — Activa todas las tarjetas de fase de una vez.</li>' +
+      '<li><strong>Ninguna</strong> — Desactiva todas (equivale a mostrar todo).</li>' +
+      '<li><strong>Invertir</strong> — Invierte la seleccion: las activas pasan a inactivas y viceversa.</li>' +
+      '</ul>' +
 
-      '<h4>3. Baterias rapidas</h4>' +
-      '<p>Filtros predefinidos de un solo click:</p>' +
+      '<h4>3. Tarjetas de estados</h4>' +
+      '<p>Funcionan igual que las tarjetas de fases pero filtran por <strong>estado</strong> del registro:</p>' +
+      '<ul>' +
+      '<li><strong>Click</strong> — Activa/desactiva el estado. Cada estado tiene su propio color.</li>' +
+      '<li>Se pueden combinar: activa PENDIENTE + ALERTA para ver solo esos estados.</li>' +
+      '<li>Sin ninguno activo, se muestran todos los estados.</li>' +
+      '</ul>' +
+
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Las tarjetas de fases y estados muestran un <strong>contador</strong> ' +
+      'con el numero de registros en cada fase/estado. Util para ver la distribucion rapida.</div>' +
+
+      '<h4>4. Filtros rapidos (baterias)</h4>' +
+      '<p>Botones predefinidos de un solo click:</p>' +
       '<ul>' +
       '<li><strong>Alertas activas</strong> — Registros con alerta.</li>' +
       '<li><strong>Sin vincular</strong> — Correos sin codigo de carga.</li>' +
       '<li><strong>Incidencias</strong> — Fases 05 y 25.</li>' +
-      '<li><strong>En proceso</strong> — Fases 11, 12, 21, 22.</li>' +
+      '<li><strong>En proceso</strong> — Fases 01 a 28 (todo lo que esta activo).</li>' +
       '<li><strong>Completados</strong> — Fases 19, 29, 30.</li>' +
       '</ul>' +
 
-      '<h4>4. Filtros personalizados</h4>' +
+      '<h4>5. Filtros personalizados</h4>' +
       '<p>Pulsa <strong>"+ Agregar filtro"</strong> para crear condiciones a medida:</p>' +
       '<ol>' +
       '<li>Selecciona el <strong>campo</strong> (transportista, zona, referencia...).</li>' +
@@ -101,8 +126,46 @@ const SECCIONES = [
       '<li>Escribe el <strong>valor</strong>.</li>' +
       '</ol>' +
 
-      '<div class="ayuda-tip"><strong>Consejo:</strong> Todos los filtros se combinan con AND. ' +
-      'El badge en la barra muestra cuantos filtros tienes activos. Pulsa "Limpiar todo" para quitarlos.</div>'
+      '<h4>Combinacion de filtros</h4>' +
+      '<p>Todos los filtros se combinan con <strong>AND</strong>: un registro debe cumplir TODAS las condiciones ' +
+      'para mostrarse. Por ejemplo, si activas fase "19 En ruta" + estado "PENDIENTE", solo veras cargas en ruta con estado pendiente.</p>' +
+      '<ul>' +
+      '<li>El <strong>badge</strong> en la barra muestra cuantos filtros tienes activos.</li>' +
+      '<li><strong>"Limpiar todo"</strong> — Desactiva todos los filtros de una vez.</li>' +
+      '<li>La <strong>busqueda global</strong> (campo de texto) funciona ademas de los filtros del panel.</li>' +
+      '</ul>'
+  },
+  {
+    id: 'tablero',
+    titulo: 'Tablero Kanban',
+    contenido:
+      '<h3>Vista Kanban</h3>' +
+      '<p>La pestana <strong>Tablero</strong> muestra las cargas en un tablero tipo Trello, organizadas en columnas por grupo de fase:</p>' +
+      '<ul>' +
+      '<li><strong>Espera</strong> — Fases 00, 01, 02.</li>' +
+      '<li><strong>Carga</strong> — Fases 11, 12.</li>' +
+      '<li><strong>En ruta</strong> — Fase 19.</li>' +
+      '<li><strong>Descarga</strong> — Fases 21, 22.</li>' +
+      '<li><strong>Vacio</strong> — Fase 29.</li>' +
+      '<li><strong>Incidencia</strong> — Fases 05, 25 (columna roja).</li>' +
+      '</ul>' +
+
+      '<h4>Tarjetas</h4>' +
+      '<p>Cada tarjeta representa una carga y muestra: asunto, transportista, codigo de carga, estado y tiempo en fase.</p>' +
+      '<ul>' +
+      '<li><strong>Click en tarjeta</strong> — Abre el detalle con todos los campos y opciones de edicion.</li>' +
+      '<li><strong>Arrastrar (drag & drop)</strong> — Mueve una carga a otra columna, cambiando su fase automaticamente.</li>' +
+      '</ul>' +
+
+      '<h4>Controles</h4>' +
+      '<ul>' +
+      '<li><strong>Actualizar</strong> — Refresca el tablero con los datos actuales.</li>' +
+      '<li><strong>Mostrar Documentado</strong> — Agrega la columna "Documentado" (fase 30), oculta por defecto.</li>' +
+      '<li><strong>Estados</strong> — Activa swimlanes (subagrupar por estado dentro de cada columna).</li>' +
+      '</ul>' +
+
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Los filtros de la barra (fases, estados, busqueda global) ' +
+      'tambien se aplican al tablero. Es la misma barra de filtros compartida.</div>'
   },
   {
     id: 'acciones',
@@ -332,6 +395,14 @@ const SECCIONES = [
       '<li><code>in:inbox is:unread</code> — Solo no leidos.</li>' +
       '</ul>' +
       '<p>Pulsa los botones de ejemplo para aplicar queries comunes.</p>' +
+
+      '<h4>Apariencia</h4>' +
+      '<ul>' +
+      '<li><strong>Modo oscuro</strong> — Alterna entre tema claro y oscuro. La preferencia se guarda y persiste entre sesiones.</li>' +
+      '</ul>' +
+
+      '<h4>Estado inicial de emails</h4>' +
+      '<p>Selecciona el estado que se asigna automaticamente a los correos nuevos al procesarlos (p.ej. NUEVO, RECIBIDO). Se guarda en el backend GAS.</p>' +
 
       '<h4>Otros ajustes</h4>' +
       '<ul>' +

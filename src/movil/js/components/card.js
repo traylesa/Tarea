@@ -72,6 +72,10 @@ var CardUI = {
       info.appendChild(preview);
     }
 
+    // Indicadores (notas, recordatorios)
+    var indFila = this._crearIndicadores(carga);
+    if (indFila) info.appendChild(indFila);
+
     body.appendChild(info);
 
     // Menu
@@ -147,6 +151,34 @@ var CardUI = {
     if (!ultimo) return '';
     var texto = ultimo.extracto || ultimo.cuerpoTexto || '';
     return texto.substring(0, 80).replace(/\s+/g, ' ').trim();
+  },
+
+  _crearIndicadores: function(carga) {
+    var items = [];
+    var codCar = carga.codCar;
+    if (!codCar) return null;
+
+    // Notas
+    if (typeof contarNotas === 'function') {
+      var almacen = null;
+      try { almacen = JSON.parse(localStorage.getItem('tarealog_notas')); } catch(e) {}
+      var n = contarNotas(codCar, almacen);
+      if (n > 0) items.push('<span class="card-indicador" data-tipo="notas">\uD83D\uDCDD' + n + '</span>');
+    }
+
+    // Recordatorios
+    var recs = [];
+    try { recs = JSON.parse(localStorage.getItem('tarealog_recordatorios')) || []; } catch(e) {}
+    if (recs.some(function(r) { return String(r.codCar) === String(codCar); })) {
+      items.push('<span class="card-indicador" data-tipo="record">\u23F0</span>');
+    }
+
+    if (items.length === 0) return null;
+
+    var fila = document.createElement('div');
+    fila.className = 'card-indicadores';
+    fila.innerHTML = items.join('');
+    return fila;
   },
 
   _escapar: function(texto) {

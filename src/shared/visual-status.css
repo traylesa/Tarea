@@ -13,6 +13,24 @@
    ================================================================ */
 
 :root {
+  /* --- UI generales (light por defecto) --- */
+  --primary: #1565C0;
+  --primary-hover: #0D47A1;
+  --primary-container: #E3F2FD;
+  --on-primary: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-surface-variant: #F5F5F5;
+  --bg-elevated: #FFFFFF;
+  --text-on-surface: #333333;
+  --text-on-surface-variant: #666666;
+  --text-muted: #999999;
+  --outline: #D0D8E8;
+  --outline-variant: #E0E0E0;
+  --shadow-color: rgba(0,0,0,0.12);
+  --danger: #D32F2F;
+  --success: #2E7D32;
+  --warning: #F57C00;
+
   /* --- Estado: colores --- */
   --estado-nuevo-bg: #BBDEFB;      --estado-nuevo-fg: #0D47A1;
   --estado-enviado-bg: #E3F2FD;    --estado-enviado-fg: #1565C0;
@@ -21,6 +39,7 @@
   --estado-gestionado-bg: #E8F5E9; --estado-gestionado-fg: #2E7D32;
   --estado-alerta-bg: #FFEBEE;     --estado-alerta-fg: #C62828;
   --estado-cerrado-bg: #EEEEEE;    --estado-cerrado-fg: #757575;
+  --estado-nada-bg: #F5F5F5;       --estado-nada-fg: #9E9E9E;
 
   /* --- Fase: colores --- */
   --fase-default-bg: #616161;     --fase-default-fg: white;
@@ -37,6 +56,8 @@
 .estado-alerta     { color: var(--estado-alerta-fg); font-weight: bold; }
 .estado-cerrado    { color: var(--estado-cerrado-fg); }
 
+.estado-nada       { color: var(--estado-nada-fg); font-style: italic; }
+
 /* --- Tabulator cells: estados --- */
 .tabulator-cell.estado-nuevo      { color: var(--estado-nuevo-fg); font-weight: 500; }
 .tabulator-cell.estado-enviado    { color: var(--estado-enviado-fg); }
@@ -45,6 +66,7 @@
 .tabulator-cell.estado-gestionado { color: var(--estado-gestionado-fg); }
 .tabulator-cell.estado-alerta     { color: var(--estado-alerta-fg); font-weight: bold; }
 .tabulator-cell.estado-cerrado    { color: var(--estado-cerrado-fg); }
+.tabulator-cell.estado-nada       { color: var(--estado-nada-fg); font-style: italic; }
 
 /* --- Chips estado: pill coloreada (cards movil + extension) --- */
 .chip-estado {
@@ -66,6 +88,7 @@
 .chip-estado-gestionado { background: var(--estado-gestionado-bg); color: var(--estado-gestionado-fg); }
 .chip-estado-alerta     { background: var(--estado-alerta-bg);     color: var(--estado-alerta-fg); }
 .chip-estado-cerrado    { background: var(--estado-cerrado-bg);    color: var(--estado-cerrado-fg); }
+.chip-estado-nada       { background: var(--estado-nada-bg);       color: var(--estado-nada-fg); font-style: italic; }
 
 /* --- Ficha estado: badge en vista detalle --- */
 .ficha-estado {
@@ -85,6 +108,7 @@
 .ficha-estado-gestionado { background: var(--estado-gestionado-bg); color: var(--estado-gestionado-fg); }
 .ficha-estado-alerta     { background: var(--estado-alerta-bg);     color: var(--estado-alerta-fg); }
 .ficha-estado-cerrado    { background: var(--estado-cerrado-bg);    color: var(--estado-cerrado-fg); }
+.ficha-estado-nada       { background: var(--estado-nada-bg);       color: var(--estado-nada-fg); font-style: italic; }
 
 /* ================================================================
    FASES DE TRANSPORTE

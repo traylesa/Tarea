@@ -15,6 +15,11 @@ var App = {
       document.body.classList.add('outdoor');
     }
 
+    // Modo oscuro persistente
+    if (localStorage.getItem('tarealog_darkmode') === '1') {
+      document.body.classList.add('darkmode');
+    }
+
     // Listener hash change
     window.addEventListener('hashchange', function() {
       App.renderizar();

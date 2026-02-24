@@ -1,7 +1,7 @@
 # Skill: Desarrollo Mobile PWA
 
 **Proposito**: Guia tecnica para desarrollar la version movil PWA de TareaLog, consumiendo el backend GAS existente con experiencia mobile-first optimizada para operadores de trafico en campo.
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-24
 
 ---
 
@@ -25,7 +25,7 @@ TareaLog es una extension Chrome para gestion logistica TRAYLESA. La PWA movil e
 | `src/movil/js/feedback.js` | Vibracion (4 patrones), toasts, feedback haptico |
 | `src/movil/js/app.js` | Router SPA, inicializacion, navegacion 3 tabs |
 | `src/movil/js/logic/action-resolver.js` | Calcula accion requerida por carga |
-| `src/movil/js/views/` | 4 vistas: todo, detalle, programados, config |
+| `src/movil/js/views/` | 5 vistas: mi-turno, todo, detalle, programados, config, kanban |
 | `src/movil/js/components/` | card, toast, bottom-sheet (UI reutilizable) |
 | `src/movil/css/app.css` | Variables CSS + layout mobile-first |
 | `src/movil/css/cards.css` | Estilos card (estados, banners alerta) |
@@ -160,12 +160,13 @@ try {
 
 ## Patrones UI Mobile
 
-### Navegacion: 4 tabs bottom nav
+### Navegacion: 5 tabs bottom nav
 
 1. **Mi Turno** (dashboard KPIs turno, resumen estado, grafico semanal)
-2. **Todo** (lista unificada + alertas inline + badge numerico)
-3. **Programados** (envios programados + recordatorios activos)
-4. **Config** (URL backend, umbrales, modo outdoor, estado inicial)
+2. **Todo** (lista unificada + alertas inline + badge numerico + indicadores 📝⏰)
+3. **Tablero** (Kanban drag&drop, BottomSheet detalle con acciones rapidas)
+4. **Programados** (envios programados + recordatorios activos)
+5. **Config** (URL backend, umbrales, modo outdoor, estado inicial, dark mode)
 
 Router SPA en `app.js` con `App.navegar('todo')`. Contenido se renderiza en `#app-contenido`.
 
@@ -175,7 +176,7 @@ Estructura de una card (`components/card.js`):
 1. **Banner accion requerida** (solo si hay alerta) - rojo/naranja segun nivel
 2. **codCar + transportista** - identificacion (monospace 20px bold)
 3. **Chip fase** (coloreado) + tiempo transcurrido
-4. **Indicadores**: emails sin leer, notas, deadline cercano
+4. **Indicadores clicables**: 📝 notas (con count), ⏰ recordatorios — click navega a detalle
 5. **Botones accion rapida** directos en la card
 
 Ordenacion: CRITICAS primero, luego por `fechaCorreo` descendente.
@@ -187,6 +188,19 @@ Componente generico (`components/bottom-sheet.js`) para:
 - Filtros avanzados (nivel 2)
 - Editor de campos editables
 - Selector de plantilla
+
+**BottomSheet detalle kanban** (`views/kanban.js:_abrirDetalleMovil`):
+- Info basica: codCar, transportista, estado/fase, tiempo relativo
+- Indicadores existentes: 📝 notas (count), ⏰ recordatorio (motivo)
+- Acciones rapidas: +Nota, +Record., Cambiar fase, Ver detalle completo
+- Click indicadores navega a detalle
+
+### Indicadores clicables en tarjetas kanban
+
+Tres indicadores en footer tarjeta, todos clicables:
+- **📝 notas** → click navega a detalle (movil) / abre modal notas (extension)
+- **⏰ recordatorio** → abre BottomSheet recordatorio (movil) / abre detalle recordatorio (extension)
+- **📅 programado** → abre BottomSheet programado (movil) / abre modal programado (extension)
 
 ### Filtros 2 niveles
 
@@ -313,7 +327,7 @@ Claves `localStorage` (prefijo `tarealog_`):
 
 ### DESPUES de implementar
 
-1. Verificar que los 827 tests Jest existentes (37 suites) siguen pasando (`npx jest`)
+1. Verificar que los 878 tests Jest existentes (38 suites) siguen pasando (`npx jest`)
 2. Probar en Chrome DevTools modo responsive (< 640px)
 3. Verificar modo outdoor activado/desactivado
 4. Comprobar fallback offline (SW devuelve error graceful)
@@ -330,5 +344,5 @@ Claves `localStorage` (prefijo `tarealog_`):
 | Skill backend GAS | `.claude/skills/gas-deploy.md` |
 | Skill extension Chrome | `.claude/skills/chrome-extension-mv3.md` |
 | Skill dual-compat | `.claude/skills/dual-compat-modules.md` |
-| Tests existentes | `tests/TDD/unit/` (827 tests, 37 suites) |
+| Tests existentes | `tests/TDD/unit/` (878 tests, 38 suites) |
 | Backend GAS | `src/gas/` (11 archivos, clasp deploy) |

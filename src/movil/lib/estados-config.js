@@ -8,7 +8,8 @@
 
 var CLASES_CSS_ESTADOS_VALIDAS = [
   '', 'estado-nuevo', 'estado-enviado', 'estado-recibido',
-  'estado-pendiente', 'estado-gestionado', 'estado-alerta', 'estado-cerrado'
+  'estado-pendiente', 'estado-gestionado', 'estado-alerta', 'estado-cerrado',
+  'estado-nada'
 ];
 
 function getDefaultEstados() {
@@ -19,7 +20,8 @@ function getDefaultEstados() {
     { codigo: 'PENDIENTE',  nombre: 'Pendiente',   icono: '\u25D4', abreviatura: 'PEN', clase_css: 'estado-pendiente',  orden: 4, activo: true },
     { codigo: 'GESTIONADO', nombre: 'Gestionado',  icono: '\u2713', abreviatura: 'GES', clase_css: 'estado-gestionado', orden: 5, activo: true },
     { codigo: 'ALERTA',     nombre: 'Alerta',      icono: '\u25B2', abreviatura: 'ALE', clase_css: 'estado-alerta',     orden: 6, activo: true },
-    { codigo: 'CERRADO',    nombre: 'Cerrado',     icono: '\u2714', abreviatura: 'CER', clase_css: 'estado-cerrado',    orden: 7, activo: true }
+    { codigo: 'CERRADO',    nombre: 'Cerrado',     icono: '\u2714', abreviatura: 'CER', clase_css: 'estado-cerrado',    orden: 7, activo: true },
+    { codigo: 'NADA',       nombre: 'Nada',        icono: '\uD83D\uDD18', abreviatura: 'NAD', clase_css: 'estado-nada',       orden: 8, activo: true }
   ];
 }
 

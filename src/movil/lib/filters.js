@@ -101,8 +101,9 @@ function filtroRangoDescarga(hoy) {
 function filtroEstados(estadosActivos) {
   if (!estadosActivos) return function() { return true; };
   if (estadosActivos.length === 0) return function() { return false; };
+  var incluyeSinEstado = estadosActivos.indexOf('__SIN_ESTADO__') !== -1;
   return function(valor) {
-    if (!valor) return false;
+    if (!valor) return incluyeSinEstado;
     return estadosActivos.indexOf(String(valor)) !== -1;
   };
 }
@@ -171,7 +172,7 @@ function obtenerBaterias() {
     },
     {
       nombre: 'En proceso',
-      filtros: [{ field: 'fase', func: (data) => ['11', '12', '21', '22'].includes(data.fase || '') }]
+      filtros: [{ field: 'fase', func: (data) => { var f = parseInt(data.fase, 10); return !isNaN(f) && f >= 1 && f <= 28; } }]
     },
     {
       nombre: 'Completados',

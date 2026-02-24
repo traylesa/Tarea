@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../shared/visual-status.css">
   <link rel="stylesheet" href="panel.css">
   <link rel="stylesheet" href="kanban.css">
+  <link rel="stylesheet" href="dark-mode.css">
 </head>
 <body>
   <div id="toast-container"></div>
@@ -378,6 +379,14 @@
         </fieldset>
 
         <fieldset>
+          <legend>Apariencia</legend>
+          <label>
+            <input type="checkbox" id="cfg-darkmode">
+            Modo oscuro
+          </label>
+        </fieldset>
+
+        <fieldset>
           <legend>Resumen matutino</legend>
           <label>
             <input type="checkbox" id="cfg-resumen-activado" checked>
@@ -464,7 +473,13 @@
     <section id="tab-tablero" class="tab-content">
       <div class="kanban-controls">
         <button id="btn-kanban-refresh" title="Actualizar tablero">Actualizar</button>
-        <label><input type="checkbox" id="chk-kanban-documentado"> Mostrar Documentado</label>
+        <label><input type="checkbox" id="chk-kanban-espera" checked> Espera</label>
+        <label><input type="checkbox" id="chk-kanban-vacio" checked> Vacio</label>
+        <label><input type="checkbox" id="chk-kanban-documentado"> Documentado</label>
+        <label><input type="checkbox" id="chk-kanban-nada" checked> Nada</label>
+        <label><input type="checkbox" id="chk-kanban-cerrado" checked> Cerrado</label>
+        <button id="btn-kanban-todas" class="btn-fase-control" title="Mostrar todas las columnas">Todas</button>
+        <button id="btn-kanban-ninguna" class="btn-fase-control" title="Ocultar columnas opcionales">Ninguna</button>
         <label><input type="checkbox" id="chk-kanban-estados" checked> Estados</label>
         <span id="kanban-total" class="kanban-total"></span>
       </div>

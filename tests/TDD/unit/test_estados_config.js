@@ -17,7 +17,7 @@ describe('estados-config', () => {
     test('retorna array de 7 estados', () => {
       const estados = getDefaultEstados();
       expect(Array.isArray(estados)).toBe(true);
-      expect(estados).toHaveLength(7);
+      expect(estados).toHaveLength(8);
     });
 
     test('cada estado tiene campos requeridos', () => {
@@ -195,10 +195,10 @@ describe('estados-config', () => {
       expect(estados[0].codigo).toBe('B');
     });
 
-    test('defaults quedan en orden NUEVO-ENVIADO-RECIBIDO-PENDIENTE-GESTIONADO-ALERTA-CERRADO', () => {
+    test('defaults quedan en orden NUEVO-ENVIADO-RECIBIDO-PENDIENTE-GESTIONADO-ALERTA-CERRADO-NADA', () => {
       const ordenados = obtenerEstadosOrdenados(getDefaultEstados());
       expect(ordenados.map(e => e.codigo)).toEqual([
-        'NUEVO', 'ENVIADO', 'RECIBIDO', 'PENDIENTE', 'GESTIONADO', 'ALERTA', 'CERRADO'
+        'NUEVO', 'ENVIADO', 'RECIBIDO', 'PENDIENTE', 'GESTIONADO', 'ALERTA', 'CERRADO', 'NADA'
       ]);
     });
   });
@@ -210,9 +210,9 @@ describe('estados-config', () => {
       expect(mapa['ALERTA']).toContain('Alerta');
     });
 
-    test('incluye los 7 estados activos', () => {
+    test('incluye los 8 estados activos', () => {
       const mapa = estadosAMapaEditor(getDefaultEstados());
-      expect(Object.keys(mapa)).toHaveLength(7);
+      expect(Object.keys(mapa)).toHaveLength(8);
     });
 
     test('solo incluye estados activos', () => {
@@ -269,8 +269,8 @@ describe('estados-config', () => {
       expect(CLASES_CSS_ESTADOS_VALIDAS).toContain('estado-cerrado');
     });
 
-    test('tiene 8 entradas (vacia + 7 estados)', () => {
-      expect(CLASES_CSS_ESTADOS_VALIDAS).toHaveLength(8);
+    test('tiene 9 entradas (vacia + 8 estados)', () => {
+      expect(CLASES_CSS_ESTADOS_VALIDAS).toHaveLength(9);
     });
   });
 });

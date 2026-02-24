@@ -220,7 +220,8 @@
   margin-left: auto;
 }
 
-.kanban-tarjeta-indicador { opacity: 0.6; }
+.kanban-tarjeta-indicador { opacity: 0.6; cursor: pointer; }
+.kanban-tarjeta-indicador:active { opacity: 1; transform: scale(1.2); }
 
 /* Total del tablero */
 .kanban-total {

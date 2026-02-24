@@ -117,8 +117,8 @@ var VistaTodo = {
       cargas = cargas.filter(function(c) { return c.fase === '05' || c.fase === '25'; });
     } else if (this._filtroActivo === 'enproceso') {
       cargas = cargas.filter(function(c) {
-        var f = c.fase;
-        return f === '11' || f === '12' || f === '19' || f === '21' || f === '22';
+        var f = parseInt(c.fase, 10);
+        return !isNaN(f) && f >= 1 && f <= 28;
       });
     } else if (this._filtroActivo === 'sinvincular') {
       cargas = cargas.filter(function(c) { return c.vinculacion === 'SIN_VINCULAR' || !c.codCar; });
@@ -245,7 +245,7 @@ var VistaTodo = {
       { texto: 'Incidencias (05, 25)', accion: function() {
         VistaTodo._filtroActivo = 'incidencias'; App.renderizar();
       }},
-      { texto: 'En proceso (11-22)', accion: function() {
+      { texto: 'En proceso (01-28)', accion: function() {
         VistaTodo._filtroActivo = 'enproceso'; App.renderizar();
       }},
       { texto: 'Sin vincular', accion: function() {

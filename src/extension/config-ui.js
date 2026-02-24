@@ -806,6 +806,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-guardar-gmail-query').addEventListener('click', guardarGmailQueryUI);
   document.querySelector('.gmail-query-ejemplos').addEventListener('click', aplicarEjemploQuery);
 
+  // Modo oscuro
+  chrome.storage.local.get('tarealog_darkmode', function(data) {
+    document.getElementById('cfg-darkmode').checked = !!data.tarealog_darkmode;
+  });
+  document.getElementById('cfg-darkmode').addEventListener('change', function() {
+    var activado = this.checked;
+    document.body.classList.toggle('darkmode', activado);
+    chrome.storage.local.set({ tarealog_darkmode: activado });
+  });
+
   // Estado inicial
   document.getElementById('config-estado-inicial').addEventListener('change', guardarEstadoInicialUI);
 

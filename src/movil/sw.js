@@ -1,7 +1,7 @@
 // sw.js - Service Worker para cache offline y notificaciones
 'use strict';
 
-var CACHE_NAME = 'tarealog-v13';
+var CACHE_NAME = 'tarealog-v21';
 var CACHE_URLS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ var CACHE_URLS = [
   './css/outdoor.css',
   './css/mi-turno.css',
   './css/kanban.css',
+  './css/dark-mode.css',
   './manifest.json',
   './js/app.js',
   './js/api.js',

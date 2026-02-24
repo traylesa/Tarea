@@ -164,6 +164,24 @@ var VistaConfig = {
     outdoorDiv.appendChild(toggle);
     scrollable.appendChild(outdoorDiv);
 
+    // Modo oscuro
+    var darkDiv = document.createElement('div');
+    darkDiv.style.cssText = 'padding:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #E0E0E0';
+    darkDiv.innerHTML = '<span style="font-weight:bold">Modo oscuro</span>';
+
+    var toggleDark = document.createElement('input');
+    toggleDark.type = 'checkbox';
+    toggleDark.checked = document.body.classList.contains('darkmode');
+    toggleDark.style.cssText = 'width:48px;height:48px';
+    toggleDark.addEventListener('change', function() {
+      document.body.classList.toggle('darkmode', toggleDark.checked);
+      localStorage.setItem('tarealog_darkmode', toggleDark.checked ? '1' : '0');
+      Feedback.vibrar('corto');
+      ToastUI.mostrar(toggleDark.checked ? 'Modo oscuro activado' : 'Modo oscuro desactivado', { tipo: 'info' });
+    });
+    darkDiv.appendChild(toggleDark);
+    scrollable.appendChild(darkDiv);
+
     // === SECCION: Firma y plantillas ===
     this._seccionTitulo(scrollable, 'Firma y plantillas');
 

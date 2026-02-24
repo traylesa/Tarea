@@ -132,6 +132,20 @@
   min-height: 40px;
 }
 
+/* Indicadores en card (notas, recordatorios) */
+.card-indicadores {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.card-indicador {
+  font-size: 11px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.card-indicador:active { opacity: 1; }
+
 /* Detalle */
 .detalle-header {
   position: sticky;

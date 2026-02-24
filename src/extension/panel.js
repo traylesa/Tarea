@@ -1584,13 +1584,21 @@ function renderEstadoCards() {
     var card = document.createElement('button');
     card.className = 'estado-card';
     if (!estadosCardActivos || estadosCardActivos.indexOf(est.codigo) !== -1) card.classList.add('active');
-    var claseCss = est.claseCss || 'estado-' + est.codigo.toLowerCase();
+    var claseCss = est.clase_css || est.claseCss || 'estado-' + est.codigo.toLowerCase();
     card.classList.add(claseCss);
     card.textContent = (est.icono || '') + ' ' + (est.nombre || est.codigo);
     card.dataset.codigo = est.codigo;
     card.addEventListener('click', function() { toggleEstadoCard(card, est.codigo); });
     container.appendChild(card);
   });
+
+  var cardSinEstado = document.createElement('button');
+  cardSinEstado.className = 'estado-card fase-card-sin-fase';
+  if (!estadosCardActivos || estadosCardActivos.indexOf('__SIN_ESTADO__') !== -1) cardSinEstado.classList.add('active');
+  cardSinEstado.textContent = '(Sin estado)';
+  cardSinEstado.dataset.codigo = '__SIN_ESTADO__';
+  cardSinEstado.addEventListener('click', function() { toggleEstadoCard(cardSinEstado, '__SIN_ESTADO__'); });
+  container.appendChild(cardSinEstado);
 }
 
 function toggleEstadoCard(card, codigo) {
@@ -1598,6 +1606,7 @@ function toggleEstadoCard(card, codigo) {
     estadosCardActivos = estadosActuales
       .filter(function(e) { return e.activo !== false; })
       .map(function(e) { return e.codigo; });
+    estadosCardActivos.push('__SIN_ESTADO__');
   }
 
   var idx = estadosCardActivos.indexOf(codigo);
@@ -2020,6 +2029,11 @@ function fetchBackend(action) {
 // Action bar, notas -> panel-acciones.js
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Modo oscuro: aplicar antes de render para evitar flash
+  chrome.storage.local.get('tarealog_darkmode', function(data) {
+    if (data.tarealog_darkmode) document.body.classList.add('darkmode');
+  });
+
   inicializarTabs();
   inicializarNavegacionTeclado();
   await cargarPlantillasGuardadas();

@@ -3,7 +3,11 @@
 // Depende de: kanban.js (logica pura), Sortable (libreria)
 
 var _sortableInstances = [];
+var _kanbanMostrarEspera = true;
+var _kanbanMostrarVacio = true;
 var _kanbanMostrarDocumentado = false;
+var _kanbanMostrarNada = true;
+var _kanbanMostrarCerrado = true;
 var _kanbanEstadosActivo = true;
 var _kanbanColumnasColapsadas = {};
 
@@ -39,6 +43,14 @@ function _filtrarParaKanban(regs) {
   if (typeof estadosCardActivos !== 'undefined' && estadosCardActivos !== null) {
     var fnE = filtroEstados(estadosCardActivos);
     resultado = resultado.filter(function(r) { return fnE(r.estado); });
+  }
+
+  // 3b. Ocultar estados NADA/CERRADO (checks kanban independientes)
+  if (!_kanbanMostrarNada) {
+    resultado = resultado.filter(function(r) { return r.estado !== 'NADA'; });
+  }
+  if (!_kanbanMostrarCerrado) {
+    resultado = resultado.filter(function(r) { return r.estado !== 'CERRADO'; });
   }
 
   // 4. Correo
@@ -146,13 +158,15 @@ function renderKanban() {
 
   var estados = (configActual && configActual.estados)
     ? configActual.estados.filter(function(e) { return e.activo !== false; }).map(function(e) { return e.codigo; })
-    : ['NUEVO', 'ENVIADO', 'RECIBIDO', 'PENDIENTE', 'GESTIONADO', 'ALERTA', 'CERRADO'];
+    : ['NUEVO', 'ENVIADO', 'RECIBIDO', 'PENDIENTE', 'GESTIONADO', 'ALERTA', 'CERRADO', 'NADA'];
 
   board.innerHTML = '';
   var totalFiltrado = 0;
   var totalGeneral = 0;
 
   COLUMNAS_KANBAN.forEach(function(col) {
+    if (col.id === 'espera' && !_kanbanMostrarEspera) return;
+    if (col.id === 'vacio' && !_kanbanMostrarVacio) return;
     if (col.id === 'documentado' && !_kanbanMostrarDocumentado) return;
 
     var regsColumna = agrupadosFiltrados[col.id] || [];
@@ -348,6 +362,27 @@ function _crearTarjetaKanban(reg) {
 
   card.addEventListener('click', function(e) {
     if (e.defaultPrevented) return;
+    var target = e.target.closest('.kanban-ind-notas, .kanban-ind-recordatorio, .kanban-ind-programado');
+    if (target) {
+      e.stopPropagation();
+      var clave = reg.codCar || reg.threadId;
+      if (target.classList.contains('kanban-ind-notas')) {
+        if (typeof abrirModalNotas === 'function') {
+          abrirModalNotas(clave, reg.codCar || '');
+        }
+      } else if (target.classList.contains('kanban-ind-recordatorio')) {
+        if (typeof abrirDetallePorCodCar === 'function') {
+          abrirDetallePorCodCar(clave, reg.asunto || '');
+        } else if (typeof abrirModalRecordatorio === 'function') {
+          abrirModalRecordatorio(clave, reg.asunto || '');
+        }
+      } else if (target.classList.contains('kanban-ind-programado')) {
+        if (typeof abrirModalProgramadoPorThread === 'function') {
+          abrirModalProgramadoPorThread(reg.threadId);
+        }
+      }
+      return;
+    }
     _abrirModalKanban(reg);
   });
 
@@ -501,11 +536,21 @@ function _abrirModalKanban(reg) {
 
   var indicadores = '';
   var clave = reg.codCar || reg.threadId;
-  if (clave && typeof tieneNotas === 'function' && tieneNotas(clave, almacenNotas || {})) {
-    indicadores += '<span class="kanban-detalle-indicador" title="Notas">Notas</span>';
+  var tieneNotasFlag = clave && typeof tieneNotas === 'function' && tieneNotas(clave, almacenNotas || {});
+  var tieneRecordatorioFlag = clave && (recordatoriosCache || []).some(function(r) { return r.codCar == clave; });
+  var tieneProgramadoFlag = clave && programadosCache && programadosCache.some(function(p) {
+    return p.codCar == clave || p.threadId == reg.threadId;
+  });
+
+  if (tieneNotasFlag) {
+    var nNotas = typeof contarNotas === 'function' ? contarNotas(clave, almacenNotas || {}) : 0;
+    indicadores += '<span class="kanban-detalle-indicador kanban-detalle-ind-notas" title="Notas">\uD83D\uDCDD Notas (' + nNotas + ')</span>';
   }
-  if (clave && typeof obtenerActivos === 'function' && (recordatoriosCache || []).some(function(r) { return r.codCar == clave; })) {
-    indicadores += '<span class="kanban-detalle-indicador" title="Recordatorio">Recordatorio</span>';
+  if (tieneRecordatorioFlag) {
+    indicadores += '<span class="kanban-detalle-indicador kanban-detalle-ind-recordatorio" title="Recordatorio">\u23F0 Recordatorio</span>';
+  }
+  if (tieneProgramadoFlag) {
+    indicadores += '<span class="kanban-detalle-indicador kanban-detalle-ind-programado" title="Programado">\uD83D\uDCC5 Programado</span>';
   }
 
   body.innerHTML =
@@ -526,6 +571,8 @@ function _abrirModalKanban(reg) {
     '</div>' +
     (indicadores ? '<div class="kanban-detalle-indicadores">' + indicadores + '</div>' : '') +
     '<div class="kanban-detalle-acciones">' +
+      '<button id="btn-kanban-add-nota" class="btn-secundario" title="Añadir nota">\uD83D\uDCDD +Nota</button>' +
+      '<button id="btn-kanban-add-record" class="btn-secundario" title="Crear recordatorio">\u23F0 +Record.</button>' +
       '<button id="btn-kanban-ver-tabla" class="btn-secundario">Ver en tabla</button>' +
     '</div>';
 
@@ -545,6 +592,39 @@ function _abrirModalKanban(reg) {
     _cerrarModalKanban();
     _seleccionarEnTabla(reg);
   });
+
+  document.getElementById('btn-kanban-add-nota').addEventListener('click', function() {
+    _cerrarModalKanban();
+    if (typeof abrirModalNotas === 'function') abrirModalNotas(clave, reg.codCar || '');
+  });
+
+  document.getElementById('btn-kanban-add-record').addEventListener('click', function() {
+    _cerrarModalKanban();
+    if (typeof abrirModalRecordatorio === 'function') abrirModalRecordatorio(clave, reg.asunto || '');
+  });
+
+  // Indicadores clicables en modal
+  var indNotas = body.querySelector('.kanban-detalle-ind-notas');
+  if (indNotas) {
+    indNotas.addEventListener('click', function() {
+      _cerrarModalKanban();
+      if (typeof abrirModalNotas === 'function') abrirModalNotas(clave, reg.codCar || '');
+    });
+  }
+  var indRecord = body.querySelector('.kanban-detalle-ind-recordatorio');
+  if (indRecord) {
+    indRecord.addEventListener('click', function() {
+      _cerrarModalKanban();
+      if (typeof abrirDetallePorCodCar === 'function') abrirDetallePorCodCar(clave, reg.asunto || '');
+    });
+  }
+  var indProg = body.querySelector('.kanban-detalle-ind-programado');
+  if (indProg) {
+    indProg.addEventListener('click', function() {
+      _cerrarModalKanban();
+      if (typeof abrirModalProgramadoPorThread === 'function') abrirModalProgramadoPorThread(reg.threadId);
+    });
+  }
 }
 
 function _cerrarModalKanban() {
@@ -552,13 +632,72 @@ function _cerrarModalKanban() {
   if (modal) modal.classList.add('hidden');
 }
 
+function _syncCheckboxesKanban() {
+  var e = document.getElementById('chk-kanban-espera');
+  var v = document.getElementById('chk-kanban-vacio');
+  var d = document.getElementById('chk-kanban-documentado');
+  var n = document.getElementById('chk-kanban-nada');
+  var c = document.getElementById('chk-kanban-cerrado');
+  if (e) e.checked = _kanbanMostrarEspera;
+  if (v) v.checked = _kanbanMostrarVacio;
+  if (d) d.checked = _kanbanMostrarDocumentado;
+  if (n) n.checked = _kanbanMostrarNada;
+  if (c) c.checked = _kanbanMostrarCerrado;
+}
+
 function inicializarKanbanEventos() {
   var btnRefresh = document.getElementById('btn-kanban-refresh');
   if (btnRefresh) btnRefresh.addEventListener('click', renderKanban);
 
+  var chkEspera = document.getElementById('chk-kanban-espera');
+  if (chkEspera) chkEspera.addEventListener('change', function() {
+    _kanbanMostrarEspera = chkEspera.checked;
+    renderKanban();
+  });
+
+  var chkVacio = document.getElementById('chk-kanban-vacio');
+  if (chkVacio) chkVacio.addEventListener('change', function() {
+    _kanbanMostrarVacio = chkVacio.checked;
+    renderKanban();
+  });
+
   var chkDoc = document.getElementById('chk-kanban-documentado');
   if (chkDoc) chkDoc.addEventListener('change', function() {
     _kanbanMostrarDocumentado = chkDoc.checked;
+    renderKanban();
+  });
+
+  var chkNada = document.getElementById('chk-kanban-nada');
+  if (chkNada) chkNada.addEventListener('change', function() {
+    _kanbanMostrarNada = chkNada.checked;
+    renderKanban();
+  });
+
+  var chkCerrado = document.getElementById('chk-kanban-cerrado');
+  if (chkCerrado) chkCerrado.addEventListener('change', function() {
+    _kanbanMostrarCerrado = chkCerrado.checked;
+    renderKanban();
+  });
+
+  var btnTodas = document.getElementById('btn-kanban-todas');
+  if (btnTodas) btnTodas.addEventListener('click', function() {
+    _kanbanMostrarEspera = true;
+    _kanbanMostrarVacio = true;
+    _kanbanMostrarDocumentado = true;
+    _kanbanMostrarNada = true;
+    _kanbanMostrarCerrado = true;
+    _syncCheckboxesKanban();
+    renderKanban();
+  });
+
+  var btnNinguna = document.getElementById('btn-kanban-ninguna');
+  if (btnNinguna) btnNinguna.addEventListener('click', function() {
+    _kanbanMostrarEspera = false;
+    _kanbanMostrarVacio = false;
+    _kanbanMostrarDocumentado = false;
+    _kanbanMostrarNada = false;
+    _kanbanMostrarCerrado = false;
+    _syncCheckboxesKanban();
     renderKanban();
   });
 

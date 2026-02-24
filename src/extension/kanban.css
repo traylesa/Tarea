@@ -3,6 +3,26 @@
  * Usa variables de visual-status.css para colores de estados/fases.
  */
 
+/* Variables UI locales (fallback si visual-status.css no resuelve cross-file) */
+:root {
+  --primary: #1565C0;
+  --primary-hover: #0D47A1;
+  --primary-container: #E3F2FD;
+  --on-primary: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-surface-variant: #F5F5F5;
+  --bg-elevated: #FFFFFF;
+  --text-on-surface: #333333;
+  --text-on-surface-variant: #666666;
+  --text-muted: #999999;
+  --outline: #D0D8E8;
+  --outline-variant: #E0E0E0;
+  --shadow-color: rgba(0,0,0,0.12);
+  --danger: #D32F2F;
+  --success: #2E7D32;
+  --warning: #F57C00;
+}
+
 /* === Controles superiores === */
 .kanban-controls {
   display: flex;
@@ -26,7 +46,7 @@
   min-width: 220px;
   max-width: 280px;
   flex-shrink: 0;
-  background: #ebecf0;
+  background: var(--bg-elevated);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -101,7 +121,7 @@
   font-weight: 600;
   padding: 2px 6px;
   cursor: pointer;
-  color: #5e6c84;
+  color: var(--text-on-surface-variant);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -146,7 +166,7 @@
 
 /* === Tarjeta Kanban (estilo Trello) === */
 .kanban-tarjeta {
-  background: white;
+  background: var(--bg-surface);
   border-radius: 4px;
   padding: 6px 8px;
   margin-bottom: 4px;
@@ -158,7 +178,7 @@
 }
 
 .kanban-tarjeta:hover {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px var(--shadow-color);
   transform: translateY(-1px);
 }
 .kanban-tarjeta:active { cursor: grabbing; }
@@ -193,7 +213,7 @@
 }
 
 .kanban-tarjeta-transportista {
-  color: #5e6c84;
+  color: var(--text-on-surface-variant);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -201,7 +221,7 @@
 }
 
 .kanban-tarjeta-asunto {
-  color: #172b4d;
+  color: var(--text-on-surface);
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
@@ -215,7 +235,7 @@
   gap: 6px;
   margin-top: 4px;
   font-size: 10px;
-  color: #5e6c84;
+  color: var(--text-on-surface-variant);
 }
 
 .kanban-tarjeta-indicadores {
@@ -229,11 +249,13 @@
 .kanban-ind-recordatorio,
 .kanban-ind-programado {
   font-size: 11px;
-  cursor: default;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.15s;
 }
-.kanban-ind-notas { opacity: 0.7; }
-.kanban-ind-recordatorio { opacity: 0.8; }
-.kanban-ind-programado { opacity: 0.7; }
+.kanban-ind-notas:hover,
+.kanban-ind-recordatorio:hover,
+.kanban-ind-programado:hover { opacity: 1; transform: scale(1.2); }
 
 /* Banner alerta en tarjeta */
 .kanban-tarjeta-alerta {
@@ -276,7 +298,7 @@
 /* Total del tablero */
 .kanban-total {
   font-size: 12px;
-  color: #5e6c84;
+  color: var(--text-on-surface-variant);
   margin-left: auto;
 }
 
@@ -314,7 +336,7 @@
   font-size: 20px;
   font-weight: bold;
   margin-bottom: 16px;
-  color: #172b4d;
+  color: var(--text-on-surface);
 }
 
 .kanban-detalle-grid {
@@ -328,13 +350,13 @@
 .kanban-detalle-label {
   font-size: 12px;
   font-weight: 600;
-  color: #5e6c84;
+  color: var(--text-on-surface-variant);
   text-transform: uppercase;
 }
 
 .kanban-detalle-grid span:not(.kanban-detalle-label) {
   font-size: 13px;
-  color: #172b4d;
+  color: var(--text-on-surface);
 }
 
 .kanban-detalle-asunto {
@@ -346,12 +368,12 @@
   padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: 4px;
-  background: #f4f5f7;
+  background: var(--bg-surface-variant);
   font-size: 13px;
   cursor: pointer;
 }
 .kanban-detalle-select:hover { border-color: #ddd; }
-.kanban-detalle-select:focus { border-color: #1a73e8; outline: none; background: white; }
+.kanban-detalle-select:focus { border-color: var(--primary); outline: none; background: var(--bg-surface); }
 
 .kanban-detalle-indicadores {
   display: flex;
@@ -365,11 +387,18 @@
   border-radius: 10px;
   background: #e3f2fd;
   color: #1565C0;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.kanban-detalle-indicador:hover {
+  background: #bbdefb;
+  transform: scale(1.05);
 }
 
 .kanban-detalle-acciones {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
   padding-top: 12px;
