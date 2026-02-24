@@ -72,26 +72,23 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
-// Fetch: cache-first para estaticos, network-first para API
+// Fetch: network-first para todo, cache solo como fallback offline
 self.addEventListener('fetch', function(e) {
-  var url = new URL(e.request.url);
-
-  // API requests: network-first
-  if (url.hostname.includes('script.google.com')) {
-    e.respondWith(
-      fetch(e.request).catch(function() {
-        return new Response(JSON.stringify({ ok: false, error: 'Sin conexion' }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
-    return;
-  }
-
-  // Estaticos: cache-first
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request);
+    fetch(e.request).then(function(response) {
+      // Actualizar cache con respuesta fresca
+      if (response.ok) {
+        var copia = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(e.request, copia);
+        });
+      }
+      return response;
+    }).catch(function() {
+      // Sin red: servir desde cache
+      return caches.match(e.request).then(function(cached) {
+        return cached || new Response('Sin conexion', { status: 503 });
+      });
     })
   );
 });
