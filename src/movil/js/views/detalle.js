@@ -185,7 +185,7 @@ var VistaDetalle = {
 
     // Bottom bar dinámico via reglas
     var bottomBar = document.createElement('div');
-    bottomBar.className = 'bottom-bar';
+    bottomBar.className = 'bottom-bar bottom-bar-static';
 
     var config = Store.obtenerConfig();
     var reglas = config.reglasAcciones || (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);

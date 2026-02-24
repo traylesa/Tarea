@@ -115,7 +115,7 @@ html, body {
 }
 
 .contenido.contenido-con-bar {
-  padding-bottom: 140px;
+  padding-bottom: 8px;
 }
 
 /* Bottom Navigation */
@@ -176,6 +176,11 @@ html, body {
   background: white;
   border-top: 1px solid #E0E0E0;
   z-index: 90;
+}
+
+.bottom-bar.bottom-bar-static {
+  position: static;
+  flex-shrink: 0;
 }
 
 /* Botones */
