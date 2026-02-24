@@ -357,6 +357,14 @@ html, body {
   height: 100%;
 }
 
+#app-contenido {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* Responsive tablet */
 @media (min-width: 640px) and (max-width: 1024px) {
   .app-split {
