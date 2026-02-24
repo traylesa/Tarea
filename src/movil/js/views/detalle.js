@@ -47,7 +47,7 @@ var VistaDetalle = {
     contenedor.appendChild(header);
 
     var scrollable = document.createElement('div');
-    scrollable.className = 'contenido';
+    scrollable.className = 'contenido contenido-con-bar';
     contenedor.appendChild(scrollable);
 
     // === FICHA DATOS PRINCIPALES (siempre visible) ===
@@ -234,6 +234,15 @@ var VistaDetalle = {
       VistaDetalle._agregarNota(codCar);
     });
     bottomBar.appendChild(btnNota);
+
+    var btnRecord = document.createElement('button');
+    btnRecord.className = 'btn btn-outline btn-flex';
+    btnRecord.textContent = '+ Record.';
+    btnRecord.addEventListener('click', function() {
+      VistaDetalle._crearRecordatorio(principal);
+    });
+    bottomBar.appendChild(btnRecord);
+
     contenedor.appendChild(bottomBar);
   },
 

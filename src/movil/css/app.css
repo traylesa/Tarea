@@ -114,6 +114,10 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
+.contenido.contenido-con-bar {
+  padding-bottom: 140px;
+}
+
 /* Bottom Navigation */
 .bottom-nav {
   position: fixed;
