@@ -129,7 +129,20 @@
 
 .kanban-estado-grupo.collapsed .kanban-tarjeta { display: none; }
 
-.kanban-estado-grupo-body { min-height: 4px; }
+.kanban-estado-grupo-body { min-height: 32px; }
+
+/* Placeholder para columnas/estados vacios */
+.kanban-placeholder {
+  text-align: center;
+  color: #aaa;
+  font-size: 11px;
+  padding: 8px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  margin: 2px;
+}
+.kanban-placeholder:only-child { display: block; }
+.kanban-placeholder:not(:only-child) { display: none; }
 
 /* === Tarjeta Kanban (estilo Trello) === */
 .kanban-tarjeta {

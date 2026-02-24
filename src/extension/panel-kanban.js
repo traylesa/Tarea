@@ -204,7 +204,6 @@ function renderKanban() {
       estados.forEach(function(est) {
         var regsEst = porEstado[est] || [];
         var regsTotalEst = porEstadoTotal[est] || [];
-        if (regsTotalEst.length === 0) return;
 
         var grupoEstado = document.createElement('div');
         grupoEstado.className = 'kanban-estado-grupo';
@@ -222,6 +221,12 @@ function renderKanban() {
         grupoBody.dataset.columna = col.id;
         grupoBody.dataset.estado = est;
 
+        if (regsEst.length === 0) {
+          var placeholder = document.createElement('div');
+          placeholder.className = 'kanban-placeholder';
+          placeholder.textContent = 'Arrastra aqui';
+          grupoBody.appendChild(placeholder);
+        }
         regsEst.forEach(function(reg) {
           grupoBody.appendChild(_crearTarjetaKanban(reg));
         });
@@ -232,6 +237,12 @@ function renderKanban() {
     } else {
       body.className += ' kanban-drop-zone';
       body.dataset.columna = col.id;
+      if (regsColumna.length === 0) {
+        var ph = document.createElement('div');
+        ph.className = 'kanban-placeholder';
+        ph.textContent = 'Arrastra aqui';
+        body.appendChild(ph);
+      }
       regsColumna.forEach(function(reg) {
         body.appendChild(_crearTarjetaKanban(reg));
       });

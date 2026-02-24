@@ -140,7 +140,20 @@
 
 .kanban-estado-grupo.collapsed .kanban-tarjeta { display: none; }
 
-.kanban-estado-grupo-body { min-height: 8px; }
+.kanban-estado-grupo-body { min-height: 32px; }
+
+/* Placeholder para columnas vacias */
+.kanban-placeholder {
+  text-align: center;
+  color: #aaa;
+  font-size: 12px;
+  padding: 12px;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  margin: 4px;
+}
+.kanban-placeholder:only-child { display: block; }
+.kanban-placeholder:not(:only-child) { display: none; }
 
 /* === Tarjeta Kanban (touch-friendly) === */
 .kanban-tarjeta {

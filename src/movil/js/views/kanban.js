@@ -62,6 +62,9 @@ var VistaKanban = {
       html += '</div>';
       html += '<div class="kanban-columna-body kanban-drop" data-columna="' + col.id + '">';
 
+      if (regsCol.length === 0) {
+        html += '<div class="kanban-placeholder">Arrastra aqui</div>';
+      }
       regsCol.forEach(function(reg) {
         html += self._crearTarjetaHTML(reg);
       });
