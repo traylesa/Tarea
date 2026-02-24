@@ -119,7 +119,7 @@ function validarRegla(regla) {
 
   var camposValidos = ['fase', 'estado', 'codCar', 'tipoTarea', 'vinculacion', 'alerta', 'bandeja', 'interlocutor', 'zona'];
   if (!regla.condicion || camposValidos.indexOf(regla.condicion.campo) === -1) {
-    errores.push('Campo invalido: ' + (regla.condicion ? regla.condicion.campo : 'vacio') + '. Validos: ' + camposValidos.join(', '));
+    errores.push('El campo debe ser uno de: ' + camposValidos.join(', '));
   }
 
   if (!regla.acciones || !Array.isArray(regla.acciones) || regla.acciones.length === 0) {

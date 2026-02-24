@@ -59,6 +59,43 @@ var PRESET_4_HORAS = 240;
 
 var STORAGE_KEY_PREFS = 'tabulatorPrefs';
 
+// === PREFERENCIAS REJILLA POR DEFECTO ===
+
+var DEFAULT_PREFS_REJILLA = {
+  columnas: [
+    { field: 'mensajesEnHilo', visible: true, width: 40 },
+    { field: 'esUltimoHilo', visible: true, width: 40 },
+    { field: 'estado', visible: true, width: 100 },
+    { field: 'fase', visible: true, width: 82 },
+    { field: '_notas', visible: true, width: 50 },
+    { visible: true, width: 40 },
+    { field: 'fechaCorreo', visible: true, width: 110 },
+    { field: '_recordatorios', visible: true, width: 40 },
+    { field: 'interlocutor', visible: true, width: 150 },
+    { field: '_programados', visible: true, width: 40 },
+    { field: 'asunto', visible: true, width: 301 },
+    { field: 'codCar', visible: true, width: 110 },
+    { field: 'cuerpo', visible: false, width: 200 },
+    { field: 'fEntrega', visible: true, width: 123 },
+    { field: 'hEntrega', visible: true, width: 66 },
+    { field: 'referencia', visible: true, width: 100 },
+    { field: 'vinculacion', visible: true, width: 80 },
+    { field: 'nombreTransportista', visible: true, width: 130 },
+    { field: 'fCarga', visible: true, width: 90 },
+    { field: 'hCarga', visible: true, width: 120 },
+    { field: 'zona', visible: true, width: 80 },
+    { field: 'zDest', visible: true, width: 80 },
+    { field: 'tipoTarea', visible: true, width: 100 },
+    { field: 'para', visible: false, width: 150 },
+    { field: 'cc', visible: false, width: 120 },
+    { field: 'cco', visible: false, width: 120 },
+    { field: 'emailRemitente', visible: false, width: 150 }
+  ],
+  sorters: [
+    { column: 'fechaCorreo', dir: 'desc' }
+  ]
+};
+
 // === HORARIOS ESPECIALES ===
 
 var HORA_MATUTINO_DEFAULT = '08:00';
@@ -117,6 +154,9 @@ if (typeof module !== 'undefined' && module.exports) {
     HORA_MANANA_DEFAULT: HORA_MANANA_DEFAULT,
 
     // Claves storage
-    STORAGE_KEY_PREFS: STORAGE_KEY_PREFS
+    STORAGE_KEY_PREFS: STORAGE_KEY_PREFS,
+
+    // Preferencias rejilla
+    DEFAULT_PREFS_REJILLA: DEFAULT_PREFS_REJILLA
   };
 }

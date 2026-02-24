@@ -124,6 +124,17 @@ function aceptarSugerencia(sugerencia, codCar, ahora, asunto) {
   };
 }
 
+function buscarPorCodCar(lista, codCar) {
+  if (!lista || !codCar) return [];
+  return lista.filter(function(r) { return r.codCar === codCar; });
+}
+
+function buscarActivosPorCodCar(lista, codCar, ahora) {
+  return buscarPorCodCar(lista, codCar).filter(function(r) {
+    return new Date(r.fechaDisparo).getTime() > ahora.getTime();
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     crearRecordatorio: crearRecordatorio,
@@ -135,6 +146,8 @@ if (typeof module !== 'undefined' && module.exports) {
     evaluarPendientes: evaluarPendientes,
     generarSugerencia: generarSugerencia,
     aceptarSugerencia: aceptarSugerencia,
+    buscarPorCodCar: buscarPorCodCar,
+    buscarActivosPorCodCar: buscarActivosPorCodCar,
     PRESETS: PRESETS,
     MAX_RECORDATORIOS: MAX_RECORDATORIOS,
     SUGERENCIAS_POR_FASE: SUGERENCIAS_POR_FASE

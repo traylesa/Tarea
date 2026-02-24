@@ -17,6 +17,7 @@ function construirPayload(registros, plantilla) {
       nombreTransportista: reg.nombreTransportista,
       codTra: reg.codTra,
       emailRemitente: reg.emailRemitente,
+      interlocutor: reg.interlocutor || '',
       asunto: reg.asunto,
       fechaCorreo: reg.fechaCorreo,
       estado: reg.estado,
@@ -30,6 +31,7 @@ function construirPayload(registros, plantilla) {
 
     return {
       email: reg.emailRemitente,
+      interlocutor: reg.interlocutor || reg.emailRemitente || '',
       threadId: reg.threadId,
       asunto,
       cuerpo
@@ -57,6 +59,7 @@ function generarPrevisualizacion(registros, plantilla, sanitizar) {
     nombreTransportista: primer.nombreTransportista,
     codTra: primer.codTra,
     emailRemitente: primer.emailRemitente,
+    interlocutor: primer.interlocutor || '',
     asunto: primer.asunto,
     fechaCorreo: primer.fechaCorreo,
     estado: primer.estado,
