@@ -260,6 +260,45 @@ var VistaConfig = {
     plantillasDiv.appendChild(btnImport);
     scrollable.appendChild(plantillasDiv);
 
+    // === SECCION: Config completa (sincronizar con extension) ===
+    this._seccionTitulo(scrollable, 'Configuracion completa');
+
+    var syncDiv = document.createElement('div');
+    syncDiv.style.cssText = 'padding:16px;border-bottom:1px solid #E0E0E0';
+    syncDiv.innerHTML = '<div style="font-weight:bold;margin-bottom:4px">Sincronizar con extension</div>'
+      + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">'
+      + 'Exporta/importa la configuracion completa (fases, estados, reglas, patrones) '
+      + 'en formato compatible con la extension Chrome.</div>';
+
+    var btnExportCfg = document.createElement('button');
+    btnExportCfg.className = 'btn btn-outline';
+    btnExportCfg.style.cssText = 'width:100%;margin-bottom:8px';
+    btnExportCfg.textContent = 'Exportar configuracion';
+    btnExportCfg.addEventListener('click', function() {
+      VistaConfig._exportarConfigCompleta();
+    });
+    syncDiv.appendChild(btnExportCfg);
+
+    var btnImportCfg = document.createElement('button');
+    btnImportCfg.className = 'btn btn-outline';
+    btnImportCfg.style.cssText = 'width:100%;margin-bottom:8px';
+    btnImportCfg.textContent = 'Importar configuracion';
+    btnImportCfg.addEventListener('click', function() {
+      VistaConfig._importarConfigCompleta();
+    });
+    syncDiv.appendChild(btnImportCfg);
+
+    var cfgResumen = document.createElement('div');
+    cfgResumen.id = 'cfg-sync-resumen';
+    cfgResumen.style.cssText = 'font-size:13px;color:var(--text-secondary)';
+    var cfgActual = Store.obtenerConfig();
+    var nFases = cfgActual.fases ? cfgActual.fases.length : 0;
+    var nEstados = cfgActual.estados ? cfgActual.estados.length : 0;
+    var nReglas = cfgActual.reglasAcciones ? cfgActual.reglasAcciones.length : 0;
+    cfgResumen.textContent = nFases + ' fases | ' + nEstados + ' estados | ' + nReglas + ' reglas';
+    syncDiv.appendChild(cfgResumen);
+    scrollable.appendChild(syncDiv);
+
     // === SECCION: Info sistema ===
     this._seccionTitulo(scrollable, 'Sistema');
 
@@ -407,6 +446,72 @@ var VistaConfig = {
       statusEl.textContent = 'Error: ' + e.message;
       Feedback.vibrar('error');
     }
+  },
+
+  _exportarConfigCompleta: function() {
+    var config = Store.obtenerConfig();
+    var exportado = {
+      version: '1.2.0',
+      fecha_exportacion: new Date().toISOString(),
+      config: config
+    };
+
+    var pie = Store.obtenerPieComun();
+    if (pie) exportado.pieComun = pie;
+
+    var json = JSON.stringify(exportado, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'tarealog_config_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    ToastUI.mostrar('Configuracion exportada', { tipo: 'exito' });
+  },
+
+  _importarConfigCompleta: function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', function() {
+      if (!input.files[0]) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          if (!data.version || !data.config) {
+            ToastUI.mostrar('Formato invalido: falta version o config', { tipo: 'error' });
+            return;
+          }
+
+          var configLocal = Store.obtenerConfig();
+          var gasUrl = configLocal.gasUrl;
+
+          var merged = Object.assign({}, configLocal, data.config);
+          // Preservar URL local si la importada esta vacia
+          if (!merged.gasUrl && gasUrl) merged.gasUrl = gasUrl;
+
+          Store.guardarConfig(merged);
+
+          if (data.pieComun) Store.guardarPieComun(data.pieComun);
+
+          var importados = ['config'];
+          if (merged.fases) importados.push(merged.fases.length + ' fases');
+          if (merged.estados) importados.push(merged.estados.length + ' estados');
+          if (merged.reglasAcciones) importados.push(merged.reglasAcciones.length + ' reglas');
+          if (data.pieComun) importados.push('firma');
+
+          Feedback.vibrar('corto');
+          ToastUI.mostrar('Importado: ' + importados.join(', '), { tipo: 'exito' });
+          App.renderizar();
+        } catch (err) {
+          ToastUI.mostrar('Error al leer: ' + err.message, { tipo: 'error' });
+        }
+      };
+      reader.readAsText(input.files[0]);
+    });
+    input.click();
   },
 
   _configurarGmailQuery: async function(query, statusEl) {

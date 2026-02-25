@@ -394,6 +394,7 @@ var VistaKanban = {
     if (indRec) indRec.addEventListener('click', function() { App.navegar('detalle/' + codCar); });
 
     var opciones = [
+      { texto: '\u2709 Responder', accion: function() { VistaDetalle._abrirEditor(reg); } },
       { texto: '\uD83D\uDCDD +Nota', accion: function() { VistaDetalle._agregarNota(codCar); } },
       { texto: '\u23F0 +Record.', accion: function() { VistaDetalle._crearRecordatorio(reg); } },
       { texto: 'Cambiar fase', accion: function() { VistaDetalle._abrirCambioFase(reg); } },

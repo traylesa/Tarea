@@ -573,6 +573,7 @@ function _abrirModalKanban(reg) {
     '<div class="kanban-detalle-acciones">' +
       '<button id="btn-kanban-add-nota" class="btn-secundario" title="Añadir nota">\uD83D\uDCDD +Nota</button>' +
       '<button id="btn-kanban-add-record" class="btn-secundario" title="Crear recordatorio">\u23F0 +Record.</button>' +
+      '<button id="btn-kanban-responder" class="btn-secundario" title="Responder correo">\u2709\uFE0F Responder</button>' +
       '<button id="btn-kanban-ver-tabla" class="btn-secundario">Ver en tabla</button>' +
     '</div>';
 
@@ -601,6 +602,11 @@ function _abrirModalKanban(reg) {
   document.getElementById('btn-kanban-add-record').addEventListener('click', function() {
     _cerrarModalKanban();
     if (typeof abrirModalRecordatorio === 'function') abrirModalRecordatorio(clave, reg.asunto || '');
+  });
+
+  document.getElementById('btn-kanban-responder').addEventListener('click', function() {
+    _cerrarModalKanban();
+    if (typeof abrirModalRespuestaDesdeRegla === 'function') abrirModalRespuestaDesdeRegla(reg, {});
   });
 
   // Indicadores clicables en modal
