@@ -111,24 +111,30 @@ chrome.windows.onBoundsChanged.addListener((win) => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(async () => {
+// Crear/recrear alarmas — necesario en onInstalled Y al arrancar el SW
+async function asegurarAlarmas() {
   const config = await cargarConfig();
-  chrome.alarms.create(ALARM_NAME, {
-    periodInMinutes: config.intervaloMinutos
-  });
-  // Alarma matutina: verificar cada 60 minutos
-  chrome.alarms.create(ALARM_MATUTINO, {
-    periodInMinutes: 60
-  });
-  // Alarma recordatorios: verificar cada 1 minuto
-  chrome.alarms.create(ALARM_RECORDATORIOS, {
-    periodInMinutes: 1
-  });
-  // Alarma secuencias follow-up: verificar cada 15 minutos
-  chrome.alarms.create(ALARM_SECUENCIAS, {
-    periodInMinutes: 15
-  });
-});
+  const existentes = await chrome.alarms.getAll();
+  var nombres = existentes.map(function(a) { return a.name; });
+
+  if (nombres.indexOf(ALARM_NAME) === -1) {
+    chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.intervaloMinutos });
+  }
+  if (nombres.indexOf(ALARM_MATUTINO) === -1) {
+    chrome.alarms.create(ALARM_MATUTINO, { periodInMinutes: 60 });
+  }
+  if (nombres.indexOf(ALARM_RECORDATORIOS) === -1) {
+    chrome.alarms.create(ALARM_RECORDATORIOS, { periodInMinutes: 1 });
+  }
+  if (nombres.indexOf(ALARM_SECUENCIAS) === -1) {
+    chrome.alarms.create(ALARM_SECUENCIAS, { periodInMinutes: 15 });
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => { asegurarAlarmas(); });
+
+// Recrear alarmas cada vez que el SW arranca (pueden perderse en MV3)
+asegurarAlarmas();
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {

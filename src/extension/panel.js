@@ -995,9 +995,33 @@ async function cargarCachesParaMarcas() {
   var stored = await chrome.storage.local.get(STORAGE_KEY_RECORDATORIOS);
   recordatoriosCache = stored[STORAGE_KEY_RECORDATORIOS] || [];
 
-  // Programados desde backend
   var url = obtenerUrlActiva();
   if (url) {
+    // Merge recordatorios remotos (GAS) no presentes localmente
+    try {
+      var respRec = await fetch(url + '?action=getRecordatorios', { credentials: 'omit' });
+      var dataRec = await respRec.json();
+      if (dataRec && dataRec.ok && dataRec.recordatorios) {
+        var idsLocales = {};
+        recordatoriosCache.forEach(function(r) { idsLocales[r.id] = true; });
+        var nuevos = false;
+        dataRec.recordatorios.forEach(function(r) {
+          if (idsLocales[r.id]) return;
+          if (r.estado && r.estado !== 'ACTIVO') return;
+          recordatoriosCache.push({
+            id: r.id, codCar: r.clave || null, texto: r.texto,
+            asunto: r.asunto || null, fechaDisparo: r.fechaDisparo,
+            preset: r.preset, origen: r.origen, snoozeCount: 0
+          });
+          nuevos = true;
+        });
+        if (nuevos) {
+          await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
+        }
+      }
+    } catch (e) { /* mantener cache local */ }
+
+    // Programados desde backend
     try {
       var response = await fetch(url + '?action=getProgramados', { credentials: 'omit' });
       var data = await response.json();

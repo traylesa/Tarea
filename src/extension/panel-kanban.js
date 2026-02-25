@@ -336,7 +336,7 @@ function _crearTarjetaKanban(reg) {
 
   if (clave && (recordatoriosCache || []).some(function(r) { return r.codCar == clave; })) {
     var rec = (recordatoriosCache || []).find(function(r) { return r.codCar == clave; });
-    var recMotivo = rec ? (rec.motivo || rec.descripcion || 'Recordatorio activo') : '';
+    var recMotivo = rec ? (rec.texto || rec.motivo || rec.descripcion || 'Recordatorio activo') : '';
     indicadores += '<span class="kanban-ind-recordatorio" title="' + recMotivo + '">\u23F0</span>';
   }
 
