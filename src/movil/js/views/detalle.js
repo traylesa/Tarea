@@ -206,7 +206,8 @@ var VistaDetalle = {
     botonesDinamicos.forEach(function(acc) {
       var btn = document.createElement('button');
       btn.className = 'btn btn-primary btn-flex';
-      btn.textContent = acc.etiqueta || acc.texto || 'Accion';
+      var tieneDestino = acc.faseSiguiente || acc.plantilla || acc.aviso;
+      btn.textContent = tieneDestino ? (acc.etiqueta || acc.texto || 'Accion') : 'Fase';
       btn.addEventListener('click', function() {
         if (acc.faseSiguiente) {
           VistaDetalle._ejecutarCambioFase(principal, acc.faseSiguiente);
