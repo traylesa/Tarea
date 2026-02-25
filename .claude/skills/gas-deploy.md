@@ -2,7 +2,7 @@
 
 **Proposito**: Guia completa para desplegar codigo Google Apps Script via clasp, evitando errores comunes de la Web App.
 
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -134,12 +134,43 @@ clasp deploy -i AKfycbxXXXXXXXX
 
 ---
 
-## Referencias
+## Despliegue Completo (3 componentes)
 
-- **clasp scriptId proyecto**: `18IsF8QMTGocJUy_W3u5vNV5UHUjB4LlhaeEE_EeJkj-PCpGNYEcV6fp8`
-- **Docs**: `docs/ARCHITECTURE.md` §Backend GAS
-- **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Hojas Sheets
+TareaLog tiene 3 componentes desplegables independientes:
+
+| Componente | Repo | Metodo | URL/Destino |
+|------------|------|--------|-------------|
+| **Backend GAS** | PruebaInicializa4 | `clasp push && clasp deploy -i <id>` | Web App URL fija |
+| **Extension Chrome** | PruebaInicializa4 | Cargar `src/extension/` en `chrome://extensions` | Local |
+| **PWA Movil** | tarealog-movil | Push → Cloudflare Pages auto-deploy | tarealog-movil.pages.dev |
+
+### Deploy GAS (backend)
+
+```bash
+cd src/gas && clasp push && clasp deploy -i AKfycbx...
+```
+
+### Deploy PWA Movil
+
+```bash
+# Automatico via hook post-commit si cambias src/movil/ o src/shared/
+# Manual:
+bash scripts/sync-movil.sh "descripcion cambio"
+```
+
+Ver detalle completo: `pwa-mobile-development.md` §Despliegue
+
+### Deploy Extension Chrome
+
+Cargar carpeta `src/extension/` como extension desempaquetada en `chrome://extensions` (modo desarrollador).
 
 ---
 
-**Generada por /genera-skills**
+## Referencias
+
+- **clasp scriptId proyecto**: `18IsF8QMTGocJUy_W3u5vNV5UHUjB4LlhaeEE_EeJkj-PCpGNYEcV6fp8`
+- **Deployment actual GAS**: @29
+- **URL PWA**: `https://tarealog-movil.pages.dev`
+- **Docs**: `docs/ARCHITECTURE.md` §Backend GAS
+- **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Hojas Sheets
+- **Skill PWA**: `.claude/skills/pwa-mobile-development.md`

@@ -1,7 +1,7 @@
 # Skill: Desarrollo Mobile PWA
 
 **Proposito**: Guia tecnica para desarrollar la version movil PWA de TareaLog, consumiendo el backend GAS existente con experiencia mobile-first optimizada para operadores de trafico en campo.
-**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-24
+**Version**: 1.3.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -38,18 +38,45 @@ TareaLog es una extension Chrome para gestion logistica TRAYLESA. La PWA movil e
 
 ### Service Worker (`sw.js`)
 
-Estrategia dual implementada:
-- **Cache-first** para estaticos (HTML, CSS, JS, iconos) via `CACHE_URLS`
-- **Network-first** para API GAS (`script.google.com`), con fallback offline que retorna `{ ok: false, error: 'Sin conexion' }`
-- Versionado via `CACHE_NAME = 'tarealog-vN'`, limpieza automatica de caches antiguas en `activate`
-- Notificaciones push con listener `notificationclick` (accion 'abrir' abre la app)
+Estrategia **network-first** para todo:
+- Intenta red primero, actualiza cache con respuesta fresca
+- Fallback a cache solo si no hay red (modo offline)
+- Versionado **UNICO** via `CACHE_NAME = 'tarealog-vN'`
+- Limpieza automatica de caches antiguas en `activate`
+- `skipWaiting()` + `clients.claim()` para activacion inmediata
+- Notificaciones push con listener `notificationclick`
 
 ```javascript
 // Al agregar archivos JS, actualizar CACHE_URLS en sw.js
 var CACHE_URLS = ['./', './index.html', './css/app.css', /* ... todos los archivos */];
 ```
 
-**Actualizar version**: Incrementar `CACHE_NAME` al modificar cualquier archivo cacheado.
+**REGLA CRITICA — Versionado**:
+- **SOLO** `CACHE_NAME` versiona (ej: `tarealog-v38`)
+- **NUNCA** usar query params `?v=N` en index.html (conflicto con SW cache keys)
+- Incrementar `CACHE_NAME` al modificar cualquier archivo cacheado
+
+### Deteccion de updates (`app.js`)
+
+El SW detecta actualizaciones y muestra toast persistente con boton "Actualizar":
+
+```javascript
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(function(reg) {
+    reg.addEventListener('updatefound', function() {
+      var nuevo = reg.installing;
+      nuevo.addEventListener('statechange', function() {
+        if (nuevo.state === 'activated' && navigator.serviceWorker.controller) {
+          ToastUI.mostrar('Nueva version disponible', {
+            tipo: 'info', duracion: 0,
+            accion: { texto: 'Actualizar', fn: function() { location.reload(); } }
+          });
+        }
+      });
+    });
+  });
+}
+```
 
 ### Manifest (`manifest.json`)
 
@@ -59,18 +86,7 @@ var CACHE_URLS = ['./', './index.html', './css/app.css', /* ... todos los archiv
   "orientation": "portrait",
   "theme_color": "#1565C0",
   "start_url": ".",
-  "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }, { "src": "icons/icon-512.png", "sizes": "512x512" }]
-}
-```
-
-**Pendiente**: Generar iconos en `src/movil/icons/` (192px y 512px).
-
-### Registro del Service Worker
-
-En `app.js`, registrar al inicio:
-```javascript
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
+  "icons": [{ "src": "icons/icon-192.svg", "sizes": "192x192" }, { "src": "icons/icon-512.svg", "sizes": "512x512" }]
 }
 ```
 
@@ -127,34 +143,74 @@ try {
 
 ---
 
+## Despliegue — Cloudflare Pages
+
+### Arquitectura de repos
+
+```
+PruebaInicializa4 (repo principal)     tarealog-movil (repo deploy)
+├── src/extension/                      ├── js/          ← copia de src/movil/js/
+├── src/movil/     ──sync-movil.sh──►   ├── css/         ← copia de src/movil/css/
+├── src/shared/    ──sync-movil.sh──►   ├── lib/         ← copia de src/movil/lib/
+├── src/gas/                            ├── shared/      ← copia de src/shared/
+└── scripts/sync-movil.sh              ├── sw.js, index.html, manifest.json
+                                        ├── _headers     ← Cache-Control no-cache
+                                        └── (Cloudflare Pages → tarealog-movil.pages.dev)
+```
+
+- **Repo principal**: `traylesa/PruebaInicializa4` — desarrollo, tests, extension
+- **Repo deploy**: `traylesa/tarealog-movil` — solo archivos PWA para Cloudflare Pages
+- **URL produccion**: `https://tarealog-movil.pages.dev`
+
+### Script de sincronizacion (`scripts/sync-movil.sh`)
+
+```bash
+bash scripts/sync-movil.sh "mensaje commit"
+```
+
+Copia `src/movil/` + `src/shared/` al repo `tarealog-movil`, ajusta rutas (`../shared/` → `shared/`), hace commit y push. Cloudflare Pages redespliega automaticamente.
+
+### Hook post-commit automatico
+
+`.git/hooks/post-commit` detecta cambios en `src/movil/` o `src/shared/` y ejecuta `sync-movil.sh` automaticamente. **No requiere accion manual**.
+
+### Checklist despliegue movil
+
+1. Incrementar `CACHE_NAME` en `src/movil/sw.js` (ej: `v38` → `v39`)
+2. Si hay archivos nuevos: anadirlos a `CACHE_URLS` en `sw.js`
+3. Commit en PruebaInicializa4 → hook auto-sync a tarealog-movil
+4. Push a PruebaInicializa4 (si el hook ya hizo push al repo deploy, listo)
+5. Verificar en `https://tarealog-movil.pages.dev/sw.js` que CACHE_NAME sea el nuevo
+
+### Cloudflare Pages config
+
+| Parametro | Valor |
+|-----------|-------|
+| Repo | `traylesa/tarealog-movil` |
+| Rama | `main` |
+| Build command | (vacio — archivos estaticos) |
+| Output directory | `/` (raiz del repo) |
+| `_headers` | `Cache-Control: no-cache` para index.html y sw.js |
+
+### Errores comunes
+
+| Problema | Causa | Solucion |
+|----------|-------|----------|
+| Version congelada en movil | CACHE_NAME no incrementado | Incrementar en sw.js |
+| Query params `?v=N` no invalidan cache | SW cache keys no coinciden | NUNCA usar query params, solo CACHE_NAME |
+| Cloudflare no redespliega | Push fue a PruebaInicializa4, no a tarealog-movil | Ejecutar `bash scripts/sync-movil.sh` |
+| `../shared/` no carga | Ruta relativa invalida en deploy (raiz distinta) | sync-movil.sh ajusta a `shared/` |
+| Deploy no se promueve a produccion | Cloudflare Pages deployment en preview | Promover manualmente en dashboard |
+
+---
+
 ## Reutilizacion de Modulos
 
-18 modulos de logica pura se mantienen como COPIAS en `src/movil/lib/` (NO referencias a `../extension/`). Al modificar un modulo en la extension, SINCRONIZAR manualmente la copia movil:
-
-```html
-<script src="./lib/constants.js"></script>
-<script src="./lib/date-utils.js"></script>
-<script src="./lib/alerts.js"></script>
-<script src="./lib/templates.js"></script>
-<script src="./lib/filters.js"></script>
-<script src="./lib/reminders.js"></script>
-<script src="./lib/sequences.js"></script>
-<script src="./lib/notes.js"></script>
-<script src="./lib/fases-config.js"></script>
-<script src="./lib/action-bar.js"></script>
-<script src="./lib/dashboard.js"></script>
-<script src="./lib/action-log.js"></script>
-<script src="./lib/shift-report.js"></script>
-<script src="./lib/alert-summary.js"></script>
-<script src="./lib/resilience.js"></script>
-<script src="./lib/estados-config.js"></script>
-<script src="./lib/bulk-reply.js"></script>
-<script src="./lib/action-rules.js"></script>
-```
+18 modulos de logica pura se mantienen como COPIAS en `src/movil/lib/`. La sincronizacion es **automatica** via `scripts/sync-movil.sh` (ejecutado por hook post-commit).
 
 **Patron dual-compat**: Cada modulo exporta con `if (typeof module !== 'undefined') module.exports = {...}`, lo que permite usarlos en Jest (Node) y en browser (globales via script tags).
 
-**REGLA**: Al modificar logica pura en `src/extension/`, copiar cambios a `src/movil/lib/` y verificar que no rompa tests Jest.
+**REGLA**: Al modificar logica pura en `src/extension/`, el hook post-commit sincroniza automaticamente a `src/movil/lib/` y al repo deploy.
 
 ---
 
@@ -204,8 +260,14 @@ Tres indicadores en footer tarjeta, todos clicables:
 
 ### Filtros 2 niveles
 
-**Nivel 1**: 4 chips sticky bajo busqueda: `[Urgentes(N)]` `[Hoy(N)]` `[Sin leer(N)]` `[+]`
+**Nivel 1**: Chips sticky bajo busqueda: `[Urgentes(N)]` `[Hoy(N)]` `[Sin leer(N)]` `[Cerrado(N)]` `[+]`
 **Nivel 2**: Bottom sheet con transportista, fase, periodo, estado, vinculacion + botones Reset/Aplicar
+
+### Cambio de estado (3 vistas)
+
+Disponible en Todo (menu tarjeta ⋮), Tablero (long-press + detalle) y Detalle (boton Estado + menu opciones):
+- `_abrirCambioEstado(registro)`: BottomSheet con todos estados activos de `getDefaultEstados()`
+- `_ejecutarCambioEstado(registro, nuevoEstado)`: API call + propagacion local + re-evaluacion alertas
 
 ### Feedback obligatorio (cada accion)
 
@@ -327,11 +389,14 @@ Claves `localStorage` (prefijo `tarealog_`):
 
 ### DESPUES de implementar
 
-1. Verificar que los 878 tests Jest existentes (38 suites) siguen pasando (`npx jest`)
-2. Probar en Chrome DevTools modo responsive (< 640px)
-3. Verificar modo outdoor activado/desactivado
-4. Comprobar fallback offline (SW devuelve error graceful)
-5. Actualizar `CLAUDE.md` si cambia version o estado
+1. Verificar que los 878+ tests Jest existentes siguen pasando (`npx jest`)
+2. Incrementar `CACHE_NAME` en `sw.js` (ej: `v38` → `v39`)
+3. Si archivos nuevos: anadirlos a `CACHE_URLS` en `sw.js`
+4. Commit → hook post-commit sincroniza automaticamente a repo deploy
+5. Push a PruebaInicializa4 → Cloudflare Pages redespliega
+6. Verificar en `https://tarealog-movil.pages.dev/sw.js` que version sea la nueva
+7. Probar en Chrome DevTools modo responsive (< 640px)
+8. Actualizar `CLAUDE.md` si cambia version o estado
 
 ---
 
