@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actualizando TareaLog...</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 40px 20px; text-align: center; background: #F5F5F5; }
+    h2 { color: #1565C0; }
+    #log { text-align: left; background: white; padding: 16px; border-radius: 8px; margin: 20px 0; font-size: 14px; line-height: 1.8; }
+    .ok { color: #2E7D32; }
+    .err { color: #D32F2F; }
+  </style>
+</head>
+<body>
+  <h2>Actualizando TareaLog</h2>
+  <p>Limpiando cache y service worker...</p>
+  <div id="log"></div>
+  <script>
+    var log = document.getElementById('log');
+    function msg(texto, tipo) {
+      log.innerHTML += '<div class="' + (tipo || '') + '">' + texto + '</div>';
+    }
+
+    async function limpiar() {
+      // 1. Desregistrar todos los service workers
+      try {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        for (var i = 0; i < regs.length; i++) {
+          await regs[i].unregister();
+          msg('SW desregistrado: ' + (regs[i].scope || 'default'), 'ok');
+        }
+        if (regs.length === 0) msg('No habia SW registrado', 'ok');
+      } catch (e) {
+        msg('Error SW: ' + e.message, 'err');
+      }
+
+      // 2. Borrar todas las caches
+      try {
+        var nombres = await caches.keys();
+        for (var j = 0; j < nombres.length; j++) {
+          await caches.delete(nombres[j]);
+          msg('Cache borrada: ' + nombres[j], 'ok');
+        }
+        if (nombres.length === 0) msg('No habia caches', 'ok');
+      } catch (e) {
+        msg('Error cache: ' + e.message, 'err');
+      }
+
+      // 3. Redirigir
+      msg('<b>Listo. Redirigiendo en 3 segundos...</b>', 'ok');
+      setTimeout(function() {
+        window.location.href = './index.html?updated=' + Date.now();
+      }, 3000);
+    }
+
+    limpiar();
+  </script>
+</body>
+</html>
