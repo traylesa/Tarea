@@ -44,8 +44,8 @@ var VistaDetalle = {
     });
     header.appendChild(menuBtn);
 
-    // Layout: contenedor = scrollable completo, header sticky top, bar sticky bottom
-    contenedor.style.cssText = 'overflow-y:auto;-webkit-overflow-scrolling:touch;height:100%;display:block;';
+    // Override flex layout del CSS: bloque scrollable, flex:1 del CSS da la altura
+    contenedor.style.cssText = 'overflow-y:auto;-webkit-overflow-scrolling:touch;display:block;';
     contenedor.appendChild(header);
 
     var scrollable = document.createElement('div');
