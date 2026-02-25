@@ -290,7 +290,14 @@ var VistaConfig = {
     // Version
     var info = document.createElement('div');
     info.style.cssText = 'padding:16px;color:var(--text-secondary);font-size:14px;text-align:center';
-    info.textContent = 'TareaLog Movil v0.4.0 — TRAYLESA';
+    var swVersion = 'desconocida';
+    if ('caches' in window) {
+      caches.keys().then(function(nombres) {
+        var v = nombres.find(function(n) { return n.indexOf('tarealog-') === 0; });
+        info.textContent = 'TareaLog Movil v0.4.0 | cache: ' + (v || 'sin SW') + ' — TRAYLESA';
+      });
+    }
+    info.textContent = 'TareaLog Movil v0.4.0 | cache: ' + swVersion + ' — TRAYLESA';
     scrollable.appendChild(info);
 
     contenedor.appendChild(scrollable);
