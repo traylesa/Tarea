@@ -35,6 +35,7 @@ var VistaTodo = {
     this._crearChip(filtros, 'Urgentes', urgentes, 'urgentes');
     this._crearChip(filtros, 'Hoy', this._contarHoy(), 'hoy');
     this._crearChip(filtros, 'Sin leer', this._contarSinLeer(), 'sinleer');
+    this._crearChip(filtros, 'Cerrado', this._contarCerrado(), 'cerrado');
 
     var chipMas = document.createElement('button');
     chipMas.className = 'chip';
@@ -122,6 +123,8 @@ var VistaTodo = {
       });
     } else if (this._filtroActivo === 'sinvincular') {
       cargas = cargas.filter(function(c) { return c.vinculacion === 'SIN_VINCULAR' || !c.codCar; });
+    } else if (this._filtroActivo === 'cerrado') {
+      cargas = cargas.filter(function(c) { return c.estado === 'CERRADO'; });
     } else if (this._filtroActivo && this._filtroActivo.indexOf('fase_') === 0) {
       var faseFilter = this._filtroActivo.substring(5);
       cargas = cargas.filter(function(c) { return c.fase === faseFilter; });
@@ -186,6 +189,10 @@ var VistaTodo = {
 
   _contarSinLeer: function() {
     return Store.obtenerRegistros().filter(function(r) { return r.estado === 'RECIBIDO'; }).length;
+  },
+
+  _contarCerrado: function() {
+    return Store.obtenerRegistros().filter(function(r) { return r.estado === 'CERRADO'; }).length;
   },
 
   _configurarPullRefresh: function(lista) {

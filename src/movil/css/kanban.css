@@ -279,6 +279,23 @@
   background: var(--primary, #1565C0);
 }
 
+/* === Columna colapsable === */
+.kanban-columna-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.kanban-col-chevron {
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.kanban-columna-colapsada {
+  max-height: none;
+  min-width: 75vw;
+}
+
 /* === Long-press visual feedback === */
 .kanban-tarjeta:active {
   cursor: grabbing;

@@ -8,6 +8,7 @@ var VistaKanban = {
   _mostrarNada: true,
   _mostrarCerrado: true,
   _sortableInstances: [],
+  _columnasColapsadas: {},
   _refreshing: false,
   _filtroActivo: null,
   _busqueda: '',
@@ -65,21 +66,28 @@ var VistaKanban = {
       var regsCol = agrupados[col.id] || [];
       var conteo = conteos[col.id] || { total: 0 };
 
-      html += '<div class="kanban-columna" data-grupo="' + col.id + '">';
-      html += '<div class="kanban-columna-header">';
+      var colapsada = !!self._columnasColapsadas[col.id];
+      var chevron = colapsada ? '\u25B6' : '\u25BC';
+
+      html += '<div class="kanban-columna' + (colapsada ? ' kanban-columna-colapsada' : '') + '" data-grupo="' + col.id + '">';
+      html += '<div class="kanban-columna-header" data-toggle-col="' + col.id + '">';
+      html += '<span class="kanban-col-chevron">' + chevron + '</span>';
       html += '<span>' + col.nombre + '</span>';
       html += '<span class="kanban-columna-count">' + conteo.total + '</span>';
       html += '</div>';
-      html += '<div class="kanban-columna-body kanban-drop" data-columna="' + col.id + '">';
 
-      if (regsCol.length === 0) {
-        html += '<div class="kanban-placeholder">Arrastra aqui</div>';
+      if (!colapsada) {
+        html += '<div class="kanban-columna-body kanban-drop" data-columna="' + col.id + '">';
+        if (regsCol.length === 0) {
+          html += '<div class="kanban-placeholder">Arrastra aqui</div>';
+        }
+        regsCol.forEach(function(reg) {
+          html += self._crearTarjetaHTML(reg);
+        });
+        html += '</div>';
       }
-      regsCol.forEach(function(reg) {
-        html += self._crearTarjetaHTML(reg);
-      });
 
-      html += '</div></div>';
+      html += '</div>';
     });
 
     html += '</div>';
@@ -320,6 +328,15 @@ var VistaKanban = {
     if (btnFiltros) {
       btnFiltros.addEventListener('click', function() { self._abrirFiltros(); });
     }
+
+    // Toggle colapsar columna
+    document.querySelectorAll('[data-toggle-col]').forEach(function(h) {
+      h.addEventListener('click', function() {
+        var colId = h.dataset.toggleCol;
+        self._columnasColapsadas[colId] = !self._columnasColapsadas[colId];
+        self._rerenderizar();
+      });
+    });
 
     // Click en tarjeta -> BottomSheet detalle (con delegation para indicadores)
     var tarjetas = document.querySelectorAll('.kanban-tarjeta');

@@ -48,8 +48,8 @@ var BottomSheet = {
         }
         btn.textContent = op.texto;
         btn.addEventListener('click', function() {
-          if (op.accion) op.accion(op);
           BottomSheet.cerrar();
+          if (op.accion) op.accion(op);
         });
         lista.appendChild(btn);
       });
