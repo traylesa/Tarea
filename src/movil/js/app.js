@@ -25,9 +25,21 @@ var App = {
       App.renderizar();
     });
 
-    // Registrar Service Worker
+    // Registrar Service Worker con deteccion de updates
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('./sw.js').then(function(reg) {
+        reg.addEventListener('updatefound', function() {
+          var nuevo = reg.installing;
+          nuevo.addEventListener('statechange', function() {
+            if (nuevo.state === 'activated' && navigator.serviceWorker.controller) {
+              ToastUI.mostrar('Nueva version disponible', {
+                tipo: 'info', duracion: 0,
+                accion: { texto: 'Actualizar', fn: function() { location.reload(); } }
+              });
+            }
+          });
+        });
+      });
     }
 
     // Render inicial

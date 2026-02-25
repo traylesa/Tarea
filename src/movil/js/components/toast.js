@@ -39,9 +39,23 @@ var ToastUI = {
       el.appendChild(btn);
     }
 
+    var accion = opciones.accion || null;
+    if (accion) {
+      var btnAccion = document.createElement('button');
+      btnAccion.className = 'toast-deshacer';
+      btnAccion.textContent = accion.texto || 'Aceptar';
+      btnAccion.addEventListener('click', function() {
+        accion.fn();
+        el.remove();
+      });
+      el.appendChild(btnAccion);
+    }
+
     this._obtenerContenedor().appendChild(el);
 
-    setTimeout(function() { el.remove(); }, duracion);
+    if (duracion > 0) {
+      setTimeout(function() { el.remove(); }, duracion);
+    }
 
     return id;
   }
