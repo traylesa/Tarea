@@ -793,15 +793,22 @@ var VistaDetalle = {
 
   _guardarRecordatorio: async function(registro, minutos) {
     var fecha = new Date(Date.now() + minutos * 60000).toISOString();
+    var id = 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    var texto = 'Revisar carga ' + registro.codCar;
     try {
       await API.post('guardarRecordatorio', {
+        id: id,
         clave: String(registro.codCar),
-        texto: 'Revisar carga ' + registro.codCar,
+        texto: texto,
         asunto: registro.asunto || '',
         fechaDisparo: fecha,
         preset: minutos + 'min',
         origen: 'manual'
       });
+      // Guardar tambien en localStorage para indicadores y evaluacion
+      var lista = Store._leerJSON('tarealog_recordatorios', []);
+      lista.push({ id: id, codCar: String(registro.codCar), texto: texto, asunto: registro.asunto || '', fechaDisparo: fecha, snoozeCount: 0, origen: 'manual' });
+      Store._guardarJSON('tarealog_recordatorios', lista);
       Feedback.vibrar('corto');
       ToastUI.mostrar('Recordatorio en ' + minutos + ' min', { tipo: 'exito' });
     } catch (e) {

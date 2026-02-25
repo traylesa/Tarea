@@ -470,32 +470,69 @@ var VistaKanban = {
   },
 
   _abrirRecordatorioMovil: function(tarjeta) {
+    var self = this;
     var codCar = tarjeta.dataset.codCar || '';
-    var recordatorios = [];
-    try { recordatorios = JSON.parse(localStorage.getItem('tarealog_recordatorios')) || []; } catch(e) {}
+    var recordatorios = Store._leerJSON('tarealog_recordatorios', []);
     var rec = recordatorios.find(function(r) { return String(r.codCar) === String(codCar); });
 
     if (!rec) return;
 
+    var texto = rec.texto || 'Recordatorio';
+    var fecha = rec.fechaDisparo ? new Date(rec.fechaDisparo).toLocaleString('es-ES') : '\u2014';
+    var tiempoRestante = '';
+    if (rec.fechaDisparo) {
+      var diff = new Date(rec.fechaDisparo).getTime() - Date.now();
+      if (diff > 0) {
+        var min = Math.floor(diff / 60000);
+        tiempoRestante = min < 60 ? min + ' min' : Math.floor(min / 60) + 'h ' + (min % 60) + 'min';
+      } else {
+        tiempoRestante = 'Vencido';
+      }
+    }
+
     var contenido = document.createElement('div');
     contenido.style.padding = '0 4px 8px';
-    var motivo = rec.motivo || rec.descripcion || 'Recordatorio';
-    var fecha = rec.fechaDisparo ? new Date(rec.fechaDisparo).toLocaleString('es-ES') : '—';
     contenido.innerHTML =
-      '<div style="font-size:16px;font-weight:bold;margin-bottom:8px">\u23F0 ' + motivo + '</div>' +
+      '<div style="font-size:16px;font-weight:bold;margin-bottom:8px">\u23F0 ' + texto + '</div>' +
       '<div style="font-size:13px;color:#666;margin-bottom:4px">Carga: <strong>' + codCar + '</strong></div>' +
-      '<div style="font-size:13px;color:#666;margin-bottom:12px">Dispara: <strong>' + fecha + '</strong></div>';
+      '<div style="font-size:13px;color:#666;margin-bottom:4px">Dispara: <strong>' + fecha + '</strong></div>' +
+      '<div style="font-size:13px;color:' + (tiempoRestante === 'Vencido' ? '#d32f2f' : '#1565c0') + ';margin-bottom:4px;font-weight:600">' + tiempoRestante + '</div>' +
+      (rec.snoozeCount > 0 ? '<div style="font-size:11px;color:#999">Pospuesto ' + rec.snoozeCount + ' vez/veces</div>' : '');
 
     if (typeof BottomSheet !== 'undefined') {
       BottomSheet.abrir({
         titulo: 'Recordatorio',
         contenido: contenido,
         opciones: [
-          { texto: 'Ver detalle carga', accion: function() { App.navegar('detalle/' + codCar); } },
-          { texto: 'Cerrar', color: '#999', accion: function() {} }
+          { texto: '\u23F0 Posponer 15 min', accion: function() { self._snoozeRecordatorio(rec, 15); }},
+          { texto: '\u23F0 Posponer 1 hora', accion: function() { self._snoozeRecordatorio(rec, 60); }},
+          { texto: '\u274C Eliminar', color: '#d32f2f', accion: function() { self._eliminarRecordatorio(rec); }},
+          { texto: 'Ver detalle carga', accion: function() { App.navegar('detalle/' + codCar); } }
         ]
       });
     }
+  },
+
+  _snoozeRecordatorio: function(rec, minutos) {
+    var nuevaFecha = new Date(Date.now() + minutos * 60000).toISOString();
+    var lista = Store._leerJSON('tarealog_recordatorios', []);
+    lista = lista.map(function(r) {
+      if (r.id !== rec.id) return r;
+      return Object.assign({}, r, { fechaDisparo: nuevaFecha, snoozeCount: (r.snoozeCount || 0) + 1 });
+    });
+    Store._guardarJSON('tarealog_recordatorios', lista);
+    if (typeof Feedback !== 'undefined') Feedback.vibrar('corto');
+    ToastUI.mostrar('Pospuesto ' + minutos + ' min', { tipo: 'info' });
+  },
+
+  _eliminarRecordatorio: function(rec) {
+    var lista = Store._leerJSON('tarealog_recordatorios', []);
+    lista = lista.filter(function(r) { return r.id !== rec.id; });
+    Store._guardarJSON('tarealog_recordatorios', lista);
+    // Marcar como completado en GAS
+    try { API.post('actualizarEstadoRecordatorio', { id: rec.id, estado: 'COMPLETADO' }); } catch(e) {}
+    ToastUI.mostrar('Recordatorio eliminado', { tipo: 'info' });
+    this.renderizar(document.getElementById('app-content'));
   },
 
   _abrirProgramadoMovil: function(tarjeta) {

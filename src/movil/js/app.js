@@ -129,6 +129,19 @@ var App = {
         Store.guardarRegistros(data.registros);
       }
 
+      // Sincronizar recordatorios desde GAS
+      try {
+        var dataRec = await API.get('getRecordatorios');
+        if (dataRec.recordatorios) {
+          var activos = dataRec.recordatorios.filter(function(r) {
+            return !r.estado || r.estado === 'ACTIVO';
+          }).map(function(r) {
+            return { id: r.id, codCar: r.clave || r.codCar, texto: r.texto, asunto: r.asunto || '', fechaDisparo: r.fechaDisparo, snoozeCount: 0, origen: r.origen || 'manual' };
+          });
+          Store._guardarJSON('tarealog_recordatorios', activos);
+        }
+      } catch(e) { /* mantener cache local */ }
+
       // Evaluar alertas
       if (typeof evaluarAlertas === 'function') {
         var alertas = evaluarAlertas(Store.obtenerRegistros(), Store.obtenerConfig());
@@ -151,6 +164,81 @@ var App = {
         ToastUI.mostrar('Sin conexion y sin cache', { tipo: 'error' });
       }
     }
+
+    // Iniciar evaluacion periodica de recordatorios (cada 60s)
+    this._iniciarEvaluadorRecordatorios();
+  },
+
+  _iniciarEvaluadorRecordatorios: function() {
+    if (this._timerRecordatorios) return;
+    var self = this;
+
+    // Pedir permiso de notificaciones
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    this._timerRecordatorios = setInterval(function() {
+      self._evaluarRecordatoriosPendientes();
+    }, 60000);
+    // Evaluar inmediatamente
+    this._evaluarRecordatoriosPendientes();
+  },
+
+  _evaluarRecordatoriosPendientes: function() {
+    var lista = Store._leerJSON('tarealog_recordatorios', []);
+    if (lista.length === 0) return;
+
+    var ahora = Date.now();
+    var vencidos = [];
+    var restantes = [];
+
+    lista.forEach(function(r) {
+      if (new Date(r.fechaDisparo).getTime() <= ahora) {
+        vencidos.push(r);
+      } else {
+        restantes.push(r);
+      }
+    });
+
+    if (vencidos.length === 0) return;
+
+    // Notificar cada vencido
+    vencidos.forEach(function(rec) {
+      var titulo = 'Recordatorio' + (rec.codCar ? ' — Carga ' + rec.codCar : '');
+      var cuerpo = rec.texto || 'Recordatorio pendiente';
+
+      // Web Notification (si permitida y app en background)
+      if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+        new Notification(titulo, { body: cuerpo, icon: './icons/icon-192.png', tag: rec.id });
+      }
+
+      // Toast in-app (si app visible)
+      if (!document.hidden && typeof ToastUI !== 'undefined') {
+        ToastUI.mostrar(titulo + ': ' + cuerpo, {
+          tipo: 'alerta',
+          duracion: 0,
+          accion: { texto: 'Snooze 15m', fn: function() {
+            var nuevaFecha = new Date(Date.now() + 15 * 60000).toISOString();
+            rec.fechaDisparo = nuevaFecha;
+            rec.snoozeCount = (rec.snoozeCount || 0) + 1;
+            var listaActual = Store._leerJSON('tarealog_recordatorios', []);
+            listaActual.push(rec);
+            Store._guardarJSON('tarealog_recordatorios', listaActual);
+          }}
+        });
+      }
+    });
+
+    // Marcar como completados en GAS
+    vencidos.forEach(function(rec) {
+      try {
+        API.post('actualizarEstadoRecordatorio', { id: rec.id, estado: 'COMPLETADO' });
+      } catch(e) {}
+    });
+
+    // Actualizar lista local
+    Store._guardarJSON('tarealog_recordatorios', restantes);
   }
 };
 
