@@ -217,7 +217,7 @@ var VistaConfig = {
     btnExport.textContent = 'Exportar plantillas';
     btnExport.addEventListener('click', function() {
       var plantillas = Store.obtenerPlantillas();
-      var datos = JSON.stringify({ plantillas: plantillas, pie: Store.obtenerPieComun() }, null, 2);
+      var datos = JSON.stringify({ plantillas: plantillas, pieComun: Store.obtenerPieComun() }, null, 2);
       var blob = new Blob([datos], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
@@ -244,7 +244,8 @@ var VistaConfig = {
             var datos = JSON.parse(e.target.result);
             if (datos.plantillas) {
               Store.guardarPlantillas(datos.plantillas);
-              if (datos.pie) Store.guardarPieComun(datos.pie);
+              var pie = datos.pieComun || datos.pie;
+              if (pie) Store.guardarPieComun(pie);
               Feedback.vibrar('corto');
               ToastUI.mostrar(datos.plantillas.length + ' plantillas importadas', { tipo: 'exito' });
               App.renderizar();
