@@ -354,6 +354,7 @@ function accionActualizarProgramadoCampos(body) {
   if (body.campos.fechaProgramada) {
     var f = new Date(body.campos.fechaProgramada);
     if (isNaN(f.getTime())) return respuestaError('fechaProgramada invalida');
+    body.campos.fechaProgramada = fechaLocalISO(f);
   }
 
   var prog = leerProgramadoPorId(body.id);
@@ -438,12 +439,23 @@ function accionGetRecordatorios() {
 
 function accionGuardarRecordatorio(body) {
   if (!body.texto) return respuestaError('texto es requerido');
+  var id = body.id || 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+  // Convertir fechaDisparo a timezone local si viene en UTC
+  var fechaDisparo = body.fechaDisparo || '';
+  if (fechaDisparo) {
+    try { fechaDisparo = fechaLocalISO(new Date(fechaDisparo)); } catch(e) {}
+  }
+
+  // Upsert: eliminar si ya existe (evita duplicados)
+  eliminarRecordatorioGAS(id);
+
   var registro = {
-    id: body.id || 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: id,
     clave: String(body.clave || ''),
     texto: body.texto,
     asunto: body.asunto || '',
-    fechaDisparo: body.fechaDisparo || '',
+    fechaDisparo: fechaDisparo,
     preset: body.preset || '',
     origen: body.origen || 'manual',
     estado: body.estado || 'ACTIVO'
