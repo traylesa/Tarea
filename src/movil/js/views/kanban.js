@@ -67,11 +67,9 @@ var VistaKanban = {
       var conteo = conteos[col.id] || { total: 0 };
 
       var colapsada = !!self._columnasColapsadas[col.id];
-      var chevron = colapsada ? '\u25B6' : '\u25BC';
 
-      html += '<div class="kanban-columna' + (colapsada ? ' kanban-columna-colapsada' : '') + '" data-grupo="' + col.id + '">';
+      html += '<div class="kanban-columna' + (colapsada ? ' collapsed' : '') + '" data-grupo="' + col.id + '">';
       html += '<div class="kanban-columna-header" data-toggle-col="' + col.id + '">';
-      html += '<span class="kanban-col-chevron">' + chevron + '</span>';
       html += '<span>' + col.nombre + '</span>';
       html += '<span class="kanban-columna-count">' + conteo.total + '</span>';
       html += '</div>';

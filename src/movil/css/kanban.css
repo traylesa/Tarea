@@ -279,22 +279,30 @@
   background: var(--primary, #1565C0);
 }
 
-/* === Columna colapsable === */
+/* === Columna colapsable (horizontal, como escritorio) === */
 .kanban-columna-header {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.kanban-col-chevron {
-  font-size: 10px;
-  margin-right: 4px;
+.kanban-columna.collapsed {
+  min-width: 44px;
+  max-width: 44px;
+  width: 44px;
+  scroll-snap-align: none;
 }
 
-.kanban-columna-colapsada {
-  max-height: none;
-  min-width: 75vw;
+.kanban-columna.collapsed .kanban-columna-header {
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  padding: 12px 4px;
+  gap: 8px;
+  border-radius: 0 0 var(--radius, 8px) var(--radius, 8px);
 }
+
+.kanban-columna.collapsed .kanban-columna-body,
+.kanban-columna.collapsed .kanban-tarjeta { display: none; }
 
 /* === Long-press visual feedback === */
 .kanban-tarjeta:active {
