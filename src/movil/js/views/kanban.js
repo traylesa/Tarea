@@ -349,62 +349,121 @@ var VistaKanban = {
       return;
     }
 
-    var transp = reg.nombreTransportista || reg.interlocutor || '---';
+    var self = this;
+    var transp = reg.nombreTransportista || '---';
+    var interlocutor = reg.interlocutor || '';
     var estado = reg.estado || '';
     var fase = reg.fase || '';
+    var clave = codCar !== '---' ? codCar : reg.threadId;
 
-    var fechaStr = '';
+    // Fecha completa + relativa
+    var fechaCompleta = '';
+    var fechaRelativa = '';
     if (reg.fechaCorreo) {
+      try { fechaCompleta = new Date(reg.fechaCorreo).toLocaleString('es-ES'); } catch(e) { fechaCompleta = reg.fechaCorreo; }
       var diff = Date.now() - new Date(reg.fechaCorreo).getTime();
       var horas = Math.floor(diff / 3600000);
-      fechaStr = horas < 1 ? '<1h' : horas < 24 ? horas + 'h' : Math.floor(horas / 24) + 'd';
+      fechaRelativa = horas < 1 ? '<1h' : horas < 24 ? horas + 'h' : Math.floor(horas / 24) + 'd';
     }
 
-    // Indicadores existentes
+    // Chips: estado + fase + bandeja + tipo
+    var chipsHtml = '<div class="kd-chips">';
+    if (estado) chipsHtml += '<span class="kd-chip kd-chip-estado" data-accion="estado">' + estado + ' \u25BE</span>';
+    if (fase) chipsHtml += '<span class="kd-chip kd-chip-fase" data-accion="fase">' + fase + ' \u25BE</span>';
+    if (reg.bandeja && reg.bandeja !== 'INBOX') chipsHtml += '<span class="kd-chip kd-chip-bandeja">' + reg.bandeja + '</span>';
+    if (reg.tipoTarea) chipsHtml += '<span class="kd-chip kd-chip-tipo">' + reg.tipoTarea + '</span>';
+    chipsHtml += '</div>';
+
+    // Grid info secundaria
+    var gridHtml = '<div class="kd-grid">';
+    if (interlocutor && interlocutor !== transp) {
+      gridHtml += '<span class="kd-label">Interlocutor</span><span class="kd-value">' + interlocutor + '</span>';
+    }
+    if (fechaCompleta) {
+      gridHtml += '<span class="kd-label">Correo</span><span class="kd-value">' + fechaCompleta + ' (' + fechaRelativa + ')</span>';
+    }
+    if (reg.vinculacion) gridHtml += '<span class="kd-label">Vinculaci\u00f3n</span><span class="kd-value">' + reg.vinculacion + '</span>';
+    if (reg.zona) gridHtml += '<span class="kd-label">Zona</span><span class="kd-value">' + reg.zona + (reg.zDest ? ' \u2192 ' + reg.zDest : '') + '</span>';
+    if (reg.referencia) gridHtml += '<span class="kd-label">Referencia</span><span class="kd-value">' + reg.referencia + '</span>';
+    if (reg.mensajesEnHilo && Number(reg.mensajesEnHilo) > 1) {
+      gridHtml += '<span class="kd-label">Mensajes</span><span class="kd-value">' + reg.mensajesEnHilo + ' en hilo</span>';
+    }
+    gridHtml += '</div>';
+
+    // Fechas logisticas (fCarga, fEntrega)
+    var fechasHtml = '';
+    if (reg.fCarga || reg.fEntrega) {
+      fechasHtml = '<div class="kd-fechas">';
+      if (reg.fCarga) {
+        fechasHtml += '<div class="kd-fecha-item"><div class="kd-fecha-label">Carga</div>' +
+          '<div class="kd-fecha-valor">' + reg.fCarga + (reg.hCarga ? ' ' + reg.hCarga : '') + '</div></div>';
+      }
+      if (reg.fEntrega) {
+        fechasHtml += '<div class="kd-fecha-item"><div class="kd-fecha-label">Entrega</div>' +
+          '<div class="kd-fecha-valor">' + reg.fEntrega + (reg.hEntrega ? ' ' + reg.hEntrega : '') + '</div></div>';
+      }
+      fechasHtml += '</div>';
+    }
+
+    // Indicadores
     var indHtml = '';
     var almacenNotas = null;
     try { almacenNotas = JSON.parse(localStorage.getItem('tarealog_notas')); } catch(e) {}
     if (almacenNotas && typeof contarNotas === 'function') {
       var nNotas = contarNotas(codCar, almacenNotas);
-      if (nNotas > 0) {
-        indHtml += '<span style="cursor:pointer;margin-right:8px" data-ind="notas">\uD83D\uDCDD' + nNotas + '</span>';
-      }
+      if (nNotas > 0) indHtml += '<span class="kd-indicador" data-ind="notas">\uD83D\uDCDD Notas (' + nNotas + ')</span>';
     }
     var recordatorios = [];
     try { recordatorios = JSON.parse(localStorage.getItem('tarealog_recordatorios')) || []; } catch(e) {}
     var recActivo = recordatorios.find(function(r) { return String(r.codCar) === String(codCar); });
     if (recActivo) {
       var motivo = recActivo.motivo || recActivo.descripcion || 'Recordatorio';
-      indHtml += '<span style="cursor:pointer;margin-right:8px" data-ind="record" title="' + motivo + '">\u23F0 ' + motivo + '</span>';
+      indHtml += '<span class="kd-indicador" data-ind="record">\u23F0 ' + motivo + '</span>';
+    }
+    var programados = [];
+    try { programados = JSON.parse(localStorage.getItem('tarealog_programados')) || []; } catch(e) {}
+    var progActivo = programados.find(function(p) { return p.codCar == clave || p.threadId == reg.threadId; });
+    if (progActivo) {
+      indHtml += '<span class="kd-indicador" data-ind="programado">\uD83D\uDCC5 Programado</span>';
     }
 
+    // Construir contenido
     var contenido = document.createElement('div');
-    contenido.style.padding = '0 4px 8px';
+    contenido.className = 'kd-contenido';
     contenido.innerHTML =
-      '<div style="font-family:monospace;font-size:20px;font-weight:bold;margin-bottom:8px">' + codCar + '</div>' +
-      '<div style="font-size:13px;color:#666;margin-bottom:4px">Transportista: <strong>' + transp + '</strong></div>' +
-      '<div style="font-size:13px;color:#666;margin-bottom:4px">Estado: <strong>' + estado + '</strong> | Fase: <strong>' + fase + '</strong></div>' +
-      (fechaStr ? '<div style="font-size:12px;color:#999;margin-bottom:8px">Hace: ' + fechaStr + '</div>' : '') +
-      (indHtml ? '<div style="font-size:13px;margin-bottom:8px">' + indHtml + '</div>' : '');
+      '<div class="kd-header"><span class="kd-codcar">' + codCar + '</span><span class="kd-transp">' + transp + '</span></div>' +
+      chipsHtml +
+      (reg.asunto ? '<div class="kd-asunto">' + reg.asunto + '</div>' : '') +
+      gridHtml +
+      fechasHtml +
+      (indHtml ? '<div class="kd-indicadores">' + indHtml + '</div>' : '') +
+      '<div class="kd-separador"></div>' +
+      '<div class="kd-acciones">' +
+        '<button class="btn btn-outline" data-act="responder">\u2709 Responder</button>' +
+        '<button class="btn btn-outline" data-act="nota">\uD83D\uDCDD +Nota</button>' +
+        '<button class="btn btn-outline" data-act="record">\u23F0 +Record.</button>' +
+        '<button class="btn btn-outline" data-act="detalle">Ver detalle \u2192</button>' +
+      '</div>';
 
-    // Indicadores clicables
-    var indNotas = contenido.querySelector('[data-ind="notas"]');
-    if (indNotas) indNotas.addEventListener('click', function() { App.navegar('detalle/' + codCar); });
-    var indRec = contenido.querySelector('[data-ind="record"]');
-    if (indRec) indRec.addEventListener('click', function() { App.navegar('detalle/' + codCar); });
+    // Event delegation para todo el contenido
+    contenido.addEventListener('click', function(e) {
+      var target = e.target.closest('[data-accion],[data-ind],[data-act]');
+      if (!target) return;
+      var accion = target.dataset.accion;
+      var ind = target.dataset.ind;
+      var act = target.dataset.act;
 
-    var opciones = [
-      { texto: '\u2709 Responder', accion: function() { VistaDetalle._abrirEditor(reg); } },
-      { texto: '\uD83D\uDCDD +Nota', accion: function() { VistaDetalle._agregarNota(codCar); } },
-      { texto: '\u23F0 +Record.', accion: function() { VistaDetalle._crearRecordatorio(reg); } },
-      { texto: 'Cambiar fase', accion: function() { VistaDetalle._abrirCambioFase(reg); } },
-      { texto: 'Cambiar estado', accion: function() { VistaDetalle._abrirCambioEstado(reg); } },
-      { texto: 'Ver detalle completo \u2192', accion: function() { App.navegar('detalle/' + codCar); } },
-      { texto: 'Cerrar', color: '#999', accion: function() {} }
-    ];
+      if (accion === 'estado') { BottomSheet.cerrar(); VistaDetalle._abrirCambioEstado(reg); }
+      else if (accion === 'fase') { BottomSheet.cerrar(); VistaDetalle._abrirCambioFase(reg); }
+      else if (ind === 'notas' || act === 'nota') { BottomSheet.cerrar(); VistaDetalle._agregarNota(codCar); }
+      else if (ind === 'record' || act === 'record') { BottomSheet.cerrar(); VistaDetalle._crearRecordatorio(reg); }
+      else if (ind === 'programado') { BottomSheet.cerrar(); App.navegar('detalle/' + codCar); }
+      else if (act === 'responder') { BottomSheet.cerrar(); VistaDetalle._abrirEditor(reg); }
+      else if (act === 'detalle') { BottomSheet.cerrar(); App.navegar('detalle/' + codCar); }
+    });
 
     if (typeof BottomSheet !== 'undefined') {
-      BottomSheet.abrir({ titulo: 'Detalle carga', contenido: contenido, opciones: opciones });
+      BottomSheet.abrir({ titulo: '', contenido: contenido, opciones: [] });
     } else {
       App.navegar('detalle/' + codCar);
     }

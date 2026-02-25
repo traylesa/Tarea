@@ -342,6 +342,176 @@
   margin: 4px;
 }
 
+/* === Detalle carga BottomSheet === */
+.kd-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.kd-codcar {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text, #1a1a1a);
+}
+
+.kd-transp {
+  font-size: 13px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kd-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s;
+}
+
+.kd-chip:active { opacity: 0.7; }
+
+.kd-chip-estado {
+  background: var(--estado-bg, #e3f2fd);
+  color: var(--estado-color, #1565c0);
+  border-color: var(--estado-color, #1565c0);
+}
+
+.kd-chip-fase {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border-color: #ce93d8;
+}
+
+.kd-chip-bandeja {
+  background: #fff3e0;
+  color: #e65100;
+  border-color: #ffcc80;
+  cursor: default;
+}
+
+.kd-chip-tipo {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+  cursor: default;
+}
+
+.kd-asunto {
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.kd-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.kd-label {
+  color: #999;
+  white-space: nowrap;
+}
+
+.kd-value {
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-fechas {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.kd-fecha-item {
+  flex: 1;
+  text-align: center;
+}
+
+.kd-fecha-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 0.5px;
+}
+
+.kd-fecha-valor {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 2px;
+}
+
+.kd-indicadores {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kd-indicador {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #f5f5f5;
+  color: #555;
+  cursor: pointer;
+}
+
+.kd-indicador:active { background: #e0e0e0; }
+
+.kd-acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.kd-acciones .btn {
+  font-size: 13px;
+  padding: 10px 8px;
+  text-align: center;
+  justify-content: center;
+}
+
+.kd-separador {
+  height: 1px;
+  background: #eee;
+  margin: 8px 0;
+}
+
 /* === Long-press visual feedback === */
 .kanban-tarjeta:active {
   cursor: grabbing;
