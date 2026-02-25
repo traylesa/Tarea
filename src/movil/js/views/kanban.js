@@ -2,11 +2,8 @@
 'use strict';
 
 var VistaKanban = {
-  _mostrarEspera: true,
-  _mostrarVacio: true,
-  _mostrarDocumentado: false,
-  _mostrarNada: true,
-  _mostrarCerrado: true,
+  // Columnas/estados ocultos (true = oculto). Por defecto solo fases core visibles
+  _ocultos: { nada: true, cerrado: true, espera: true, vacio: true, documentado: true },
   _sortableInstances: [],
   _columnasColapsadas: {},
   _refreshing: false,
@@ -34,13 +31,25 @@ var VistaKanban = {
 
     var html = '<div class="kanban-controls">';
     html += '<h2 style="margin:0;font-size:18px">Tablero</h2>';
-    html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-left:auto">';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-cerrado"' + (this._mostrarCerrado ? ' checked' : '') + '> Cerrado</label>';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-vacio"' + (this._mostrarVacio ? ' checked' : '') + '> Vacio</label>';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-documentado"' + (this._mostrarDocumentado ? ' checked' : '') + '> Doc</label>';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-nada"' + (this._mostrarNada ? ' checked' : '') + '> Nada</label>';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-espera"' + (this._mostrarEspera ? ' checked' : '') + '> Espera</label>';
     html += '</div>';
+
+    // Chips toggle scrollables
+    var ocultos = this._ocultos;
+    var chips = [
+      { id: 'nada', label: 'Nada' },
+      { id: 'cerrado', label: 'Cerrado' },
+      { id: 'espera', label: 'Espera' },
+      { id: 'carga', label: 'Carga' },
+      { id: 'en_ruta', label: 'En Ruta' },
+      { id: 'descarga', label: 'Descarga' },
+      { id: 'incidencia', label: 'Incidencia' },
+      { id: 'vacio', label: 'Vacio' },
+      { id: 'documentado', label: 'Doc' }
+    ];
+    html += '<div class="kanban-chips-scroll">';
+    chips.forEach(function(c) {
+      html += '<button class="kanban-chip-toggle' + (!ocultos[c.id] ? ' activo' : '') + '" data-chip="' + c.id + '">' + c.label + '</button>';
+    });
     html += '</div>';
 
     html += '<div class="kanban-filtros-movil">';
@@ -58,9 +67,7 @@ var VistaKanban = {
     var self = this;
     var columnasVisibles = [];
     COLUMNAS_KANBAN.forEach(function(col) {
-      if (col.id === 'espera' && !self._mostrarEspera) return;
-      if (col.id === 'vacio' && !self._mostrarVacio) return;
-      if (col.id === 'documentado' && !self._mostrarDocumentado) return;
+      if (self._ocultos[col.id]) return;
       columnasVisibles.push(col);
 
       var regsCol = agrupados[col.id] || [];
@@ -266,50 +273,14 @@ var VistaKanban = {
   _inicializarEventos: function() {
     var self = this;
 
-    var chkEspera = document.getElementById('chk-m-espera');
-    if (chkEspera) {
-      chkEspera.addEventListener('change', function() {
-        self._mostrarEspera = chkEspera.checked;
-        var contenedor = document.getElementById('app-contenido');
-        if (contenedor) self.renderizar(contenedor);
+    // Chips toggle columnas/estados
+    document.querySelectorAll('.kanban-chip-toggle').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.dataset.chip;
+        self._ocultos[id] = !self._ocultos[id];
+        self._rerenderizar();
       });
-    }
-
-    var chkVacio = document.getElementById('chk-m-vacio');
-    if (chkVacio) {
-      chkVacio.addEventListener('change', function() {
-        self._mostrarVacio = chkVacio.checked;
-        var contenedor = document.getElementById('app-contenido');
-        if (contenedor) self.renderizar(contenedor);
-      });
-    }
-
-    var chkNada = document.getElementById('chk-m-nada');
-    if (chkNada) {
-      chkNada.addEventListener('change', function() {
-        self._mostrarNada = chkNada.checked;
-        var contenedor = document.getElementById('app-contenido');
-        if (contenedor) self.renderizar(contenedor);
-      });
-    }
-
-    var chkCerrado = document.getElementById('chk-m-cerrado');
-    if (chkCerrado) {
-      chkCerrado.addEventListener('change', function() {
-        self._mostrarCerrado = chkCerrado.checked;
-        var contenedor = document.getElementById('app-contenido');
-        if (contenedor) self.renderizar(contenedor);
-      });
-    }
-
-    var chkDoc = document.getElementById('chk-m-documentado');
-    if (chkDoc) {
-      chkDoc.addEventListener('change', function() {
-        self._mostrarDocumentado = chkDoc.checked;
-        var contenedor = document.getElementById('app-contenido');
-        if (contenedor) self.renderizar(contenedor);
-      });
-    }
+    });
 
     // Busqueda y filtros
     var inputBusqueda = document.getElementById('kanban-m-busqueda');
@@ -716,11 +687,11 @@ var VistaKanban = {
   _aplicarFiltros: function(regs) {
     var resultado = regs;
 
-    // Ocultar estados NADA/CERRADO
-    if (!this._mostrarNada) {
+    // Ocultar estados NADA/CERRADO segun chips
+    if (this._ocultos.nada) {
       resultado = resultado.filter(function(r) { return r.estado !== 'NADA'; });
     }
-    if (!this._mostrarCerrado) {
+    if (this._ocultos.cerrado) {
       resultado = resultado.filter(function(r) { return r.estado !== 'CERRADO'; });
     }
 
