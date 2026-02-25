@@ -369,7 +369,9 @@ function accionEnviarProgramadoAhora(body) {
 
   var prog = leerProgramadoPorId(body.id);
   if (!prog) return respuestaError('Programado no encontrado: ' + body.id);
-  if (prog.estado !== 'PENDIENTE') return respuestaError('Solo se pueden enviar programados PENDIENTE');
+  if (prog.estado !== 'PENDIENTE' && prog.estado !== 'ERROR') {
+    return respuestaError('Solo se pueden enviar programados PENDIENTE o ERROR');
+  }
 
   var emailsPropios = obtenerEmailsPropios();
   var destinatarios = {
