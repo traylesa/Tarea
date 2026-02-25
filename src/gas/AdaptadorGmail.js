@@ -73,13 +73,22 @@ function enviarRespuesta(threadId, asunto, cuerpo, destinatarios, emailsPropios)
     var mensajes = thread.getMessages();
     var asuntoFinal = _asegurarPrefijo(asunto || thread.getFirstMessageSubject());
 
-    // FASE 1: Interlocutor = ultimo remitente que NO sea yo (cuenta ni alias)
+    // FASE 1: Interlocutor — usar destinatarios.to explicito si existe,
+    // si no, buscar ultimo remitente que NO sea yo en el thread
     var interlocutor = '';
-    for (var i = mensajes.length - 1; i >= 0; i--) {
-      var fromEmail = _extraerEmail(mensajes[i].getFrom());
-      if (fromEmail && !propios[fromEmail]) {
-        interlocutor = fromEmail;
-        break;
+    if (destinatarios && destinatarios.to) {
+      var toExplicitos = _parsearEmails(destinatarios.to).filter(function(e) {
+        return !propios[e];
+      });
+      if (toExplicitos.length > 0) interlocutor = toExplicitos[0];
+    }
+    if (!interlocutor) {
+      for (var i = mensajes.length - 1; i >= 0; i--) {
+        var fromEmail = _extraerEmail(mensajes[i].getFrom());
+        if (fromEmail && !propios[fromEmail]) {
+          interlocutor = fromEmail;
+          break;
+        }
       }
     }
     if (!interlocutor) {
@@ -88,7 +97,7 @@ function enviarRespuesta(threadId, asunto, cuerpo, destinatarios, emailsPropios)
     Logger.log('FASE 1 - Interlocutor (TO): ' + interlocutor);
     Logger.log('Emails propios: ' + Object.keys(propios).join(', '));
 
-    // FASE 2: Recopilar TODOS los emails de los registros
+    // FASE 2: Recopilar TODOS los emails de los registros para CC
     var todosEmails = [];
     if (destinatarios) {
       todosEmails = [].concat(
