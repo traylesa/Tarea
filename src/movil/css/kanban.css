@@ -301,8 +301,16 @@
   border-radius: 0 0 var(--radius, 8px) var(--radius, 8px);
 }
 
-.kanban-columna.collapsed .kanban-columna-body,
 .kanban-columna.collapsed .kanban-tarjeta { display: none; }
+
+.kanban-columna.collapsed .kanban-drop-zone {
+  min-height: 48px;
+  flex: 1;
+  border: 2px dashed rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.03);
+  border-radius: 4px;
+  margin: 4px;
+}
 
 /* === Long-press visual feedback === */
 .kanban-tarjeta:active {

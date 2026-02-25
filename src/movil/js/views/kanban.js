@@ -35,11 +35,11 @@ var VistaKanban = {
     var html = '<div class="kanban-controls">';
     html += '<h2 style="margin:0;font-size:18px">Tablero</h2>';
     html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-left:auto">';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-espera"' + (this._mostrarEspera ? ' checked' : '') + '> Espera</label>';
+    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-cerrado"' + (this._mostrarCerrado ? ' checked' : '') + '> Cerrado</label>';
     html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-vacio"' + (this._mostrarVacio ? ' checked' : '') + '> Vacio</label>';
     html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-documentado"' + (this._mostrarDocumentado ? ' checked' : '') + '> Doc</label>';
     html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-nada"' + (this._mostrarNada ? ' checked' : '') + '> Nada</label>';
-    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-cerrado"' + (this._mostrarCerrado ? ' checked' : '') + '> Cerrado</label>';
+    html += '<label style="display:flex;align-items:center;gap:3px"><input type="checkbox" id="chk-m-espera"' + (this._mostrarEspera ? ' checked' : '') + '> Espera</label>';
     html += '</div>';
     html += '</div>';
 
@@ -74,7 +74,9 @@ var VistaKanban = {
       html += '<span class="kanban-columna-count">' + conteo.total + '</span>';
       html += '</div>';
 
-      if (!colapsada) {
+      if (colapsada) {
+        html += '<div class="kanban-columna-body kanban-drop kanban-drop-zone" data-columna="' + col.id + '"></div>';
+      } else {
         html += '<div class="kanban-columna-body kanban-drop" data-columna="' + col.id + '">';
         if (regsCol.length === 0) {
           html += '<div class="kanban-placeholder">Arrastra aqui</div>';
