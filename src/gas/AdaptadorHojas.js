@@ -156,7 +156,7 @@ function obtenerIdsYaProcesados() {
 function guardarHilo(threadId, codCar) {
   const hoja = obtenerHoja(HOJA_HILOS);
   const datos = hoja.getDataRange().getValues();
-  const ahora = new Date().toISOString();
+  const ahora = ahoraLocalISO();
 
   for (var i = 1; i < datos.length; i++) {
     if (datos[i][0] === threadId) {

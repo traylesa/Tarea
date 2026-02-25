@@ -114,3 +114,17 @@ function estaEnHorarioLaboral() {
   if (horario.dias.indexOf(dia) === -1) return false;
   return hora >= horario.horaInicio && hora < horario.horaFin;
 }
+
+// Timezone del proyecto (debe coincidir con appsscript.json)
+var TIMEZONE = 'Europe/Madrid';
+
+// Fecha/hora local como ISO string con offset (ej: "2026-02-25T14:30:00+01:00")
+// Usar SIEMPRE en vez de new Date().toISOString() para timestamps visibles al usuario
+function ahoraLocalISO() {
+  return Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+// Convertir cualquier Date a ISO local con offset
+function fechaLocalISO(date) {
+  return Utilities.formatDate(date, TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}

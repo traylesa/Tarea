@@ -81,7 +81,7 @@ function processMessage(message, threadManager, erpReader) {
     interlocutor: calcularInterlocutor(message),
     cuerpo: message.body || '',
     bandeja: message.bandeja || '',
-    procesadoAt: new Date().toISOString()
+    procesadoAt: typeof ahoraLocalISO === 'function' ? ahoraLocalISO() : new Date().toISOString()
   };
 }
 

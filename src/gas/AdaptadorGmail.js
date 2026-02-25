@@ -54,7 +54,7 @@ function construirMensaje(gmailMessage) {
     bcc: gmailMessage.getBcc() || '',
     subject: gmailMessage.getSubject(),
     body: gmailMessage.getPlainBody(),
-    date: gmailMessage.getDate().toISOString(),
+    date: fechaLocalISO(gmailMessage.getDate()),
     attachments: gmailMessage.getAttachments().map(a => a.getName()),
     bandeja: bandeja
   };

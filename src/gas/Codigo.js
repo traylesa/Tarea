@@ -307,12 +307,12 @@ function accionProgramarEnvio(body) {
     cuerpo: body.cuerpo,
     cc: body.cc || '',
     bcc: body.bcc || '',
-    fechaProgramada: fechaProg.toISOString(),
+    fechaProgramada: fechaLocalISO(fechaProg),
     estado: 'PENDIENTE',
     fechaEnvio: '',
     errorDetalle: '',
     creadoPor: obtenerEmailPropio(),
-    creadoAt: new Date().toISOString()
+    creadoAt: ahoraLocalISO()
   };
 
   guardarProgramado(registro);
@@ -358,9 +358,11 @@ function accionActualizarProgramadoCampos(body) {
 
   var prog = leerProgramadoPorId(body.id);
   if (!prog) return respuestaError('Programado no encontrado: ' + body.id);
-  if (prog.estado !== 'PENDIENTE') return respuestaError('Solo se pueden editar envios PENDIENTE');
+  if (prog.estado !== 'PENDIENTE' && prog.estado !== 'ERROR') return respuestaError('Solo se pueden editar envios PENDIENTE o ERROR');
 
-  actualizarProgramadoPorId(body.id, body.campos);
+  var campos = body.campos;
+  if (prog.estado === 'ERROR') campos.estado = 'PENDIENTE';
+  actualizarProgramadoPorId(body.id, campos);
   return respuestaJson({ ok: true });
 }
 
@@ -383,7 +385,7 @@ function accionEnviarProgramadoAhora(body) {
   try {
     var resultado = enviarRespuesta(prog.threadId, prog.asunto, prog.cuerpo, destinatarios, emailsPropios);
     if (resultado) {
-      actualizarProgramadoPorId(body.id, { estado: 'ENVIADO', fechaEnvio: new Date().toISOString() });
+      actualizarProgramadoPorId(body.id, { estado: 'ENVIADO', fechaEnvio: ahoraLocalISO() });
       return respuestaJson({ ok: true });
     }
     actualizarProgramadoPorId(body.id, { estado: 'ERROR', errorDetalle: 'enviarRespuesta retorno null' });
@@ -417,7 +419,7 @@ function accionGuardarNota(body) {
     clave: String(body.clave),
     id: body.id || 'nota_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     texto: body.texto,
-    fechaCreacion: body.fechaCreacion || new Date().toISOString(),
+    fechaCreacion: body.fechaCreacion || ahoraLocalISO(),
     tipo: body.tipo || 'CARGA'
   };
   guardarNota(registro);
@@ -474,7 +476,7 @@ function accionRegistrarHistorial(body) {
     clave: String(body.clave || ''),
     tipo: body.tipo,
     descripcion: body.descripcion || '',
-    fechaCreacion: body.fechaCreacion || new Date().toISOString()
+    fechaCreacion: body.fechaCreacion || ahoraLocalISO()
   };
   guardarEntradaHistorial(registro);
   return respuestaJson({ ok: true, id: registro.id });
@@ -561,7 +563,7 @@ function _procesarColaProgramados() {
 
         if (resultado) {
           actualizarProgramado(prog._fila, 'estado', 'ENVIADO');
-          actualizarProgramado(prog._fila, 'fechaEnvio', new Date().toISOString());
+          actualizarProgramado(prog._fila, 'fechaEnvio', ahoraLocalISO());
         } else {
           actualizarProgramado(prog._fila, 'estado', 'ERROR');
           actualizarProgramado(prog._fila, 'errorDetalle', 'enviarRespuesta retorno null');
