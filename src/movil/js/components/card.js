@@ -82,7 +82,19 @@ var CardUI = {
     var menu = document.createElement('button');
     menu.className = 'card-menu';
     menu.textContent = '\u22EE';
-    menu.addEventListener('click', function(e) { e.stopPropagation(); });
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (typeof BottomSheet !== 'undefined' && typeof VistaDetalle !== 'undefined') {
+        BottomSheet.abrir({
+          titulo: carga.codCar || 'Acciones',
+          opciones: [
+            { texto: 'Cambiar fase', accion: function() { VistaDetalle._abrirCambioFase(carga); } },
+            { texto: 'Cambiar estado', accion: function() { VistaDetalle._abrirCambioEstado(carga); } },
+            { texto: 'Ver detalle', accion: function() { App.navegar('detalle/' + carga.codCar); } }
+          ]
+        });
+      }
+    });
     body.appendChild(menu);
 
     el.appendChild(body);

@@ -397,6 +397,7 @@ var VistaKanban = {
       { texto: '\uD83D\uDCDD +Nota', accion: function() { VistaDetalle._agregarNota(codCar); } },
       { texto: '\u23F0 +Record.', accion: function() { VistaDetalle._crearRecordatorio(reg); } },
       { texto: 'Cambiar fase', accion: function() { VistaDetalle._abrirCambioFase(reg); } },
+      { texto: 'Cambiar estado', accion: function() { VistaDetalle._abrirCambioEstado(reg); } },
       { texto: 'Ver detalle completo \u2192', accion: function() { App.navegar('detalle/' + codCar); } },
       { texto: 'Cerrar', color: '#999', accion: function() {} }
     ];
@@ -594,6 +595,17 @@ var VistaKanban = {
             }
           }
         });
+      });
+    }
+
+    // Cambiar estado
+    var messageId = tarjeta.dataset.messageId;
+    var regs = Store.obtenerRegistros();
+    var regLP = regs.find(function(r) { return r.messageId === messageId; });
+    if (regLP) {
+      opciones.push({
+        texto: 'Cambiar estado',
+        accion: function() { VistaDetalle._abrirCambioEstado(regLP); }
       });
     }
 

@@ -233,6 +233,15 @@ var VistaDetalle = {
       bottomBar.appendChild(btnFase);
     }
 
+    // Boton Estado siempre presente
+    var btnEstado = document.createElement('button');
+    btnEstado.className = 'btn btn-outline btn-flex';
+    btnEstado.textContent = 'Estado';
+    btnEstado.addEventListener('click', function() {
+      VistaDetalle._abrirCambioEstado(principal);
+    });
+    bottomBar.appendChild(btnEstado);
+
     // Boton + Nota siempre presente
     var btnNota = document.createElement('button');
     btnNota.className = 'btn btn-outline btn-flex';
@@ -284,6 +293,49 @@ var VistaDetalle = {
 
     padre.appendChild(header);
     padre.appendChild(contenido);
+  },
+
+  _abrirCambioEstado: function(registro) {
+    var estados = typeof getDefaultEstados === 'function'
+      ? getDefaultEstados().filter(function(e) { return e.activo; })
+      : [];
+
+    BottomSheet.abrir({
+      titulo: 'Cambiar estado',
+      opciones: estados.map(function(e) {
+        return {
+          texto: e.icono + ' ' + e.nombre,
+          accion: function() {
+            VistaDetalle._ejecutarCambioEstado(registro, e.codigo);
+          }
+        };
+      })
+    });
+  },
+
+  _ejecutarCambioEstado: async function(registro, nuevoEstado) {
+    try {
+      await API.post('actualizarCampoPorThread', {
+        threadId: registro.threadId, campo: 'estado', valor: nuevoEstado
+      });
+
+      var todos = Store.obtenerRegistros();
+      todos.forEach(function(r) {
+        if (r.threadId === registro.threadId) r.estado = nuevoEstado;
+      });
+      Store.guardarRegistros(todos);
+
+      if (typeof evaluarAlertas === 'function') {
+        Store.guardarAlertas(evaluarAlertas(todos, Store.obtenerConfig()));
+      }
+
+      Feedback.vibrar('corto');
+      ToastUI.mostrar('Estado \u2192 ' + nuevoEstado, { tipo: 'exito' });
+      App.renderizar();
+    } catch (e) {
+      Feedback.vibrar('error');
+      ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
+    }
   },
 
   _abrirCambioFase: function(registro) {
@@ -679,6 +731,9 @@ var VistaDetalle = {
       }},
       { texto: 'Cambiar fase', accion: function() {
         VistaDetalle._abrirCambioFase(registro);
+      }},
+      { texto: 'Cambiar estado', accion: function() {
+        VistaDetalle._abrirCambioEstado(registro);
       }},
       { texto: 'Recordatorio', accion: function() {
         VistaDetalle._crearRecordatorio(registro);
