@@ -662,10 +662,51 @@ var VistaDetalle = {
     textarea.placeholder = 'Escribe tu respuesta...';
     cuerpoDiv.appendChild(textarea);
 
+    // Interpolar plantilla al seleccionar
+    selPlantilla.addEventListener('change', function() {
+      var pl = plantillas.find(function(p) { return p.id === selPlantilla.value; });
+      if (pl && typeof interpolar === 'function') {
+        textarea.value = interpolar(pl.cuerpo || pl.texto || '', {
+          codCar: registro.codCar, transportista: registro.nombreTransportista,
+          fase: registro.fase, interlocutor: registro.interlocutor
+        });
+      } else if (!selPlantilla.value) {
+        textarea.value = '';
+      }
+    });
+
     // Pie comun
     var pie = document.createElement('div');
     pie.className = 'editor-pie';
     pie.innerHTML = Store.obtenerPieComun() || '<em>Sin firma configurada</em>';
+
+    // Toggle programar envio
+    var programarDiv = document.createElement('div');
+    programarDiv.className = 'editor-programar';
+    var chkProgramar = document.createElement('input');
+    chkProgramar.type = 'checkbox';
+    chkProgramar.id = 'editor-chk-programar';
+    var lblProgramar = document.createElement('label');
+    lblProgramar.setAttribute('for', 'editor-chk-programar');
+    lblProgramar.textContent = 'Programar env\u00edo';
+    programarDiv.appendChild(chkProgramar);
+    programarDiv.appendChild(lblProgramar);
+
+    var fechaDiv = document.createElement('div');
+    fechaDiv.className = 'editor-programar-fecha';
+    fechaDiv.style.display = 'none';
+    var inputFechaProg = document.createElement('input');
+    inputFechaProg.type = 'datetime-local';
+    var manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    manana.setHours(8, 0, 0, 0);
+    inputFechaProg.value = manana.toISOString().slice(0, 16);
+    fechaDiv.appendChild(inputFechaProg);
+
+    chkProgramar.addEventListener('change', function() {
+      fechaDiv.style.display = chkProgramar.checked ? 'block' : 'none';
+      btnEnviar.textContent = chkProgramar.checked ? 'Programar env\u00edo' : 'Enviar ahora';
+    });
 
     var acciones = document.createElement('div');
     acciones.className = 'editor-acciones';
@@ -675,10 +716,20 @@ var VistaDetalle = {
     btnEnviar.textContent = 'Enviar ahora';
     btnEnviar.style.width = '100%';
     btnEnviar.addEventListener('click', async function() {
+      var esProgramado = chkProgramar.checked;
+
+      if (esProgramado) {
+        var fechaSel = new Date(inputFechaProg.value);
+        if (!inputFechaProg.value || fechaSel.getTime() <= Date.now()) {
+          ToastUI.mostrar('Selecciona una fecha futura', { tipo: 'error' });
+          return;
+        }
+      }
+
       btnEnviar.disabled = true;
-      btnEnviar.textContent = 'Enviando...';
+      btnEnviar.textContent = esProgramado ? 'Programando...' : 'Enviando...';
       try {
-        await API.post('enviarRespuesta', {
+        var payload = {
           destinatarios: [{
             email: registro.interlocutor,
             threadId: registro.threadId,
@@ -688,15 +739,25 @@ var VistaDetalle = {
             cc: registro.cc || '',
             cco: ''
           }]
-        });
+        };
+
+        if (esProgramado) {
+          payload.programado = true;
+          payload.fechaProgramada = new Date(inputFechaProg.value).toISOString();
+        }
+
+        await API.post('enviarRespuesta', payload);
         Feedback.vibrar('doble');
-        ToastUI.mostrar('Email enviado', { tipo: 'exito' });
+        var msgExito = esProgramado
+          ? 'Email programado para ' + new Date(inputFechaProg.value).toLocaleString('es-ES')
+          : 'Email enviado';
+        ToastUI.mostrar(msgExito, { tipo: 'exito' });
         overlay.remove();
       } catch (e) {
         Feedback.vibrar('error');
         ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
         btnEnviar.disabled = false;
-        btnEnviar.textContent = 'Enviar ahora';
+        btnEnviar.textContent = esProgramado ? 'Programar env\u00edo' : 'Enviar ahora';
       }
     });
 
@@ -705,6 +766,8 @@ var VistaDetalle = {
     overlay.appendChild(toolbar);
     overlay.appendChild(cuerpoDiv);
     overlay.appendChild(pie);
+    overlay.appendChild(programarDiv);
+    overlay.appendChild(fechaDiv);
     overlay.appendChild(acciones);
     document.body.appendChild(overlay);
   },
