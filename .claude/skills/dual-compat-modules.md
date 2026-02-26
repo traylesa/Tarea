@@ -2,18 +2,21 @@
 
 **Proposito**: Patron para escribir modulos de logica pura que funcionan tanto en Google Apps Script (sin module system) como en Node.js (para tests Jest).
 
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
 ## Contexto del Proyecto
 
-TareaLog tiene 827 tests Jest (37 suites) que prueban logica pura. El reto: GAS no tiene `require/import`, y Jest necesita `module.exports`. La solucion es el patron dual-compat usado en TODOS los modulos de logica pura.
+TareaLog tiene **878 tests Jest (38 suites)** que prueban logica pura. El reto: GAS no tiene `require/import`, y Jest necesita `module.exports`. La solucion es el patron dual-compat usado en TODOS los modulos de logica pura.
 
-### Archivos que Usan Este Patron
+### Archivos que Usan Este Patron (22 modulos)
 
 | Archivo Extension | Test Jest |
 |---|---|
+| `constants.js` | `test_constants.js` |
+| `date-utils.js` | `test_date_utils.js` |
+| `config.js` | `test_config.js` |
 | `filters.js` | `test_filters.js` |
 | `templates.js` | `test_templates.js` |
 | `bulk-reply.js` | `test_bulk_reply.js` |
@@ -32,10 +35,8 @@ TareaLog tiene 827 tests Jest (37 suites) que prueban logica pura. El reto: GAS 
 | `action-rules.js` | `test_action_rules.js` |
 | `dashboard.js` | `test_dashboard.js` |
 | `shift-report.js` | `test_shift_report.js` |
-| `constants.js` | `test_constants.js` |
-| `date-utils.js` | `test_date_utils.js` |
 | `resilience.js` | `test_resilience.js` |
-| `config.js` | `test_config.js` |
+| `kanban.js` | `test_kanban.js` |
 
 ---
 
@@ -46,10 +47,8 @@ TareaLog tiene 827 tests Jest (37 suites) que prueban logica pura. El reto: GAS 
 ```javascript
 // === TareaLog — NombreModulo (logica pura) ===
 
-// Variables/constantes del modulo
 var MI_CONSTANTE = 'valor';
 
-// Funciones puras (sin DOM, sin Chrome API, sin GAS API)
 function miFuncion(param) {
   return param + 1;
 }
@@ -110,24 +109,11 @@ var ESTADOS = { PENDIENTE: 'PENDIENTE', ENVIADO: 'ENVIADO' };
 function formatear(estado) {
   return ESTADOS[estado] || 'Desconocido';
 }
-
-// OK dentro de funciones
-function procesarLista(lista) {
-  var resultado = [];
-  lista.forEach(function(item) {
-    resultado.push(item.nombre);
-  });
-  return resultado;
-}
 ```
 
 ### 3. Export TODAS las funciones publicas
 
 ```javascript
-// MAL — funcion oculta para tests
-function _helper(x) { return x; }
-
-// BIEN si es publica (testeable)
 if (typeof module !== 'undefined') {
   module.exports = {
     funcionPublica: funcionPublica,
@@ -138,38 +124,7 @@ if (typeof module !== 'undefined') {
 
 ### 4. Sin dependencias externas
 
-Los modulos no pueden hacer `require()` entre si (GAS no lo soporta). Cada modulo es independiente.
-
----
-
-## Ejemplo Completo: scheduled.js
-
-```javascript
-var ESTADOS_PROGRAMADO = {
-  PENDIENTE:  { icono: '\u23F3', clase: 'prog-pendiente',  texto: 'Pendiente' },
-  ENVIADO:    { icono: '\u2705', clase: 'prog-enviado',    texto: 'Enviado' },
-  ERROR:      { icono: '\u274C', clase: 'prog-error',      texto: 'Error' },
-  CANCELADO:  { icono: '\u26D4', clase: 'prog-cancelado',  texto: 'Cancelado' }
-};
-
-function formatearEstadoProgramado(estado) {
-  var info = ESTADOS_PROGRAMADO[estado] || { icono: '?', clase: '', texto: estado };
-  return { icono: info.icono, clase: info.clase, texto: info.texto };
-}
-
-function filtrarProgramados(lista, filtro) {
-  if (!filtro || filtro === 'TODOS') return lista;
-  return lista.filter(function(p) { return p.estado === filtro; });
-}
-
-if (typeof module !== 'undefined') {
-  module.exports = {
-    ESTADOS_PROGRAMADO: ESTADOS_PROGRAMADO,
-    formatearEstadoProgramado: formatearEstadoProgramado,
-    filtrarProgramados: filtrarProgramados
-  };
-}
-```
+Los modulos no pueden hacer `require()` entre si (GAS no lo soporta). Cada modulo es independiente. En browser, dependen del orden de script tags.
 
 ---
 
@@ -180,15 +135,28 @@ if (typeof module !== 'undefined') {
 3. **Ejecutar tests**: `npx jest` o `npx jest tests/TDD/unit/test_nombre.js`
 4. **NUNCA** poner logica de DOM en modulos dual-compat
 5. **SIEMPRE** terminar con el bloque `if (typeof module !== 'undefined')`
+6. **Sincronizar PWA**: Copiar modulo a `src/movil/lib/` + actualizar `CACHE_URLS` en `sw.js`
 
 ---
 
-## Referencias
+## Coordinacion con Otros Skills
 
-- **Tests existentes**: `tests/TDD/unit/` (827 tests, 37 suites)
-- **Documentacion TDD**: `CLAUDE.md` (global) §TDD
-- **Package.json**: Configuracion Jest
+| Necesitas... | Consulta skill... |
+|---|---|
+| Orden de scripts en panel.html | `chrome-extension-mv3.md` |
+| Sincronizar modulos a PWA | `pwa-mobile-development.md` (18 copias en lib/) |
+| Crear tests TDD | `CLAUDE.md` (global) §TDD |
+| Nombres de campos | `docs/DICCIONARIO_DOMINIO.md` |
 
 ---
 
-**Generada por /genera-skills**
+## Tests
+
+```bash
+npx jest --no-coverage                    # Todos (878 tests, 38 suites)
+npx jest tests/TDD/unit/test_nombre.js   # Individual
+```
+
+---
+
+**Actualizada**: 2026-02-25 (v1.2.0: 878 tests/38 suites, +kanban.js en lista)

@@ -288,6 +288,19 @@ function _renderParamsAccion(container, tipo, params) {
     inpSeq.value = params.nombreSecuencia || '';
     inpSeq.style.cssText = 'flex:1;min-width:150px';
     container.appendChild(inpSeq);
+  } else if (tipo === 'HEREDAR_DEL_HILO') {
+    var selCampo = document.createElement('select');
+    selCampo.className = 'regla-param';
+    selCampo.dataset.param = 'campo';
+    selCampo.style.cssText = 'flex:1';
+    [{ cod: 'fase', nom: 'Fase' }, { cod: 'estado', nom: 'Estado' }, { cod: 'codCar', nom: 'Codigo carga' }].forEach(function(o) {
+      var opt = document.createElement('option');
+      opt.value = o.cod;
+      opt.textContent = o.nom;
+      selCampo.appendChild(opt);
+    });
+    selCampo.value = params.campo || 'fase';
+    container.appendChild(selCampo);
   }
 }
 

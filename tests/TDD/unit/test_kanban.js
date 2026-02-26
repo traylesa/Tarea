@@ -42,8 +42,8 @@ describe('kanban.js', function() {
       expect(Array.isArray(COLUMNAS_KANBAN)).toBe(true);
     });
 
-    test('tiene 7 columnas', function() {
-      expect(COLUMNAS_KANBAN.length).toBe(7);
+    test('tiene 8 columnas', function() {
+      expect(COLUMNAS_KANBAN.length).toBe(8);
     });
 
     test('cada columna tiene id, nombre, fases y orden', function() {
@@ -61,9 +61,15 @@ describe('kanban.js', function() {
       }
     });
 
-    test('incluye las 7 columnas esperadas', function() {
+    test('incluye las 8 columnas esperadas', function() {
       var ids = COLUMNAS_KANBAN.map(function(c) { return c.id; });
-      expect(ids).toEqual(['espera', 'carga', 'en_ruta', 'descarga', 'vacio', 'incidencia', 'documentado']);
+      expect(ids).toEqual(['sin_fase', 'espera', 'carga', 'en_ruta', 'descarga', 'vacio', 'incidencia', 'documentado']);
+    });
+
+    test('sin_fase es la primera columna con orden 0', function() {
+      expect(COLUMNAS_KANBAN[0].id).toBe('sin_fase');
+      expect(COLUMNAS_KANBAN[0].orden).toBe(0);
+      expect(COLUMNAS_KANBAN[0].fases).toEqual([]);
     });
   });
 
@@ -122,7 +128,7 @@ describe('kanban.js', function() {
       COLUMNAS_KANBAN.forEach(function(col) {
         expect(grupos[col.id]).toEqual([]);
       });
-      expect(grupos.sin_columna).toEqual([]);
+      expect(grupos.sin_fase).toEqual([]);
     });
 
     test('fase 00 va a espera', function() {
@@ -153,21 +159,21 @@ describe('kanban.js', function() {
       expect(grupos.documentado.length).toBe(1);
     });
 
-    test('sin fase va a sin_columna', function() {
+    test('sin fase va a sin_fase', function() {
       var registros = [
         crearRegistro({ fase: null }),
         crearRegistro({ fase: '' })
       ];
       var grupos = agruparPorColumna(registros);
 
-      expect(grupos.sin_columna.length).toBe(2);
+      expect(grupos.sin_fase.length).toBe(2);
     });
 
-    test('fase desconocida va a sin_columna', function() {
+    test('fase desconocida va a sin_fase', function() {
       var registros = [crearRegistro({ fase: '99' })];
       var grupos = agruparPorColumna(registros);
 
-      expect(grupos.sin_columna.length).toBe(1);
+      expect(grupos.sin_fase.length).toBe(1);
     });
 
     test('multiples registros se distribuyen correctamente', function() {
@@ -190,7 +196,7 @@ describe('kanban.js', function() {
       expect(grupos.vacio.length).toBe(1);
       expect(grupos.incidencia.length).toBe(1);
       expect(grupos.documentado.length).toBe(1);
-      expect(grupos.sin_columna.length).toBe(0);
+      expect(grupos.sin_fase.length).toBe(0);
     });
   });
 
@@ -283,6 +289,18 @@ describe('kanban.js', function() {
       expect(resolverFaseAlMover('incidencia', '5')).toBe('05');
     });
 
+    test('mover a sin_fase retorna cadena vacia', function() {
+      expect(resolverFaseAlMover('sin_fase', '19')).toBe('');
+    });
+
+    test('mover a sin_fase desde 05 retorna cadena vacia', function() {
+      expect(resolverFaseAlMover('sin_fase', '05')).toBe('');
+    });
+
+    test('mover a espera desde fase vacia retorna 00', function() {
+      expect(resolverFaseAlMover('espera', '')).toBe('00');
+    });
+
     test('columna destino inexistente retorna null', function() {
       expect(resolverFaseAlMover('noexiste', '19')).toBeNull();
     });
@@ -335,13 +353,13 @@ describe('kanban.js', function() {
       });
     });
 
-    test('incluye sin_columna en conteos', function() {
+    test('incluye sin_fase en conteos', function() {
       var agrupados = agruparPorColumna([
         crearRegistro({ fase: '99' })
       ]);
       var conteos = calcularConteos(agrupados);
 
-      expect(conteos.sin_columna.total).toBe(1);
+      expect(conteos.sin_fase.total).toBe(1);
     });
   });
 

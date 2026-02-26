@@ -21,11 +21,12 @@ describe('action-rules.js', () => {
   // --- Constantes ---
 
   describe('TIPOS_ACCION_REGLA', () => {
-    test('contiene los 8 tipos definidos', () => {
-      expect(Object.keys(TIPOS_ACCION_REGLA)).toHaveLength(8);
+    test('contiene los 9 tipos definidos', () => {
+      expect(Object.keys(TIPOS_ACCION_REGLA)).toHaveLength(9);
       expect(TIPOS_ACCION_REGLA.PROPAGAR_HILO).toBe('PROPAGAR_HILO');
       expect(TIPOS_ACCION_REGLA.SUGERIR_RECORDATORIO).toBe('SUGERIR_RECORDATORIO');
       expect(TIPOS_ACCION_REGLA.MOSTRAR_AVISO).toBe('MOSTRAR_AVISO');
+      expect(TIPOS_ACCION_REGLA.HEREDAR_DEL_HILO).toBe('HEREDAR_DEL_HILO');
     });
 
     test('NOMBRES_ACCION_REGLA tiene entrada para cada tipo', () => {
@@ -297,9 +298,9 @@ describe('action-rules.js', () => {
   // --- generarReglasDefault ---
 
   describe('generarReglasDefault', () => {
-    test('genera 7 reglas', () => {
+    test('genera 8 reglas', () => {
       var defaults = generarReglasDefault();
-      expect(defaults).toHaveLength(7);
+      expect(defaults).toHaveLength(8);
     });
 
     test('todas las reglas tienen origen sistema', () => {
@@ -309,11 +310,13 @@ describe('action-rules.js', () => {
       });
     });
 
-    test('todas las reglas estan activas', () => {
+    test('7 reglas activas, 1 inactiva (heredar_cerrado)', () => {
       var defaults = generarReglasDefault();
-      defaults.forEach(r => {
-        expect(r.activa).toBe(true);
-      });
+      var activas = defaults.filter(r => r.activa);
+      var inactivas = defaults.filter(r => !r.activa);
+      expect(activas).toHaveLength(7);
+      expect(inactivas).toHaveLength(1);
+      expect(inactivas[0].id).toBe('default_heredar_cerrado');
     });
 
     test('todas las reglas son validas', () => {
@@ -427,6 +430,54 @@ describe('action-rules.js', () => {
         expect(a).toHaveProperty('faseSiguiente');
         expect(a).toHaveProperty('plantilla');
       });
+    });
+  });
+
+  // --- HEREDAR_DEL_HILO ---
+
+  describe('HEREDAR_DEL_HILO', () => {
+
+    test('NOMBRES_ACCION_REGLA tiene entrada para HEREDAR_DEL_HILO', () => {
+      expect(NOMBRES_ACCION_REGLA.HEREDAR_DEL_HILO).toBe('Heredar campo del hilo');
+    });
+
+    test('validarRegla acepta accion HEREDAR_DEL_HILO', () => {
+      var regla = crearRegla(
+        'Heredar fase',
+        { campo: 'vinculacion', valor: 'HILO' },
+        [{ tipo: 'HEREDAR_DEL_HILO', params: { campo: 'fase' } }]
+      );
+      var res = validarRegla(regla);
+      expect(res.valido).toBe(true);
+    });
+
+    test('evaluarReglas con vinculacion=HILO retorna reglas coincidentes', () => {
+      var reglas = [{
+        id: 'test_heredar', nombre: 'Test heredar', activa: true,
+        condicion: { campo: 'vinculacion', valor: 'HILO', faseOrigen: null },
+        acciones: [{ tipo: 'HEREDAR_DEL_HILO', params: { campo: 'fase' } }],
+        orden: 1, origen: 'usuario'
+      }];
+      var result = evaluarReglas(reglas, 'vinculacion', 'HILO', 'SIN_VINCULAR');
+      expect(result).toHaveLength(1);
+      expect(result[0].acciones[0].tipo).toBe('HEREDAR_DEL_HILO');
+    });
+
+    test('regla default_heredar_cerrado esta inactiva', () => {
+      var defaults = generarReglasDefault();
+      var regla = defaults.find(r => r.id === 'default_heredar_cerrado');
+      expect(regla).toBeDefined();
+      expect(regla.activa).toBe(false);
+      expect(regla.condicion.campo).toBe('vinculacion');
+      expect(regla.condicion.valor).toBe('HILO');
+      expect(regla.acciones[0].tipo).toBe('CAMBIAR_ESTADO');
+    });
+
+    test('regla default_heredar_cerrado es valida', () => {
+      var defaults = generarReglasDefault();
+      var regla = defaults.find(r => r.id === 'default_heredar_cerrado');
+      var res = validarRegla(regla);
+      expect(res.valido).toBe(true);
     });
   });
 });

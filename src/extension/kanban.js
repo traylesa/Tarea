@@ -4,6 +4,7 @@
  */
 
 var COLUMNAS_KANBAN = [
+  { id: 'sin_fase',    nombre: 'Sin Fase',    fases: [],              orden: 0 },
   { id: 'espera',      nombre: 'Espera',      fases: ['00','01','02'], orden: 1 },
   { id: 'carga',       nombre: 'Carga',       fases: ['11','12'],     orden: 2 },
   { id: 'en_ruta',     nombre: 'En Ruta',     fases: ['19'],          orden: 3 },
@@ -44,7 +45,6 @@ function deduplicarPorCarga(registros) {
 function agruparPorColumna(registros) {
   var grupos = {};
   COLUMNAS_KANBAN.forEach(function(col) { grupos[col.id] = []; });
-  grupos.sin_columna = [];
 
   registros.forEach(function(r) {
     var fase = r.fase;
@@ -52,7 +52,7 @@ function agruparPorColumna(registros) {
     if (columna) {
       grupos[columna].push(r);
     } else {
-      grupos.sin_columna.push(r);
+      grupos.sin_fase.push(r);
     }
   });
 
@@ -82,6 +82,8 @@ function resolverColumnaDestino(faseActual) {
 }
 
 function resolverFaseAlMover(columnaDestinoId, faseActual) {
+  if (columnaDestinoId === 'sin_fase') return '';
+
   var columna = COLUMNAS_KANBAN.find(function(c) { return c.id === columnaDestinoId; });
   if (!columna) return null;
 

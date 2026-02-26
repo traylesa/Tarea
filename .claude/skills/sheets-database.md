@@ -2,7 +2,7 @@
 
 **Proposito**: Patrones CRUD sobre Google Sheets via GAS, incluyendo auto-sync de headers, hojas dinamicas y consultas por fila.
 
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -34,19 +34,16 @@ function obtenerHoja(nombre) {
   var ss = SpreadsheetApp.openById(obtenerSpreadsheetId());
   var hoja = ss.getSheetByName(nombre);
 
-  // Seleccionar headers segun hoja
   var headersEsperados = HEADERS_SEGUIMIENTO;
   if (nombre === HOJA_HILOS) headersEsperados = HEADERS_HILOS;
   else if (nombre === HOJA_PROGRAMADOS) headersEsperados = HEADERS_PROGRAMADOS;
 
-  // Auto-crear hoja si no existe
   if (!hoja) {
     var nueva = ss.insertSheet(nombre);
     nueva.getRange(1, 1, 1, headersEsperados.length).setValues([headersEsperados]);
     return nueva;
   }
 
-  // Auto-sync: anadir columnas nuevas sin perder datos
   _sincronizarHeaders(hoja, headersEsperados);
   return hoja;
 }
@@ -54,7 +51,7 @@ function obtenerHoja(nombre) {
 
 **Ventajas**:
 - Hoja se crea automaticamente al primer acceso
-- Columnas nuevas se anaden sin romper datos existentes
+- `_sincronizarHeaders` anade columnas nuevas sin perder datos existentes
 - Un unico punto de acceso garantiza consistencia
 
 ---
@@ -108,24 +105,29 @@ function actualizarCampo(messageId, campo, valor) {
 }
 ```
 
-### READ con filtro + numero de fila
+### UPDATE generico por ID (PROGRAMADOS)
 
 ```javascript
-// Para actualizaciones posteriores, incluir _fila
-function leerProgramadosPendientes() {
+function actualizarProgramadoPorId(id, campos) {
   var hoja = obtenerHoja(HOJA_PROGRAMADOS);
   var datos = hoja.getDataRange().getValues();
-  var pendientes = [];
+  var headers = datos[0];
+  var colId = headers.indexOf('id');
 
   for (var i = 1; i < datos.length; i++) {
-    if (datos[i][colEstado] !== 'PENDIENTE') continue;
-    var obj = { _fila: i + 1 };  // +1 por header
-    headers.forEach(function(h, j) { obj[h] = datos[i][j]; });
-    pendientes.push(obj);
+    if (datos[i][colId] === id) {
+      Object.keys(campos).forEach(function(campo) {
+        var col = headers.indexOf(campo);
+        if (col !== -1) hoja.getRange(i + 1, col + 1).setValue(campos[campo]);
+      });
+      return true;
+    }
   }
-  return pendientes;
+  return false;
 }
 ```
+
+Acepta cualquier campo que exista en headers, incluyendo `estado` (usado para reactivar ERROR→PENDIENTE).
 
 ---
 
@@ -141,6 +143,7 @@ const HEADERS_SEGUIMIENTO = [
   'cuerpo', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega',
   'zona', 'zDest', 'bandeja', 'procesadoAt'
 ];
+// 29 columnas — incluye bandeja (etiquetas Gmail) y procesadoAt
 
 const HOJA_PROGRAMADOS = 'PROGRAMADOS';
 const HEADERS_PROGRAMADOS = [
@@ -148,6 +151,10 @@ const HEADERS_PROGRAMADOS = [
   'cc', 'bcc', 'fechaProgramada', 'estado',
   'fechaEnvio', 'errorDetalle', 'creadoPor', 'creadoAt'
 ];
+// 13 columnas — errorDetalle guarda motivo del fallo
+
+const HOJA_HILOS = 'DB_HILOS';
+const HEADERS_HILOS = ['threadId', 'codCar', 'fechaActualizacion'];
 
 const HOJA_NOTAS = 'NOTAS';
 const HEADERS_NOTAS = ['clave', 'id', 'texto', 'fechaCreacion', 'tipo'];
@@ -180,16 +187,20 @@ const HEADERS_HISTORIAL = ['id', 'clave', 'tipo', 'descripcion', 'fechaCreacion'
 3. **Consultas**: Siempre leer con `getDataRange().getValues()`, nunca con formulas
 4. **Concurrencia**: Usar `LockService.getScriptLock()` para operaciones que modifican multiples celdas
 5. **Diccionario**: Consultar `docs/DICCIONARIO_DOMINIO.md` antes de crear nombres de columnas
+6. **Desplegar**: `clasp push && clasp deploy -i <id>` tras cambiar headers
 
 ---
 
-## Referencias
+## Coordinacion con Otros Skills
 
-- **Diccionario dominio**: `docs/DICCIONARIO_DOMINIO.md` §Hojas, §Campos
-- **Arquitectura**: `docs/ARCHITECTURE.md` §Backend GAS
-- **Trazabilidad hilos**: `.claude/skills/trazabilidad-hilos.md` (DB_HILOS, ThreadManager)
-- **Quotas GAS**: https://developers.google.com/apps-script/guides/services/quotas
+| Necesitas... | Consulta skill... |
+|---|---|
+| Desplegar cambios GAS | `gas-deploy.md` |
+| Trazabilidad hilos DB_HILOS | `trazabilidad-hilos.md` |
+| Cola PROGRAMADOS | `envios-programados.md` |
+| Auto-sync en extension | `chrome-extension-mv3.md` (storage) |
+| Diccionario campos | `docs/DICCIONARIO_DOMINIO.md` |
 
 ---
 
-**Generada por /genera-skills**
+**Actualizada**: 2026-02-25 (v1.2.0: HEADERS completos, UPDATE generico PROGRAMADOS)

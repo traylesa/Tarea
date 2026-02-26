@@ -106,6 +106,12 @@
 }
 .kanban-columna-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
 
+/* Columna sin_fase: bandeja de entrada */
+.kanban-columna[data-grupo="sin_fase"] {
+  background: repeating-linear-gradient(45deg, #f8f9fa, #f8f9fa 10px, #f0f1f2 10px, #f0f1f2 20px);
+  border-left: 3px solid #90A4AE;
+}
+
 /* Columna incidencia: borde rojo sutil */
 .kanban-columna[data-grupo="incidencia"] { background: #fce4e4; }
 

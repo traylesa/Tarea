@@ -263,8 +263,8 @@ describe('esEditable', () => {
     expect(esEditable(crearProgramado({ estado: 'ENVIADO' }))).toBe(false);
   });
 
-  test('ERROR no es editable', () => {
-    expect(esEditable(crearProgramado({ estado: 'ERROR' }))).toBe(false);
+  test('ERROR es editable para corregir y reactivar', () => {
+    expect(esEditable(crearProgramado({ estado: 'ERROR' }))).toBe(true);
   });
 
   test('CANCELADO no es editable', () => {

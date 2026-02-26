@@ -54,17 +54,21 @@ function renderTablaProgramados() {
       abrirModalProgramado(p);
     });
 
-    if (p.estado === 'PENDIENTE') {
+    if (p.estado === 'PENDIENTE' || p.estado === 'ERROR') {
       var btn = document.createElement('button');
       btn.className = 'btn-secundario';
-      btn.textContent = 'Cancelar';
+      btn.textContent = p.estado === 'ERROR' ? 'Editar' : 'Cancelar';
       btn.style.fontSize = '11px';
       btn.style.padding = '2px 8px';
-      btn.addEventListener('click', function(e) { e.stopPropagation(); cancelarProgramado(p.id); });
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (p.estado === 'ERROR') abrirModalProgramado(p);
+        else cancelarProgramado(p.id);
+      });
       tr.lastChild.appendChild(btn);
-    } else if (p.estado === 'ERROR' && p.errorDetalle) {
-      tr.lastChild.textContent = p.errorDetalle.substring(0, 40);
-      tr.lastChild.title = p.errorDetalle;
+      if (p.estado === 'ERROR' && p.errorDetalle) {
+        tr.lastChild.title = p.errorDetalle;
+      }
     }
     tbody.appendChild(tr);
   });
@@ -290,7 +294,7 @@ function abrirModalProgramado(prog) {
   document.getElementById('btn-guardar-programado').classList.toggle('hidden', !editable);
   document.getElementById('btn-enviar-ahora').classList.toggle('hidden', !editable);
   document.getElementById('btn-cancelar-programado-modal').classList.toggle('hidden', !editable);
-  document.getElementById('btn-reprogramar').classList.toggle('hidden', prog.estado !== 'ERROR');
+  document.getElementById('btn-reprogramar').classList.add('hidden');
 
   document.getElementById('prog-modal-error').classList.add('hidden');
   modal.classList.remove('hidden');

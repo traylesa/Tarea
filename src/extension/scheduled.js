@@ -43,7 +43,7 @@ function contarPorEstado(lista) {
 var CAMPOS_EDITABLES_PROG = ['asunto', 'cuerpo', 'cc', 'bcc', 'fechaProgramada'];
 
 function esEditable(prog) {
-  return !!(prog && prog.estado === 'PENDIENTE');
+  return !!(prog && (prog.estado === 'PENDIENTE' || prog.estado === 'ERROR'));
 }
 
 function validarEdicionProgramado(cambios) {

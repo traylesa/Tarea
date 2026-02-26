@@ -68,7 +68,7 @@ just diagnostico        # Diagnóstico completo
 - ✅ Interlocutor calculado (from+to minus email propio via Session.getEffectiveUser)
 - ✅ Campo bandeja extraido de etiquetas Gmail (labels/INBOX/OTRO)
 
-**Tests:** 827 Jest pasando, 37 suites (logica pura dual-compatible GAS/Node)
+**Tests:** 878 Jest pasando, 38 suites (logica pura dual-compatible GAS/Node)
 
 **Ver detalle:** `just diagnostico`
 
@@ -92,19 +92,22 @@ PruebaInicializa4/
 
 ### Skills Especializadas (`.claude/skills/`)
 
+**Indice maestro**: `.claude/skills/INDICE_SKILLS.md` (navegacion rapida, grafo dependencias, protocolo agentes)
+
 | Skill | Area | Contenido |
 |-------|------|-----------|
 | `gas-deploy.md` | Backend | Despliegue clasp, endpoints, PropertiesService |
 | `chrome-extension-mv3.md` | Extension | MV3 patterns, service worker, storage, ventanas |
-| `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest |
-| `sheets-database.md` | Backend | CRUD Sheets, auto-sync headers, limitaciones |
-| `alertas-proactivas.md` | Dominio | Motor de reglas, niveles, notificaciones, resumen |
+| `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest (878 tests, 38 suites) |
+| `sheets-database.md` | Backend | CRUD Sheets, auto-sync headers, 6 hojas |
+| `alertas-proactivas.md` | Dominio | Motor de reglas R2-R6, niveles, notificaciones, resumen |
 | `productividad-avanzada.md` | Dominio | Recordatorios, secuencias, dashboard, historial, notas |
 | `trazabilidad-hilos.md` | Backend | ThreadManager, DB_HILOS, vinculacion auto/manual/hilo |
-| `pwa-mobile-development.md` | Mobile | PWA, integracion GAS, UI mobile-first, accesibilidad campo |
-| `motor-reglas-acciones.md` | Dominio | Reglas parametrizables, 9 campos, 8 tipos accion, evaluacion |
-| `sistema-configuracion.md` | Arquitectura | Defaults, validacion, export/import, migracion, sync GAS |
-| `envios-programados.md` | Dominio | Cola envios, horario laboral, rate limiting, trigger GAS |
+| `pwa-mobile-development.md` | Mobile | PWA, integracion GAS, UI mobile-first, cambio estado |
+| `motor-reglas-acciones.md` | Dominio | Reglas parametrizables, 9 campos, 8 tipos accion |
+| `sistema-configuracion.md` | Arquitectura | Defaults, auto-migracion, export/import, sync GAS |
+| `envios-programados.md` | Dominio | Cola envios, ERROR editable, reactivacion, horario laboral |
+| `kanban-tablero.md` | UI | Kanban Trello, colapso horizontal, chips filtros, SortableJS |
 
 ---
 

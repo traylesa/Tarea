@@ -145,7 +145,7 @@ describe('export/import configuracion', () => {
       const config = getDefaults();
       expect(config.reglasAcciones).toBeDefined();
       expect(Array.isArray(config.reglasAcciones)).toBe(true);
-      expect(config.reglasAcciones.length).toBe(7);
+      expect(config.reglasAcciones.length).toBe(8);
 
       const exportado = exportarConfigCompleta(config);
       const resultado = validarImportacion(exportado);
@@ -165,7 +165,7 @@ describe('export/import configuracion', () => {
       const parsed = JSON.parse(json);
       const resultado = validarImportacion(parsed);
       expect(resultado.valido).toBe(true);
-      expect(parsed.config.reglasAcciones).toHaveLength(8);
+      expect(parsed.config.reglasAcciones).toHaveLength(9);
     });
 
     test('config con regla invalida falla validacion', () => {
@@ -180,7 +180,7 @@ describe('export/import configuracion', () => {
       const exportado = exportarConfigCompleta(config);
       const resultado = validarImportacion(exportado);
       expect(resultado.valido).toBe(false);
-      expect(resultado.errores.some(e => e.includes('Regla 8'))).toBe(true);
+      expect(resultado.errores.some(e => e.includes('Regla 9'))).toBe(true);
     });
 
     test('preferencias rejilla sobrevive roundtrip JSON', () => {

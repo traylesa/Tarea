@@ -2,13 +2,13 @@
 
 **Proposito**: Guia para el sistema centralizado de configuracion de TareaLog: defaults, validacion, export/import JSON, migracion de versiones y sincronizacion con GAS.
 
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
 ## Contexto del Proyecto
 
-La configuracion de TareaLog vive en `chrome.storage.local` (clave `tarealog_config`). Incluye: fases, estados, reglas, alertas, resumen matutino, recordatorios, secuencias, reporte, robustez, y el nuevo `estadoInicial`. Ademas, ciertos valores se sincronizan con GAS via `PropertiesService`.
+La configuracion de TareaLog vive en `chrome.storage.local` (clave `tarealog_config`). Incluye: fases, estados, reglas, alertas, resumen matutino, recordatorios, secuencias, reporte, robustez, y `estadoInicial`. Ciertos valores se sincronizan con GAS via `PropertiesService`.
 
 ### Archivos Relevantes
 
@@ -50,6 +50,20 @@ function getDefaults() {
 }
 ```
 
+### DEFAULT_PREFS_REJILLA (constants.js)
+
+Preferencias predeterminadas para la tabla Tabulator (orden, anchos, visibilidad de columnas). Se usa como fallback cuando no hay preferencias guardadas en storage.
+
+```javascript
+var DEFAULT_PREFS_REJILLA = {
+  columns: [
+    { field: 'codCar', width: 80, visible: true },
+    { field: 'fase', width: 65, visible: true },
+    // ... orden y anchos predefinidos para 20+ columnas
+  ]
+};
+```
+
 ### Auto-migracion en cargar()
 
 Al cargar config guardada, se fusiona con defaults para inyectar campos nuevos:
@@ -65,10 +79,10 @@ async function cargar() {
     ventana: { ...defaults.ventana, ...(guardada.ventana || {}) }
   };
 
-  // Auto-migracion por seccion
+  // Auto-migracion por seccion (spread doble)
   if (!guardada.alertas) config.alertas = defaults.alertas;
   else config.alertas = { ...defaults.alertas, ...guardada.alertas };
-  // ... idem para cada seccion
+  // ... idem para cada seccion anidada
 }
 ```
 
@@ -95,9 +109,6 @@ async function cargar() {
 // config.js — exportarConfigCompleta incluye:
 // - config principal (todas las secciones)
 // - extras opcionales: servicios, gmailQuery, spreadsheet, pieComun, preferenciasRejilla
-
-// config-ui.js — leerFormulario() DEBE incluir todos los campos
-// para que la config exportada sea completa
 ```
 
 ### Patron 3: Sincronizacion Config Local vs GAS
@@ -105,10 +116,10 @@ async function cargar() {
 | Campo | Storage local | GAS PropertiesService | Sync |
 |-------|--------------|----------------------|------|
 | gasUrl | config.gasUrl | -- | Solo local |
-| estadoInicial | config.estadoInicial | ESTADO_INICIAL | Bidireccional |
+| estadoInicial | config.estadoInicial | ESTADO_INICIAL | Bidireccional (GET al cargar, POST al cambiar) |
 | spreadsheetId | tarealog_spreadsheet | SPREADSHEET_ID | Al configurar |
 | gmailQuery | tarealog_gmail_query | GMAIL_QUERY | Al configurar |
-| horarioLaboral | -- | HORARIO_LABORAL | Solo GAS (configurable) |
+| horarioLaboral | -- | HORARIO_LABORAL | Solo GAS (configurable desde panel-programados) |
 | emailsPorMinuto | config.emailsPorMinuto | EMAILS_POR_MINUTO | Al configurar |
 | fases/estados/reglas | config.fases/estados/reglasAcciones | -- | Solo local |
 
@@ -125,7 +136,6 @@ estadoInicial: 'NUEVO',  // Agregado en defaults
 // config-ui.js — OBLIGATORIO agregar tambien aqui:
 return {
   estadoInicial: document.getElementById('config-estado-inicial').value || 'NUEVO',
-  // ...
 };
 // Si falta, al guardar se pierde el valor
 ```
@@ -139,6 +149,10 @@ else config.alertas = { ...defaults.alertas, ...guardada.alertas };
 // NUNCA: config.alertas = guardada.alertas (perderia campos nuevos)
 ```
 
+### Error 3: DEFAULT_PREFS_REJILLA como fallback
+
+`cargarPreferencias()` en panel.js y popup.js usa `DEFAULT_PREFS_REJILLA` como fallback cuando no hay prefs guardadas. Al agregar columnas nuevas a la tabla, actualizar tambien este default en `constants.js`.
+
 ---
 
 ## Consideraciones para Agentes
@@ -147,6 +161,7 @@ else config.alertas = { ...defaults.alertas, ...guardada.alertas };
 2. **Durante implementacion**: Mantener dual-compat, no romper auto-migracion
 3. **Despues de cambios**: Verificar export/import round-trip (exportar → importar → verificar valores)
 4. **Precauciones**: No cambiar `STORAGE_KEY_CONFIG` ni `CONFIG_VERSION` sin motivo
+5. **PWA movil**: Config movil usa `localStorage` via Store (no chrome.storage)
 
 ---
 
@@ -160,14 +175,18 @@ Cubren: defaults, validacion, export/import, migracion.
 
 ---
 
-## Referencias
+## Coordinacion con Otros Skills
 
-- **Diccionario dominio**: `docs/DICCIONARIO_DOMINIO.md` (nombres campos, tipos)
-- **Fases**: `src/extension/fases-config.js`
-- **Estados**: `src/extension/estados-config.js`
-- **Reglas**: `.claude/skills/motor-reglas-acciones.md`
-- **Referente**: Kent Beck — "Make it work, make it right, make it fast" (migracion progresiva)
+| Necesitas... | Consulta skill... |
+|---|---|
+| Reglas de acciones (select dinamico) | `motor-reglas-acciones.md` |
+| Fases y estados disponibles | `docs/DICCIONARIO_DOMINIO.md` |
+| Alertas config (umbrales) | `alertas-proactivas.md` |
+| Programados (horario laboral) | `envios-programados.md` |
+| Deploy cambios GAS config | `gas-deploy.md` |
+| Patron dual-compat | `dual-compat-modules.md` |
+| Config movil | `pwa-mobile-development.md` (Store, localStorage) |
 
 ---
 
-**Generada automaticamente por /genera-skills**
+**Actualizada**: 2026-02-25 (v1.2.0: DEFAULT_PREFS_REJILLA, sync bidireccional estadoInicial)

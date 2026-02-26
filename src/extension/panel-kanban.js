@@ -3,6 +3,7 @@
 // Depende de: kanban.js (logica pura), Sortable (libreria)
 
 var _sortableInstances = [];
+var _kanbanMostrarSinFase = true;
 var _kanbanMostrarEspera = true;
 var _kanbanMostrarVacio = true;
 var _kanbanMostrarDocumentado = false;
@@ -165,6 +166,7 @@ function renderKanban() {
   var totalGeneral = 0;
 
   COLUMNAS_KANBAN.forEach(function(col) {
+    if (col.id === 'sin_fase' && !_kanbanMostrarSinFase) return;
     if (col.id === 'espera' && !_kanbanMostrarEspera) return;
     if (col.id === 'vacio' && !_kanbanMostrarVacio) return;
     if (col.id === 'documentado' && !_kanbanMostrarDocumentado) return;
@@ -422,7 +424,7 @@ async function _onKanbanDragEnd(evt) {
   var reg = registros.find(function(r) { return r.messageId === messageId; });
   if (!reg) return;
 
-  if (nuevaFase && nuevaFase !== reg.fase) {
+  if (nuevaFase !== null && nuevaFase !== reg.fase) {
     await _persistirCambioKanban(reg, 'fase', nuevaFase);
   }
 
@@ -639,11 +641,13 @@ function _cerrarModalKanban() {
 }
 
 function _syncCheckboxesKanban() {
+  var sf = document.getElementById('chk-kanban-sinfase');
   var e = document.getElementById('chk-kanban-espera');
   var v = document.getElementById('chk-kanban-vacio');
   var d = document.getElementById('chk-kanban-documentado');
   var n = document.getElementById('chk-kanban-nada');
   var c = document.getElementById('chk-kanban-cerrado');
+  if (sf) sf.checked = _kanbanMostrarSinFase;
   if (e) e.checked = _kanbanMostrarEspera;
   if (v) v.checked = _kanbanMostrarVacio;
   if (d) d.checked = _kanbanMostrarDocumentado;
@@ -654,6 +658,12 @@ function _syncCheckboxesKanban() {
 function inicializarKanbanEventos() {
   var btnRefresh = document.getElementById('btn-kanban-refresh');
   if (btnRefresh) btnRefresh.addEventListener('click', renderKanban);
+
+  var chkSinFase = document.getElementById('chk-kanban-sinfase');
+  if (chkSinFase) chkSinFase.addEventListener('change', function() {
+    _kanbanMostrarSinFase = chkSinFase.checked;
+    renderKanban();
+  });
 
   var chkEspera = document.getElementById('chk-kanban-espera');
   if (chkEspera) chkEspera.addEventListener('change', function() {
@@ -687,6 +697,7 @@ function inicializarKanbanEventos() {
 
   var btnTodas = document.getElementById('btn-kanban-todas');
   if (btnTodas) btnTodas.addEventListener('click', function() {
+    _kanbanMostrarSinFase = true;
     _kanbanMostrarEspera = true;
     _kanbanMostrarVacio = true;
     _kanbanMostrarDocumentado = true;
@@ -698,6 +709,7 @@ function inicializarKanbanEventos() {
 
   var btnNinguna = document.getElementById('btn-kanban-ninguna');
   if (btnNinguna) btnNinguna.addEventListener('click', function() {
+    _kanbanMostrarSinFase = false;
     _kanbanMostrarEspera = false;
     _kanbanMostrarVacio = false;
     _kanbanMostrarDocumentado = false;

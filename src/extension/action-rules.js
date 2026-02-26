@@ -11,7 +11,8 @@ var TIPOS_ACCION_REGLA = {
   PRESELECCIONAR_PLANTILLA: 'PRESELECCIONAR_PLANTILLA',
   CAMBIAR_FASE: 'CAMBIAR_FASE',
   CAMBIAR_ESTADO: 'CAMBIAR_ESTADO',
-  MOSTRAR_AVISO: 'MOSTRAR_AVISO'
+  MOSTRAR_AVISO: 'MOSTRAR_AVISO',
+  HEREDAR_DEL_HILO: 'HEREDAR_DEL_HILO'
 };
 
 var NOMBRES_ACCION_REGLA = {
@@ -22,7 +23,8 @@ var NOMBRES_ACCION_REGLA = {
   PRESELECCIONAR_PLANTILLA: 'Preseleccionar plantilla',
   CAMBIAR_FASE: 'Cambiar fase',
   CAMBIAR_ESTADO: 'Cambiar estado',
-  MOSTRAR_AVISO: 'Mostrar aviso'
+  MOSTRAR_AVISO: 'Mostrar aviso',
+  HEREDAR_DEL_HILO: 'Heredar campo del hilo'
 };
 
 function _generarIdRegla() {
@@ -198,6 +200,15 @@ function generarReglasDefault() {
       condicion: { campo: 'fase', valor: '29', faseOrigen: null },
       acciones: [{ tipo: 'CAMBIAR_FASE', params: { fase: '30' } }],
       orden: 21,
+      origen: 'sistema'
+    },
+    {
+      id: 'default_heredar_cerrado',
+      nombre: 'No heredar CERRADO desde INBOX',
+      activa: false,
+      condicion: { campo: 'vinculacion', valor: 'HILO', faseOrigen: null },
+      acciones: [{ tipo: 'CAMBIAR_ESTADO', params: { estado: 'PENDIENTE' } }],
+      orden: 0,
       origen: 'sistema'
     }
   ];

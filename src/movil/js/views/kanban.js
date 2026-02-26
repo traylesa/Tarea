@@ -3,7 +3,7 @@
 
 var VistaKanban = {
   // Columnas/estados ocultos (true = oculto). Por defecto solo fases core visibles
-  _ocultos: { nada: true, cerrado: true, espera: true, vacio: true, documentado: true },
+  _ocultos: { nada: true, cerrado: true, sin_fase: false, espera: true, vacio: true, documentado: true },
   _sortableInstances: [],
   _columnasColapsadas: {},
   _refreshing: false,
@@ -38,6 +38,7 @@ var VistaKanban = {
     var chips = [
       { id: 'nada', label: 'Nada' },
       { id: 'cerrado', label: 'Cerrado' },
+      { id: 'sin_fase', label: 'Sin Fase' },
       { id: 'espera', label: 'Espera' },
       { id: 'carga', label: 'Carga' },
       { id: 'en_ruta', label: 'En Ruta' },
@@ -235,7 +236,7 @@ var VistaKanban = {
     if (!messageId || !columnaDestino) return;
 
     var nuevaFase = resolverFaseAlMover(columnaDestino, faseActual);
-    if (!nuevaFase || nuevaFase === faseActual) return;
+    if (nuevaFase === null || nuevaFase === faseActual) return;
 
     var regs = Store.obtenerRegistros();
     var reg = regs.find(function(r) { return r.messageId === messageId; });

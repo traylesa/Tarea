@@ -2,7 +2,7 @@
 
 **Proposito**: Modulos de productividad del operador: recordatorios con snooze, secuencias de follow-up automaticas, dashboard KPIs, historial de acciones, notas por carga, acciones contextuales y reporte de turno.
 
-**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-21
+**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -19,7 +19,7 @@
 | `src/extension/action-bar.js` | Acciones contextuales por fase (logica pura) | ~70 |
 | `src/extension/background.js` | Orquestador: alarmas Chrome, evaluacion periodica | - |
 
-**Tests** (`tests/TDD/unit/`): test_reminders, test_sequences, test_dashboard, test_action_log, test_shift_report, test_notes, test_action_bar — Parte de los 827 tests totales (37 suites)
+**Tests** (`tests/TDD/unit/`): test_reminders, test_sequences, test_dashboard, test_action_log, test_shift_report, test_notes, test_action_bar — Parte de los 878 tests totales (38 suites)
 
 ---
 
@@ -54,19 +54,11 @@ Todos los modulos siguen el mismo patron:
 - **SUGERENCIAS_POR_FASE**: `'19'→{Verificar descarga, 8h}`, `'29'→{Reclamar POD, 24h}`
 - Activacion: `config.recordatorios.sugerenciasActivadas = true`
 
-### Estructura Recordatorio
-
-```javascript
-{ id: 'rec_...', codCar: '12345', texto: 'Verificar descarga',
-  fechaCreacion: ISO, fechaDisparo: ISO, snoozeCount: 0, origen: 'manual'|'sugerido' }
-```
-
 ### Storage y Background
 
 - `tarealog_recordatorios`: Array de recordatorios activos
 - `tarealog_recordatorios_vencidos`: Temporal para vencidos pendientes de notificacion
 - `ALARM_RECORDATORIOS`: Cada 1 minuto, llama `verificarRecordatorios` en background.js
-- Limite: `MAX_RECORDATORIOS` (desde constants.js)
 
 ## 2. Secuencias (sequences.js)
 
@@ -89,18 +81,10 @@ Todos los modulos siguen el mismo patron:
 | Confirmar carga | Consulta hora carga | Recordatorio (24h) | Urgente (48h) |
 | Seguimiento incidencia | Solicitar detalle | Recordatorio (24h) | Escalar (72h) |
 
-### Estados
-
-```javascript
-var ESTADOS_SECUENCIA = { ACTIVA, COMPLETADA, DETENIDA, CANCELADA };
-var ESTADOS_PASO = { PENDIENTE, EJECUTADO, DETENIDO, CANCELADO };
-```
-
 ### Storage y Background
 
 - `tarealog_secuencias`: Array de secuencias
 - `ALARM_SECUENCIAS`: Cada 15 minutos, llama `verificarSecuencias` en background.js
-- Validaciones: codCar numerico, threadId obligatorio, max `MAX_PASOS_SECUENCIA` pasos
 
 ---
 
@@ -114,14 +98,7 @@ var ESTADOS_PASO = { PENDIENTE, EJECUTADO, DETENIDO, CANCELADO };
 | `calcularGraficoSemanal` | registros, ahora | Array 7 dias `{dia, fecha, conteo}` |
 | `calcularCargasPorGrupo` | registros | Mapa grupo→conteo |
 
-### Estructura KPIs
-
-```javascript
-{ activas: N, porGrupo: {espera,carga,en_ruta,descarga,vacio,incidencia,sin_fase},
-  alertasUrgentes: N, recordatoriosHoy: N, cerradasHoy: N, cerradasSemana: N }
-```
-
-### Grupos de Fase (compartido con action-bar.js)
+### Grupos de Fase (compartido con action-bar.js y kanban.js)
 
 ```javascript
 { '00-02': 'espera', '05,25': 'incidencia', '11-12': 'carga',
@@ -134,8 +111,6 @@ Cerrado: `estado === 'GESTIONADO' && fase === '30'`
 
 ## 4. Historial (action-log.js)
 
-### API Publica
-
 | Funcion | Parametros | Retorna |
 |---------|-----------|---------|
 | `registrarAccion` | tipo, codCar, descripcion, almacen, ahora | `{almacen, entrada}` |
@@ -143,50 +118,25 @@ Cerrado: `estado === 'GESTIONADO' && fase === '30'`
 | `filtrarPorTipo` | historial, tipo | Array filtrado |
 | `rotarHistorial` | almacen, diasMax, ahora | Almacen sin entradas antiguas |
 
-### Tipos y Limites
-
-```javascript
-var TIPOS_ACCION = ['EMAIL', 'FASE', 'RECORDATORIO', 'NOTA'];
-var MAX_ENTRADAS_POR_CARGA = 100;  // MAX_ENTRADAS_HISTORIAL_POR_CARGA en constants.js
-```
-
-### Storage
-
-- `tarealog_historial`: Mapa `{ codCar: [entrada, entrada, ...] }`
-- Patron inmutable: `registrarAccion` retorna `{almacen, entrada}` sin mutar original
+Tipos: `['EMAIL', 'FASE', 'RECORDATORIO', 'NOTA']`. Storage: `tarealog_historial`.
 
 ---
 
 ## 5. Notas (notes.js)
 
-### API Publica
-
 | Funcion | Parametros | Retorna |
 |---------|-----------|---------|
 | `crearNota` | texto, codCar, almacen, ahora | `{almacen, nota}` (inmutable) |
-| `obtenerNotas` | codCar, almacen | Array ordenado desc por fecha |
+| `obtenerNotas` | codCar, almacen | Array ordenado desc |
 | `eliminarNota` | id, codCar, almacen | Nuevo almacen |
 | `contarNotas` | codCar, almacen | Numero |
 | `tieneNotas` | codCar, almacen | Boolean |
 
-### Storage y Limites
-
-- `tarealog_notas`: Mapa `{ codCar: [nota, nota, ...] }`
-- Limite: `MAX_NOTAS_POR_CARGA = 50`
-- Patron inmutable: crearNota copia almacen, no muta original
+Storage: `tarealog_notas` (mapa `{codCar: [nota, ...]}`). Patron inmutable.
 
 ---
 
 ## 6. Acciones Contextuales (action-bar.js)
-
-### API Publica
-
-| Funcion | Parametros | Retorna |
-|---------|-----------|---------|
-| `obtenerAccionesPorFase` | codigoFase | Array de acciones o [] |
-| `obtenerGrupoFase` | codigoFase | String grupo o null |
-
-### Mapa Acciones por Grupo
 
 | Grupo | Acciones |
 |-------|----------|
@@ -197,26 +147,17 @@ var MAX_ENTRADAS_POR_CARGA = 100;  // MAX_ENTRADAS_HISTORIAL_POR_CARGA en consta
 | vacio | Reclamar POD, Marcar documentado (→fase 30) |
 | incidencia | Solicitar detalle, Escalar responsable |
 
-Cada accion: `{etiqueta, faseSiguiente, plantilla}` — plantilla es nombre de plantilla de respuesta o null.
+Cada accion: `{etiqueta, faseSiguiente, plantilla}`. Acciones sin `faseSiguiente` ni `plantilla` muestran boton "Fase" en detalle movil.
 
 ---
 
 ## 7. Reporte de Turno (shift-report.js)
-
-### API Publica
 
 | Funcion | Parametros | Retorna |
 |---------|-----------|---------|
 | `generarDatosReporte` | registros, alertas, recordatorios, ahora | Datos completos |
 | `calcularKPIsDia` | registros, ahora | `{cerradas, emailsEnviados}` |
 | `esMismoDia` | fecha1, fecha2 | Boolean |
-
-### Estructura Reporte
-
-```javascript
-{ fecha: ISO, cargasGestionadas: N, incidenciasActivas: N,
-  recordatoriosPendientes: N, kpis: {cerradas, emailsEnviados} }
-```
 
 Config: `config.reporteTurno = { activado: true, hora: '18:00' }`
 
@@ -231,19 +172,23 @@ Config: `config.reporteTurno = { activado: true, hora: '18:00' }`
 5. **Fechas centralizadas**: Usar `date-utils.js` (esMismoDia, inicioDelDia, etc.)
 6. **Background.js**: Solo orquesta; no poner logica de negocio ahi
 7. **Storage keys**: Prefijo `tarealog_` obligatorio para todo
-8. **Validaciones**: codCar numerico, textos no vacios, limites respetados
+8. **Sincronizar PWA**: Copiar cambios a `src/movil/lib/`
 
 ---
 
-## Referencias
+## Coordinacion con Otros Skills
 
-- **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Fases, §Estados
-- **Alertas**: `.claude/skills/alertas-proactivas.md` (complementario)
-- **Config defaults**: `src/extension/config.js` §recordatorios, §secuencias, §reporteTurno
-- **Sistema configuracion**: `.claude/skills/sistema-configuracion.md` (persistencia y sync GAS)
-- **Constantes**: `src/extension/constants.js`
-- **Fechas**: `src/extension/date-utils.js`
+| Necesitas... | Consulta skill... |
+|---|---|
+| Alertas proactivas (R2-R6) | `alertas-proactivas.md` |
+| Kanban (grupos fase compartidos) | `kanban-tablero.md` |
+| Config defaults y auto-migracion | `sistema-configuracion.md` |
+| Motor reglas (evaluar al cambiar fase) | `motor-reglas-acciones.md` |
+| Patron dual-compat | `dual-compat-modules.md` |
+| Sincronizar modulos PWA | `pwa-mobile-development.md` |
+| Deploy background.js | `gas-deploy.md` (no aplica, es extension) |
+| Diccionario campos | `docs/DICCIONARIO_DOMINIO.md` |
 
 ---
 
-**Generada por Claude Code**
+**Actualizada**: 2026-02-25 (v1.2.0: 878 tests/38 suites, coordinacion skills)

@@ -1,0 +1,32 @@
+{
+  "expediente": "Recomendaciones2y3_20260215_214727",
+  "creado_en": "2026-02-15T21:47:27.688582",
+  "archivo_principal": "Recomendaciones2y3.txt",
+  "clasificacion": {
+    "categoria": "BUG",
+    "severidad": "MEDIA",
+    "impacto": "BAJO",
+    "urgencia": "INMEDIATA",
+    "complejidad": "STANDARD"
+  },
+  "camino_estrategico": {
+    "camino": "MINI_PROYECTO",
+    "justificacion": "Feature o refactor de complejidad media con fases estándar"
+  },
+  "fases_generadas": [
+    "00_ESTRATEGIA",
+    "01_ANALISIS",
+    "03_PLAN",
+    "04_DISENO",
+    "05_RESULTADO",
+    "06_VALIDACION",
+    "07_DESPLIEGUE",
+    "08_OPERACION"
+  ],
+  "fase_actual": "00_ESTRATEGIA",
+  "estado": "ACTIVO",
+  "timestamps": {
+    "creado": "2026-02-15T21:47:27.688582",
+    "ultima_actualizacion": "2026-02-15T21:47:27.688582"
+  }
+}

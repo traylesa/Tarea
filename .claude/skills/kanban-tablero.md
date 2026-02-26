@@ -2,7 +2,7 @@
 
 **Proposito**: Vista Kanban estilo Trello para visualizar cargas logisticas como tarjetas que se mueven entre columnas (grupos de fase) con swimlanes por estado. Drag & drop via SortableJS en Extension Chrome y PWA Movil.
 
-**Version**: 1.0.0 | **Ultima actualizacion**: 2026-02-23
+**Version**: 1.1.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -158,8 +158,21 @@ case 'kanban':
 ### Movil (kanban.css)
 - Columnas: `width: 75vw; scroll-snap-align: start`
 - Board: `scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch`
+- Columnas colapsables horizontal: `.kanban-columna.collapsed` (44px, writing-mode vertical-lr, rotate 180deg)
+- Drop zone en columnas colapsadas: `.kanban-drop-zone` (min-height 48px, borde dashed)
 - Touch targets: minimo 48px
 - Tarjetas: padding mayor, fuentes mas grandes
+
+### Filtros movil (chips scrollables)
+- `.kanban-chips-scroll`: flex, overflow-x auto, scrollbar oculto
+- `.kanban-chip-toggle` / `.kanban-chip-toggle.activo`: pill-style toggle
+- Orden chips: Nada, Cerrado, Espera, Carga, En Ruta, Descarga, Incidencia, Vacio, Doc
+- Default ocultos: `{ nada: true, cerrado: true, espera: true, vacio: true, documentado: true }`
+
+### Cambio de estado desde Kanban movil
+- Long-press tarjeta → BottomSheet con "Cambiar fase", "Cambiar estado", "Ver detalle"
+- Detalle tarjeta → BottomSheet con opciones + boton "Estado"
+- `_abrirCambioEstado()`: BottomSheet lista todos estados activos de `getDefaultEstados()`
 
 ---
 
@@ -202,4 +215,4 @@ case 'kanban':
 
 ---
 
-**Generada por Claude Code**
+**Actualizada**: 2026-02-25 (v1.1.0: colapso horizontal, chips filtros, cambio estado)

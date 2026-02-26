@@ -257,7 +257,10 @@ async function ejecutarBarridoPeriodico() {
 }
 
 async function verificarRecordatorios() {
-  if (typeof evaluarPendientes !== 'function') return;
+  if (typeof evaluarPendientes !== 'function') {
+    console.warn('[TareaLog] evaluarPendientes no disponible');
+    return;
+  }
 
   try {
     var stored = await chrome.storage.local.get('tarealog_recordatorios');
@@ -266,10 +269,13 @@ async function verificarRecordatorios() {
 
     var ahora = new Date();
     var vencidos = evaluarPendientes(lista, ahora);
+    console.log('[TareaLog] Recordatorios:', lista.length, 'total,', vencidos.length, 'vencidos, ahora:', ahora.toISOString());
+
     if (vencidos.length === 0) return;
 
     for (var i = 0; i < vencidos.length; i++) {
       var rec = vencidos[i];
+      console.log('[TareaLog] Notificando recordatorio:', rec.id, rec.texto, 'disparo:', rec.fechaDisparo);
       chrome.notifications.create('rec_' + rec.id, {
         type: 'basic',
         iconUrl: 'icons/icon128.png',
@@ -281,19 +287,27 @@ async function verificarRecordatorios() {
         ],
         requireInteraction: true,
         priority: 2
+      }, function(notifId) {
+        if (chrome.runtime.lastError) {
+          console.error('[TareaLog] Error creando notificacion:', chrome.runtime.lastError.message);
+        } else {
+          console.log('[TareaLog] Notificacion creada:', notifId);
+        }
       });
     }
 
-    // Eliminar vencidos de la lista (se recrean con snooze si el usuario elige)
+    // Actualizar badge para indicar recordatorios vencidos
+    chrome.action.setBadgeText({ text: String(vencidos.length) });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF9800' });
+
     var idsVencidos = vencidos.map(function(r) { return r.id; });
     var restantes = lista.filter(function(r) { return idsVencidos.indexOf(r.id) === -1; });
-    // Guardar vencidos en key temporal para snooze
     await chrome.storage.local.set({
       tarealog_recordatorios: restantes,
       tarealog_recordatorios_vencidos: vencidos
     });
   } catch (error) {
-    console.error('Error verificando recordatorios:', error);
+    console.error('[TareaLog] Error verificando recordatorios:', error);
   }
 }
 

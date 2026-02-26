@@ -334,6 +334,30 @@ function actualizarRecordatorioEstado(id, nuevoEstado) {
 
 // --- CRUD Historial ---
 
+function obtenerUltimoRegistroPorThread(threadId) {
+  if (!threadId) return null;
+  var hoja = obtenerHoja(HOJA_SEGUIMIENTO);
+  var datos = hoja.getDataRange().getValues();
+  var headers = datos[0];
+  var idxThread = headers.indexOf('threadId');
+  var idxFecha = headers.indexOf('fechaCorreo');
+  if (idxThread === -1) return null;
+
+  var mejor = null;
+  var mejorFecha = '';
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i][idxThread] === threadId) {
+      var fecha = datos[i][idxFecha] || '';
+      if (String(fecha) >= String(mejorFecha)) {
+        mejorFecha = fecha;
+        mejor = {};
+        headers.forEach(function(h, j) { mejor[h] = datos[i][j]; });
+      }
+    }
+  }
+  return mejor;
+}
+
 function leerHistorial() {
   return _leerHojaGenerica(HOJA_HISTORIAL, HEADERS_HISTORIAL);
 }

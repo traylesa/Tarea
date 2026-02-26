@@ -43,6 +43,22 @@ function processMessage(message, threadManager, erpReader) {
     }
   }
 
+  // Herencia de fase/estado desde ultimo registro del mismo hilo
+  var faseHeredada = '';
+  var estadoHeredado = null;
+
+  if (message.threadId && typeof obtenerUltimoRegistroPorThread === 'function') {
+    var ultimo = obtenerUltimoRegistroPorThread(message.threadId);
+    if (ultimo) {
+      faseHeredada = ultimo.fase !== undefined ? ultimo.fase : '';
+      estadoHeredado = ultimo.estado || null;
+      if (!codCar && ultimo.codCar) {
+        codCar = ultimo.codCar;
+        vinculacion = 'HILO';
+      }
+    }
+  }
+
   let cargaData = null;
   let transportistaData = null;
   let auditResult = { valido: true, alerta: null, emailErp: null };
@@ -71,7 +87,8 @@ function processMessage(message, threadManager, erpReader) {
     asunto: message.subject,
     fechaCorreo: message.date,
     tipoTarea: metadata.tipo,
-    estado: auditResult.alerta ? 'ALERTA' : (typeof obtenerEstadoInicial === 'function' ? obtenerEstadoInicial() : 'NUEVO'),
+    fase: faseHeredada,
+    estado: auditResult.alerta ? 'ALERTA' : (estadoHeredado || (typeof obtenerEstadoInicial === 'function' ? obtenerEstadoInicial() : 'NUEVO')),
     alerta: auditResult.alerta,
     vinculacion,
     referencia: cargaData?.referencia || null,

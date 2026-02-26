@@ -2,7 +2,7 @@
 
 **Proposito**: Guia completa para desplegar codigo Google Apps Script via clasp, evitando errores comunes de la Web App.
 
-**Version**: 1.2.0 | **Ultima actualizacion**: 2026-02-25
+**Version**: 1.3.0 | **Ultima actualizacion**: 2026-02-25
 
 ---
 
@@ -124,6 +124,64 @@ clasp deploy -i AKfycbxXXXXXXXX
 
 ---
 
+## Norma de Hora Local (OBLIGATORIA)
+
+**Regla fundamental**: Todo timestamp generado en GAS DEBE usar hora local con offset, NUNCA UTC puro.
+
+### Funciones centralizadas (`Configuracion.js`)
+
+```javascript
+var TIMEZONE = 'Europe/Madrid';
+
+// Timestamp actual en hora local con offset (ej: "2026-02-25T14:30:00+01:00")
+function ahoraLocalISO() {
+  return Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+// Convertir cualquier Date a ISO local con offset
+function fechaLocalISO(date) {
+  return Utilities.formatDate(date, TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+```
+
+### Reglas de uso
+
+| Situacion | Usar | NO usar |
+|-----------|------|---------|
+| Timestamp actual | `ahoraLocalISO()` | `new Date().toISOString()` |
+| Convertir Date | `fechaLocalISO(date)` | `date.toISOString()` |
+| Fecha de Gmail | `fechaLocalISO(msg.getDate())` | `msg.getDate().toISOString()` |
+| Fecha del cliente (UTC) | `fechaLocalISO(new Date(clienteISO))` | Guardar tal cual |
+
+### Donde aplica
+
+- `procesadoAt` en processMessage (Main.js)
+- `actualizadoAt` en guardarHilo (AdaptadorHojas.js)
+- `date` en construirMensaje (AdaptadorGmail.js)
+- `creadoAt` en programados (Codigo.js)
+- `fechaEnvio` en envio programados (Codigo.js)
+- `fechaCreacion` en notas e historial (Codigo.js)
+- `fechaDisparo` en recordatorios — convertir desde cliente (Codigo.js)
+- `fechaProgramada` en actualizarProgramadoCampos — convertir desde cliente (Codigo.js)
+
+### En tests (dual-compat)
+
+Los tests Jest no tienen `Utilities.formatDate`. En Main.js el fallback es:
+
+```javascript
+procesadoAt: typeof ahoraLocalISO === 'function' ? ahoraLocalISO() : new Date().toISOString()
+```
+
+Para tests que necesiten simular hora local, mockear `ahoraLocalISO`/`fechaLocalISO` como globales en `tests/setup.js`.
+
+### Checklist pre-deploy
+
+- [ ] Ningun `new Date().toISOString()` en archivos GAS
+- [ ] Fechas del cliente convertidas con `fechaLocalISO(new Date(valor))`
+- [ ] Nuevos campos de fecha usan `ahoraLocalISO()`
+
+---
+
 ## Consideraciones para Agentes
 
 1. **Antes de modificar GAS**: Leer `src/gas/Codigo.js` para entender endpoints existentes
@@ -169,7 +227,7 @@ Cargar carpeta `src/extension/` como extension desempaquetada en `chrome://exten
 ## Referencias
 
 - **clasp scriptId proyecto**: `18IsF8QMTGocJUy_W3u5vNV5UHUjB4LlhaeEE_EeJkj-PCpGNYEcV6fp8`
-- **Deployment actual GAS**: @29
+- **Deployment actual GAS**: @31
 - **URL PWA**: `https://tarealog-movil.pages.dev`
 - **Docs**: `docs/ARCHITECTURE.md` §Backend GAS
 - **Diccionario**: `docs/DICCIONARIO_DOMINIO.md` §Hojas Sheets

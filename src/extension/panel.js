@@ -663,6 +663,12 @@ async function ejecutarAccionRegla(accion, rowData) {
           await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: lista });
           recordatoriosCache = lista;
           if (typeof renderRecordatorios === 'function') renderRecordatorios();
+          chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
+          syncBackend('guardarRecordatorio', {
+            id: rec.id, clave: rec.codCar || '', texto: rec.texto,
+            asunto: rec.asunto || '', fechaDisparo: rec.fechaDisparo,
+            preset: '', origen: rec.origen || 'sugerido', estado: 'ACTIVO'
+          });
         }
       }
       break;
@@ -678,6 +684,12 @@ async function ejecutarAccionRegla(accion, rowData) {
         recordatoriosCache = listaAuto;
         if (typeof renderRecordatorios === 'function') renderRecordatorios();
         mostrarToast('Recordatorio creado: ' + params.texto, 'info');
+        chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
+        syncBackend('guardarRecordatorio', {
+          id: recAuto.id, clave: recAuto.codCar || '', texto: recAuto.texto,
+          asunto: recAuto.asunto || '', fechaDisparo: recAuto.fechaDisparo,
+          preset: '', origen: recAuto.origen || 'sugerido', estado: 'ACTIVO'
+        });
       }
       break;
 
@@ -766,6 +778,31 @@ async function ejecutarAccionRegla(accion, rowData) {
             await chrome.storage.local.set({ tarealog_secuencias: listaSeq });
             mostrarToast('Secuencia iniciada: ' + params.nombreSecuencia, 'info');
           } catch (e) { /* silencioso si falta codCar/threadId */ }
+        }
+      }
+      break;
+
+    case 'HEREDAR_DEL_HILO':
+      var campoHeredar = params.campo || 'fase';
+      if (rowData.threadId && registros) {
+        var hermano = registros.slice().reverse().find(function(r) {
+          return r.threadId === rowData.threadId && r.messageId !== rowData.messageId && r[campoHeredar];
+        });
+        if (hermano && hermano[campoHeredar]) {
+          var idxH = registros.findIndex(function(r) { return r.messageId === rowData.messageId; });
+          if (idxH >= 0) {
+            registros[idxH][campoHeredar] = hermano[campoHeredar];
+            await chrome.storage.local.set({ registros: registros });
+            var urlH = obtenerUrlActiva();
+            if (urlH) {
+              fetch(urlH + '?action=actualizarCampo', {
+                method: 'POST', credentials: 'omit',
+                body: JSON.stringify({ messageId: rowData.messageId, campo: campoHeredar, valor: hermano[campoHeredar] })
+              }).catch(function() {});
+            }
+            if (tabla) await renderTabla();
+            mostrarToast('Heredado ' + campoHeredar + ': ' + hermano[campoHeredar], 'info');
+          }
         }
       }
       break;

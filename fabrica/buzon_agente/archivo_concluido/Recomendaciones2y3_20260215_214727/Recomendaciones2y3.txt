@@ -1,0 +1,49 @@
+## Recomendaciones a aplicar
+
+Revisión completa de TareaLog
+                                                                 
+  Estado general
+
+  La aplicación es funcional y está bien estructurada. La lógica de  
+  negocio (alertas, recordatorios, notas, secuencias) tiene buena    
+  cobertura de tests. Pero hay puntos que conviene atender para      
+  evitar problemas conforme la uses más.
+
+---
+  2. SEGURIDAD
+
+  La limpieza de HTML en las plantillas es insuficiente
+  Cuando escribes una plantilla, TareaLog intenta limpiar código peligroso. 
+  Pero solo detecta <script> básico. Otros vectores de ataque como <iframe>,   javascript: en enlaces, o ciertos atributos HTML no se filtran.
+  Riesgo real: Bajo (solo tú y tu equipo crean plantillas). Pero conviene   
+  protegerlo por si alguien importa un JSON de plantillas de fuente no      
+  confiable.
+  Recomendación: Usar una librería especializada (DOMPurify) que es muy     
+  pequeña y cubre todos los casos.
+
+  El backend acepta cualquier campo para actualizar
+  Cuando editas un dato, el servidor no verifica qué campo estás
+  modificando. Un atacante podría enviar campos internos que no deberían    
+  tocarse.
+  Riesgo real: Bajo (la extensión no está expuesta a internet). Pero es     
+  buena práctica tener una lista de campos permitidos.
+
+  El ID del spreadsheet por defecto está visible en el código
+  Si alguien instala la extensión sin configurar su propia hoja, apuntaría a   tu spreadsheet.
+  Recomendación: Que falle con mensaje claro si no hay hoja configurada, en 
+  lugar de usar una por defecto.
+
+---
+    3. RENDIMIENTO — Conforme crezcan los datos
+
+  Las búsquedas en la hoja son lineales
+  Cada vez que actualizas un campo, el backend recorre TODAS las   filas de la hoja buscando el registro. Con 5,000+ filas esto 
+  será cada vez más lento.
+  No es problema ahora, pero tenlo en cuenta si la hoja crece   
+  mucho.
+
+  panel.js tiene 2,700 líneas
+  Es el archivo más grande y hace de todo: tabla, filtros,      
+  plantillas, recordatorios, acciones... Funciona bien, pero    
+  cada cambio futuro será más difícil.
+ Separalo coherentemente, comprueba y valida que quede todo perfectamente coordinado.
