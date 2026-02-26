@@ -126,6 +126,7 @@ var VistaKanban = {
   _crearTarjetaHTML: function(reg) {
     var codCar = reg.codCar || '---';
     var transp = reg.nombreTransportista || reg.interlocutor || '';
+    var asunto = reg.asunto || '';
     var estado = reg.estado || '';
 
     var fechaStr = '';
@@ -157,6 +158,7 @@ var VistaKanban = {
         + chipEstado
       + '</div>'
       + '<div class="kanban-tarjeta-transportista">' + transp + '</div>'
+      + '<div class="kanban-tarjeta-asunto">' + asunto + '</div>'
       + '<div class="kanban-tarjeta-footer">'
         + '<span>' + fechaStr + '</span>'
         + indicadores
