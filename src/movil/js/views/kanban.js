@@ -372,14 +372,14 @@ var VistaKanban = {
     // Chips: estado + fase + bandeja + tipo
     var chipsHtml = '<div class="kd-chips">';
     if (estado) chipsHtml += '<span class="kd-chip kd-chip-estado" data-accion="estado">' + estado + ' \u25BE</span>';
-    if (fase) {
-      var nombreFase = fase;
-      if (typeof getDefaultFases === 'function') {
-        var faseObj = getDefaultFases().find(function(f) { return f.codigo === fase; });
-        if (faseObj) nombreFase = faseObj.nombre;
-      }
-      chipsHtml += '<span class="kd-chip kd-chip-fase" data-accion="fase">' + nombreFase + ' \u25BE</span>';
+    var nombreFase = 'Sin Fase';
+    if (fase && typeof getDefaultFases === 'function') {
+      var faseObj = getDefaultFases().find(function(f) { return f.codigo === fase; });
+      if (faseObj) nombreFase = faseObj.nombre;
+    } else if (fase) {
+      nombreFase = fase;
     }
+    chipsHtml += '<span class="kd-chip kd-chip-fase' + (!fase ? ' kd-chip-sin-fase' : '') + '" data-accion="fase">' + nombreFase + ' \u25BE</span>';
     if (reg.bandeja && reg.bandeja !== 'INBOX') chipsHtml += '<span class="kd-chip kd-chip-bandeja">' + reg.bandeja + '</span>';
     if (reg.tipoTarea) chipsHtml += '<span class="kd-chip kd-chip-tipo">' + reg.tipoTarea + '</span>';
     chipsHtml += '</div>';

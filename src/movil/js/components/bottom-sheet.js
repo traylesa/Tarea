@@ -17,7 +17,20 @@ var BottomSheet = {
 
     var handle = document.createElement('div');
     handle.className = 'bottom-sheet-handle';
-    sheet.appendChild(handle);
+
+    var header = document.createElement('div');
+    header.className = 'bottom-sheet-header';
+    header.appendChild(handle);
+
+    var btnCerrar = document.createElement('button');
+    btnCerrar.className = 'bottom-sheet-cerrar';
+    btnCerrar.textContent = '\u2715';
+    btnCerrar.addEventListener('click', this.cerrar.bind(this));
+    header.appendChild(btnCerrar);
+
+    sheet.appendChild(header);
+
+    document.body.style.overflow = 'hidden';
 
     if (opciones.titulo) {
       var titulo = document.createElement('div');
@@ -70,5 +83,6 @@ var BottomSheet = {
   cerrar: function() {
     if (this._overlay) { this._overlay.remove(); this._overlay = null; }
     if (this._sheet) { this._sheet.remove(); this._sheet = null; }
+    document.body.style.overflow = '';
   }
 };
