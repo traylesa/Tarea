@@ -97,12 +97,45 @@ async function eliminarRecordatorioUI(id) {
   if (tabla) tabla.redraw(true);
 }
 
+function _toggleFechaPersonalizada(selectId, inputId) {
+  var select = document.getElementById(selectId);
+  var input = document.getElementById(inputId);
+  if (select.value === 'personalizado') {
+    input.classList.remove('hidden');
+    if (!input.value) {
+      var d = new Date(Date.now() + 3600000);
+      input.value = d.toISOString().slice(0, 16);
+    }
+  } else {
+    input.classList.add('hidden');
+  }
+}
+
+function _initSelectFechaPersonalizada(selectId, inputId) {
+  var select = document.getElementById(selectId);
+  select.addEventListener('change', function() {
+    _toggleFechaPersonalizada(selectId, inputId);
+  });
+}
+
+// Inicializar listeners al cargar (se invoca desde los propios modales la primera vez)
+var _selectsInicializados = false;
+function _asegurarSelectsInicializados() {
+  if (_selectsInicializados) return;
+  _selectsInicializados = true;
+  _initSelectFechaPersonalizada('recordatorio-preset', 'recordatorio-fecha');
+  _initSelectFechaPersonalizada('rec-det-preset', 'rec-det-fecha');
+}
+
 function abrirModalRecordatorio(codCar, asunto) {
+  _asegurarSelectsInicializados();
   recordatorioCodCar = codCar || null;
   recordatorioAsunto = asunto || null;
   recordatorioEditandoId = null;
   document.getElementById('recordatorio-texto').value = '';
   document.getElementById('recordatorio-preset').value = '1h';
+  document.getElementById('recordatorio-fecha').value = '';
+  document.getElementById('recordatorio-fecha').classList.add('hidden');
   document.getElementById('recordatorio-error').classList.add('hidden');
   var info = codCar ? 'Carga: ' + codCar : 'Sin carga asociada';
   if (asunto) info += ' — ' + asunto.substring(0, 50);
@@ -129,17 +162,27 @@ function editarRecordatorioUI(rec) {
 async function guardarRecordatorioUI() {
   var texto = document.getElementById('recordatorio-texto').value;
   var preset = document.getElementById('recordatorio-preset').value;
+  var fechaDirecta = null;
+
+  if (preset === 'personalizado') {
+    var inputFecha = document.getElementById('recordatorio-fecha').value;
+    if (!inputFecha) {
+      document.getElementById('recordatorio-error').textContent = 'Selecciona una fecha y hora';
+      document.getElementById('recordatorio-error').classList.remove('hidden');
+      return;
+    }
+    fechaDirecta = new Date(inputFecha).toISOString();
+  }
 
   try {
     if (recordatorioEditandoId) {
-      // Modo edicion: eliminar viejo, crear nuevo con misma clave
       var viejo = recordatoriosCache.find(function(r) { return r.id === recordatorioEditandoId; });
       recordatoriosCache = eliminarRecordatorio(recordatorioEditandoId, recordatoriosCache);
       syncBackend('eliminarRecordatorio', { id: recordatorioEditandoId });
 
       var codCarEdicion = viejo ? viejo.codCar : recordatorioCodCar;
       var asuntoEdicion = viejo ? viejo.asunto : recordatorioAsunto;
-      var rec = crearRecordatorio(texto, codCarEdicion, preset, new Date(), recordatoriosCache, asuntoEdicion);
+      var rec = crearRecordatorio(texto, codCarEdicion, preset, new Date(), recordatoriosCache, asuntoEdicion, fechaDirecta);
       recordatoriosCache.push(rec);
       await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
       chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
@@ -150,8 +193,7 @@ async function guardarRecordatorioUI() {
         origen: rec.origen || 'manual', estado: 'ACTIVO'
       });
     } else {
-      // Modo creacion
-      var rec = crearRecordatorio(texto, recordatorioCodCar, preset, new Date(), recordatoriosCache, recordatorioAsunto);
+      var rec = crearRecordatorio(texto, recordatorioCodCar, preset, new Date(), recordatoriosCache, recordatorioAsunto, fechaDirecta);
       recordatoriosCache.push(rec);
       await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
       chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });
@@ -188,6 +230,7 @@ function cerrarModalRecordatorio() {
 var _recordatorioDetalle = null;
 
 function abrirDetalleRecordatorio(rec) {
+  _asegurarSelectsInicializados();
   _recordatorioDetalle = rec;
   var modal = document.getElementById('modal-recordatorio-detalle');
 
@@ -197,7 +240,17 @@ function abrirDetalleRecordatorio(rec) {
     rec.asunto ? rec.asunto : '';
 
   document.getElementById('rec-det-texto').value = rec.texto || '';
-  document.getElementById('rec-det-preset').value = rec.preset || '1h';
+
+  var inputFechaDetalle = document.getElementById('rec-det-fecha');
+  if (rec.preset === 'personalizado') {
+    document.getElementById('rec-det-preset').value = 'personalizado';
+    inputFechaDetalle.value = new Date(rec.fechaDisparo).toISOString().slice(0, 16);
+    inputFechaDetalle.classList.remove('hidden');
+  } else {
+    document.getElementById('rec-det-preset').value = rec.preset || '1h';
+    inputFechaDetalle.value = '';
+    inputFechaDetalle.classList.add('hidden');
+  }
 
   var disparo = new Date(rec.fechaDisparo);
   var diffMin = Math.round((disparo - new Date()) / 60000);
@@ -240,6 +293,7 @@ async function guardarDesdeDetalle() {
   var errorEl = document.getElementById('rec-det-error');
   var texto = document.getElementById('rec-det-texto').value;
   var preset = document.getElementById('rec-det-preset').value;
+  var fechaDirecta = null;
 
   if (!texto || !texto.trim()) {
     errorEl.textContent = 'El texto es obligatorio';
@@ -247,12 +301,22 @@ async function guardarDesdeDetalle() {
     return;
   }
 
+  if (preset === 'personalizado') {
+    var inputFecha = document.getElementById('rec-det-fecha').value;
+    if (!inputFecha) {
+      errorEl.textContent = 'Selecciona una fecha y hora';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    fechaDirecta = new Date(inputFecha).toISOString();
+  }
+
   try {
     var viejo = _recordatorioDetalle;
     recordatoriosCache = eliminarRecordatorio(viejo.id, recordatoriosCache);
     syncBackend('eliminarRecordatorio', { id: viejo.id });
 
-    var rec = crearRecordatorio(texto, viejo.codCar, preset, new Date(), recordatoriosCache, viejo.asunto);
+    var rec = crearRecordatorio(texto, viejo.codCar, preset, new Date(), recordatoriosCache, viejo.asunto, fechaDirecta);
     recordatoriosCache.push(rec);
     await chrome.storage.local.set({ [STORAGE_KEY_RECORDATORIOS]: recordatoriosCache });
     chrome.runtime.sendMessage({ tipo: 'RECORDATORIO_CREADO' });

@@ -353,6 +353,46 @@ describe('reminders.js', () => {
     });
   });
 
+  // --- crearRecordatorio con fechaDisparoDirecta ---
+
+  describe('crearRecordatorio con fecha personalizada', () => {
+    const FUTURO = '2026-02-15T14:00:00.000Z';
+    const PASADO = '2026-02-15T09:00:00.000Z';
+
+    test('usa fechaDisparoDirecta cuando se proporciona', () => {
+      const rec = crearRecordatorio('Tarea', 100, '1h', AHORA, [], null, FUTURO);
+      expect(rec.fechaDisparo).toBe(FUTURO);
+    });
+
+    test('rechaza fecha pasada con throw', () => {
+      expect(() => crearRecordatorio('Tarea', 100, '1h', AHORA, [], null, PASADO))
+        .toThrow('futura');
+    });
+
+    test('rechaza fecha pasada incluso con preset valido', () => {
+      // Forzar fecha pasada via fechaDisparoDirecta (el preset se ignora)
+      expect(() => crearRecordatorio('Tarea', 100, '15min', AHORA, [], null, PASADO))
+        .toThrow('futura');
+    });
+
+    test('acepta fecha futura ISO string', () => {
+      const rec = crearRecordatorio('Tarea futura', 200, 'personalizado', AHORA, [], 'Asunto', FUTURO);
+      expect(rec.fechaDisparo).toBe(FUTURO);
+      expect(rec.texto).toBe('Tarea futura');
+      expect(rec.asunto).toBe('Asunto');
+    });
+
+    test('sin 7o param funciona igual que antes (retrocompatible)', () => {
+      const rec = crearRecordatorio('Retro', 100, '2h', AHORA);
+      expect(new Date(rec.fechaDisparo).getTime()).toBe(AHORA.getTime() + 120 * 60000);
+    });
+
+    test('con fechaDisparoDirecta null funciona igual que antes', () => {
+      const rec = crearRecordatorio('Retro null', 100, '1h', AHORA, [], null, null);
+      expect(new Date(rec.fechaDisparo).getTime()).toBe(AHORA.getTime() + 60 * 60000);
+    });
+  });
+
   // --- Constantes ---
 
   describe('constantes', () => {

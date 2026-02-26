@@ -568,7 +568,9 @@
         <option value="2h">En 2 horas</option>
         <option value="4h">En 4 horas</option>
         <option value="manana">Manana a las 9:00</option>
+        <option value="personalizado">Elegir fecha y hora...</option>
       </select>
+      <input type="datetime-local" id="recordatorio-fecha" class="input-full hidden" style="margin-top:6px">
       <div id="recordatorio-error" class="errores hidden"></div>
       <div class="modal-actions">
         <button type="button" id="btn-guardar-recordatorio" class="btn-primario">Crear</button>
@@ -594,14 +596,16 @@
       <input type="text" id="rec-det-texto" class="input-full">
 
       <label>Cuando:</label>
-      <select id="rec-det-preset" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin-bottom:16px">
+      <select id="rec-det-preset" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin-bottom:8px">
         <option value="15min">En 15 minutos</option>
         <option value="30min">En 30 minutos</option>
         <option value="1h">En 1 hora</option>
         <option value="2h">En 2 horas</option>
         <option value="4h">En 4 horas</option>
         <option value="manana">Manana a las 9:00</option>
+        <option value="personalizado">Elegir fecha y hora...</option>
       </select>
+      <input type="datetime-local" id="rec-det-fecha" class="input-full hidden" style="margin-bottom:16px">
 
       <div style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;color:#666">
         <div>Disparo: <strong id="rec-det-disparo"></strong></div>

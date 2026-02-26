@@ -786,15 +786,65 @@ var VistaDetalle = {
         { texto: '15 min', accion: function() { VistaDetalle._guardarRecordatorio(registro, 15); }},
         { texto: '30 min', accion: function() { VistaDetalle._guardarRecordatorio(registro, 30); }},
         { texto: '1 hora', accion: function() { VistaDetalle._guardarRecordatorio(registro, 60); }},
-        { texto: '4 horas', accion: function() { VistaDetalle._guardarRecordatorio(registro, 240); }}
+        { texto: '4 horas', accion: function() { VistaDetalle._guardarRecordatorio(registro, 240); }},
+        { texto: 'Elegir fecha...', accion: function() { VistaDetalle._abrirRecordatorioPersonalizado(registro); }}
       ]
     });
   },
 
-  _guardarRecordatorio: async function(registro, minutos) {
-    var fecha = new Date(Date.now() + minutos * 60000).toISOString();
+  _abrirRecordatorioPersonalizado: function(registro) {
+    var contenido = document.createElement('div');
+
+    var lblTexto = document.createElement('label');
+    lblTexto.style.cssText = 'display:block;margin-bottom:4px;font-size:14px;color:var(--text-secondary)';
+    lblTexto.textContent = 'Texto:';
+    contenido.appendChild(lblTexto);
+
+    var inputTexto = document.createElement('input');
+    inputTexto.type = 'text';
+    inputTexto.value = 'Revisar carga ' + registro.codCar;
+    inputTexto.style.cssText = 'width:100%;font-size:16px;min-height:48px;padding:8px;margin-bottom:12px;border:1px solid #CCC;border-radius:4px;box-sizing:border-box';
+    contenido.appendChild(inputTexto);
+
+    var lblFecha = document.createElement('label');
+    lblFecha.style.cssText = 'display:block;margin-bottom:4px;font-size:14px;color:var(--text-secondary)';
+    lblFecha.textContent = 'Fecha y hora:';
+    contenido.appendChild(lblFecha);
+
+    var inputFecha = document.createElement('input');
+    inputFecha.type = 'datetime-local';
+    inputFecha.style.cssText = 'width:100%;font-size:16px;min-height:48px;padding:8px;margin-bottom:16px;border:1px solid #CCC;border-radius:4px;box-sizing:border-box';
+    var defecto = new Date(Date.now() + 3600000);
+    inputFecha.value = defecto.toISOString().slice(0, 16);
+    contenido.appendChild(inputFecha);
+
+    var btnCrear = document.createElement('button');
+    btnCrear.className = 'btn btn-primary';
+    btnCrear.style.cssText = 'width:100%';
+    btnCrear.textContent = 'Crear recordatorio';
+    btnCrear.addEventListener('click', function() {
+      if (!inputFecha.value) {
+        ToastUI.mostrar('Selecciona fecha y hora', { tipo: 'error' });
+        return;
+      }
+      var fechaISO = new Date(inputFecha.value).toISOString();
+      if (new Date(fechaISO).getTime() <= Date.now()) {
+        ToastUI.mostrar('La fecha debe ser futura', { tipo: 'error' });
+        return;
+      }
+      VistaDetalle._guardarRecordatorio(registro, null, fechaISO, inputTexto.value);
+      BottomSheet.cerrar();
+    });
+    contenido.appendChild(btnCrear);
+
+    BottomSheet.abrir({ titulo: 'Recordatorio personalizado', contenido: contenido });
+  },
+
+  _guardarRecordatorio: async function(registro, minutos, fechaISO, textoCustom) {
+    var fecha = fechaISO || new Date(Date.now() + minutos * 60000).toISOString();
     var id = 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-    var texto = 'Revisar carga ' + registro.codCar;
+    var texto = textoCustom || ('Revisar carga ' + registro.codCar);
+    var preset = fechaISO ? 'personalizado' : (minutos + 'min');
     try {
       await API.post('guardarRecordatorio', {
         id: id,
@@ -802,15 +852,17 @@ var VistaDetalle = {
         texto: texto,
         asunto: registro.asunto || '',
         fechaDisparo: fecha,
-        preset: minutos + 'min',
+        preset: preset,
         origen: 'manual'
       });
-      // Guardar tambien en localStorage para indicadores y evaluacion
       var lista = Store._leerJSON('tarealog_recordatorios', []);
       lista.push({ id: id, codCar: String(registro.codCar), texto: texto, asunto: registro.asunto || '', fechaDisparo: fecha, snoozeCount: 0, origen: 'manual' });
       Store._guardarJSON('tarealog_recordatorios', lista);
       Feedback.vibrar('corto');
-      ToastUI.mostrar('Recordatorio en ' + minutos + ' min', { tipo: 'exito' });
+      var msg = fechaISO
+        ? 'Recordatorio para ' + new Date(fecha).toLocaleString('es-ES')
+        : 'Recordatorio en ' + minutos + ' min';
+      ToastUI.mostrar(msg, { tipo: 'exito' });
     } catch (e) {
       ToastUI.mostrar('Error: ' + e.message, { tipo: 'error' });
     }

@@ -34,7 +34,7 @@ function calcularFechaDisparo(preset, ahora) {
   return new Date(ahora.getTime() + minutos * MS_POR_MINUTO).toISOString();
 }
 
-function crearRecordatorio(texto, codCar, preset, ahora, listaExistente, asunto) {
+function crearRecordatorio(texto, codCar, preset, ahora, listaExistente, asunto, fechaDisparoDirecta) {
   if (!texto || !texto.trim()) {
     throw new Error('El texto del recordatorio es obligatorio');
   }
@@ -43,13 +43,21 @@ function crearRecordatorio(texto, codCar, preset, ahora, listaExistente, asunto)
     throw new Error('Se ha alcanzado el limite de ' + MAX_RECORDATORIOS + ' recordatorios');
   }
 
+  var fechaDisparo = fechaDisparoDirecta
+    ? new Date(fechaDisparoDirecta).toISOString()
+    : calcularFechaDisparo(preset, ahora);
+
+  if (new Date(fechaDisparo).getTime() <= ahora.getTime()) {
+    throw new Error('La fecha de disparo debe ser futura');
+  }
+
   return {
     id: _generarId(),
     codCar: codCar !== undefined ? codCar : null,
     asunto: asunto || null,
     texto: texto.trim(),
     fechaCreacion: ahora.toISOString(),
-    fechaDisparo: calcularFechaDisparo(preset, ahora),
+    fechaDisparo: fechaDisparo,
     snoozeCount: 0,
     origen: 'manual'
   };
