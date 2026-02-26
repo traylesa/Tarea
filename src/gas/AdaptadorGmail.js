@@ -62,8 +62,6 @@ function construirMensaje(gmailMessage) {
 
 function enviarRespuesta(threadId, asunto, cuerpo, destinatarios, emailsPropios) {
   if (!threadId || !cuerpo) return null;
-
-  // emailsPropios es un mapa {email: true} con cuenta + aliases
   var propios = emailsPropios || {};
 
   try {
@@ -73,68 +71,47 @@ function enviarRespuesta(threadId, asunto, cuerpo, destinatarios, emailsPropios)
     var mensajes = thread.getMessages();
     var asuntoFinal = _asegurarPrefijo(asunto || thread.getFirstMessageSubject());
 
-    // FASE 1: Interlocutor — usar destinatarios.to explicito si existe,
-    // si no, buscar ultimo remitente que NO sea yo en el thread
+    // Buscar ultimo mensaje que NO sea nuestro (es al que respondemos)
+    var mensajeReply = mensajes[mensajes.length - 1];
     var interlocutor = '';
-    if (destinatarios && destinatarios.to) {
-      var toExplicitos = _parsearEmails(destinatarios.to).filter(function(e) {
-        return !propios[e];
-      });
-      if (toExplicitos.length > 0) interlocutor = toExplicitos[0];
-    }
-    if (!interlocutor) {
-      for (var i = mensajes.length - 1; i >= 0; i--) {
-        var fromEmail = _extraerEmail(mensajes[i].getFrom());
-        if (fromEmail && !propios[fromEmail]) {
-          interlocutor = fromEmail;
-          break;
-        }
+    for (var i = mensajes.length - 1; i >= 0; i--) {
+      var from = _extraerEmail(mensajes[i].getFrom());
+      if (from && !propios[from]) {
+        mensajeReply = mensajes[i];
+        interlocutor = from;
+        break;
       }
     }
-    if (!interlocutor) {
-      interlocutor = _extraerEmail(mensajes[0].getFrom());
-    }
-    Logger.log('FASE 1 - Interlocutor (TO): ' + interlocutor);
-    Logger.log('Emails propios: ' + Object.keys(propios).join(', '));
 
-    // FASE 2: Recopilar TODOS los emails de los registros para CC
-    var todosEmails = [];
-    if (destinatarios) {
-      todosEmails = [].concat(
-        _parsearEmails(destinatarios.to),
-        _parsearEmails(destinatarios.cc)
-      );
+    // TO explicito tiene prioridad (respuesta masiva puede especificarlo)
+    if (destinatarios && destinatarios.to) {
+      var toExpl = _parsearEmails(destinatarios.to).filter(function(e) { return !propios[e]; });
+      if (toExpl.length > 0) interlocutor = toExpl[0];
     }
+    if (!interlocutor) interlocutor = _extraerEmail(mensajes[0].getFrom());
+    if (!interlocutor || propios[interlocutor]) return null;
 
-    // FASE 3: Deduplicar, quitar TODOS los propios + interlocutor (ya va en TO)
+    // CC: deduplicar quitando propios + interlocutor
     var vistos = {};
     Object.keys(propios).forEach(function(p) { vistos[p] = true; });
     vistos[interlocutor] = true;
     var ccLimpio = [];
-    todosEmails.forEach(function(e) {
-      if (!vistos[e]) {
-        vistos[e] = true;
-        ccLimpio.push(e);
-      }
-    });
-    Logger.log('FASE 3 - CC: ' + (ccLimpio.length > 0 ? ccLimpio.join(', ') : '(ninguno)'));
-
-    // FASE 4: Enviar con control total de destinatarios
-    if (!interlocutor || propios[interlocutor]) {
-      Logger.log('ABORTADO: interlocutor es propio o vacio');
-      return null;
+    if (destinatarios) {
+      [].concat(_parsearEmails(destinatarios.to), _parsearEmails(destinatarios.cc)).forEach(function(e) {
+        if (!vistos[e]) { vistos[e] = true; ccLimpio.push(e); }
+      });
     }
 
-    var opciones = { htmlBody: cuerpo };
+    // Reply al mensaje — mantiene In-Reply-To/References automaticamente
+    var opciones = { htmlBody: cuerpo, subject: asuntoFinal };
     if (ccLimpio.length > 0) opciones.cc = ccLimpio.join(', ');
     if (destinatarios && destinatarios.bcc) opciones.bcc = destinatarios.bcc;
 
-    GmailApp.sendEmail(interlocutor, asuntoFinal, '', opciones);
-    Logger.log('Enviado OK a ' + interlocutor + (ccLimpio.length > 0 ? ' CC: ' + ccLimpio.join(', ') : ''));
-
+    mensajeReply.reply('', opciones);
+    Logger.log('Reply OK a ' + interlocutor + (ccLimpio.length > 0 ? ' CC: ' + ccLimpio.join(', ') : ''));
     return threadId;
   } catch (e) {
-    Logger.log('Error enviando respuesta a hilo ' + threadId + ': ' + e.message);
+    Logger.log('Error reply hilo ' + threadId + ': ' + e.message);
     return null;
   }
 }
