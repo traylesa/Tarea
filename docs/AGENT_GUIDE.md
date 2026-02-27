@@ -1,8 +1,8 @@
 # Guía para Agentes - PruebaInicializa4
 
-**Versión:** 2.0
+**Versión:** 2.1
 **Proyecto:** PruebaInicializa4
-**Última actualización:** 2026-02-13
+**Última actualización:** 2026-02-28
 
 ---
 

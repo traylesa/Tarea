@@ -651,11 +651,13 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 - **Gmail Query:** Expresion de busqueda configurable que determina que correos procesa el barrido. Configurable desde UI, almacenada en PropertiesService y en tarealog_gmail_query
 - **Pull-to-refresh:** Gesto de arrastre hacia abajo en la PWA movil para forzar sincronizacion con el backend GAS
 - **Barra de seleccion flotante:** Barra de acciones contextuales que aparece en la parte inferior de la PWA movil al seleccionar cargas en Kanban o Todo
+- **Seleccion por columna:** Checkbox en el header de cada columna Kanban que marca/desmarca todas las tarjetas de esa columna. Reemplaza al checkbox global "Todos". Soporta estado indeterminate (parcial). Disponible en extension y PWA movil
 
 ---
 
 ## 6. Historial de Cambios
 
+- **2026-02-28:** v0.4.2: +funcion pura `obtenerSeleccionEstadoColumna(regsColumna, seleccionadosMap)` en kanban.js (retorna {total, seleccionados, estado:'ninguno'|'parcial'|'todos'}), checkbox por columna `.kanban-col-chk` reemplaza checkbox global "Todos", +glosario seleccion por columna, ayuda actualizada (15 secciones)
 - **2026-02-27:** Auditoria exhaustiva 4 agentes: corregido TIPO_ACCION_REGLA (5 valores fantasma→9 valores reales del codigo), +enum ESTADO_RECORDATORIO (ACTIVO/COMPLETADO), +campo asunto en RECORDATORIO, +3 hojas Sheets (notas/recordatorios_sheets/historial_sheets), corregido db_hilos (3 campos reales, no 4), corregidos tipos STORAGE_KEYS (spreadsheet→object, outdoor→string, darkmode→dual), +campos opcionales CONFIG_EXPORTACION, +tipo en NOTA_CARGA, +ALERTA_SUPLANTACION, nota naming camelCase/snake_case, +7 terminos glosario (dark mode, outdoor, deduplicacion por carga, gmail query, pull-to-refresh, barra flotante)
 - **2026-02-27:** Auditoria coherencia post multi-seleccion Kanban: +estado NADA, +campo bandeja en seguimiento, +5 STORAGE_KEYS (kanban_prefs, darkmode, gmail_query, programados, outdoor), +sin_fase/documentado en GRUPO_FASE, +enums TIPO_ACCION_REGLA y CAMPO_CONDICION_REGLA, +glosario estado inicial/seleccion masiva kanban
 - **2026-02-15:** Agregado modulo constants.js (CONSTANTES_PROYECTO) con 41 constantes: tiempo (8), limites (4), timeouts (4), lotes (2), umbrales (4), dashboard (1), presets (5), horarios (3). Reemplazadas constantes magicas en 7 modulos
@@ -677,6 +679,6 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 
 ---
 
-**Ultima actualizacion:** 2026-02-27 (auditoria coherencia post multi-seleccion Kanban)
+**Ultima actualizacion:** 2026-02-28 (v0.4.2: seleccion por columna Kanban)
 **Mantenido por:** Coordinacion entre expedientes
 **Consultas:** Antes de crear CUALQUIER nombre nuevo en codigo/diseno

@@ -1,7 +1,7 @@
 # PruebaInicializa4
 
-**Estado:** Activo | **Fase:** Desarrollo | **Versión:** 0.3.1
-**Última actualización:** 2026-02-21
+**Estado:** Activo | **Fase:** Desarrollo | **Versión:** 0.4.2
+**Última actualización:** 2026-02-28
 
 ---
 
@@ -46,19 +46,32 @@ just diagnostico        # Diagnóstico completo
 
 ## 🎯 ESTADO ACTUAL
 
-### Versión: 0.3.1 (Reglas ampliadas + Estado configurable + Bandeja)
+### Versión: 0.4.2 (Selección columna Kanban + Ayuda completa)
 
 **Extension Chrome (Manifest V3):**
-- ✅ Panel con tabs: Datos, Plantillas, Config, Ayuda
+- ✅ Panel con 5 tabs: Datos, Tablero, Plantillas, Config, Ayuda
 - ✅ Tabla Tabulator con 20+ columnas, edicion inline, agrupacion por hilo
 - ✅ Preferencias rejilla por defecto (orden, anchos, visibilidad predefinidos)
-- ✅ Filtros avanzados con tarjetas colapsables (fechas, fases, baterias, personalizados)
+- ✅ Filtros avanzados compartidos Datos/Tablero (fechas, fases, estados, baterias, personalizados)
 - ✅ Plantillas de respuesta con pie comun global + export/import JSON
-- ✅ Edicion masiva (fase + estado a seleccionados)
+- ✅ Edicion masiva en tabla y tablero Kanban (fase + estado a seleccionados)
 - ✅ Respuesta masiva (reply-all excluyendo email propio)
 - ✅ Selector de spreadsheet dinamico
 - ✅ Estado inicial de emails configurable desde Config (guardado en GAS)
-- ✅ Motor de reglas con 9 campos: fase, estado, codCar, tipoTarea, vinculacion, alerta, bandeja, interlocutor, zona
+- ✅ Motor de reglas con 9 campos y 9 tipos de accion
+- ✅ Tablero Kanban tipo Trello: 8 columnas, drag&drop, SortableJS, deduplicacion
+- ✅ Seleccion por columna en Kanban (checkbox por cabecera, indeterminate)
+- ✅ Swimlanes por estado, colapso horizontal, conteos duales (filtrado/total)
+- ✅ Indicadores enriquecidos en tarjetas (notas, recordatorios, programados)
+- ✅ Alertas proactivas (R2-R6), resumen matutino con click-through
+- ✅ Recordatorios con snooze, sugerencias por fase, detalle modal
+- ✅ Secuencias de seguimiento (3 predefinidas), evaluacion periodica
+- ✅ Envios programados con ERROR editable, reactivacion, enviar ahora
+- ✅ Dashboard Mi Turno + Reporte de turno + Historial acciones
+- ✅ Acciones contextuales por fase + Notas por carga
+- ✅ Herencia de campos en hilos (fase/estado/codCar del ultimo registro)
+- ✅ Modo oscuro persistente
+- ✅ Pagina de ayuda completa (15 secciones, inc. App movil)
 
 **Backend GAS (Web App):**
 - ✅ 11 archivos desplegados via clasp (6 adaptadores + 5 logica pura)
@@ -67,8 +80,18 @@ just diagnostico        # Diagnóstico completo
 - ✅ Auto-sync headers en hojas SEGUIMIENTO y DB_HILOS
 - ✅ Interlocutor calculado (from+to minus email propio via Session.getEffectiveUser)
 - ✅ Campo bandeja extraido de etiquetas Gmail (labels/INBOX/OTRO)
+- ✅ Herencia en processMessage (ultimo registro por threadId)
+- ✅ Timezone local: ahoraLocalISO() y fechaLocalISO() en Configuracion.js
 
-**Tests:** 878 Jest pasando, 38 suites (logica pura dual-compatible GAS/Node)
+**PWA Movil (Cloudflare Pages):**
+- ✅ URL: https://tarealog-movil.pages.dev
+- ✅ 5 vistas: Mi Turno, Todo, Tablero, Programados, Config
+- ✅ Kanban tactil: scroll-snap, drag&drop, seleccion por columna, pull-to-refresh
+- ✅ BottomSheet detalle: chips editables, fechas, indicadores, acciones
+- ✅ SW versionado (v50), offline-first, toast de actualizacion
+- ✅ Sync automatico via hook post-commit
+
+**Tests:** 910 Jest pasando, 39 suites (logica pura dual-compatible GAS/Node)
 
 **Ver detalle:** `just diagnostico`
 
@@ -79,9 +102,10 @@ just diagnostico        # Diagnóstico completo
 ```
 PruebaInicializa4/
 ├── src/
-│   ├── extension/     # Chrome Extension (panel.js, config-ui.js, filters.js, etc.)
-│   └── gas/           # Google Apps Script (Codigo.js, Adaptadores, logica pura)
-├── tests/TDD/unit/    # Tests Jest (67+)
+│   ├── extension/     # Chrome Extension (30+ archivos JS, panel.html, CSS)
+│   ├── gas/           # Google Apps Script (11 archivos via clasp)
+│   └── movil/         # PWA movil (views, css, sw.js, app.js)
+├── tests/TDD/unit/    # Tests Jest (39 suites, 910 tests)
 ├── docs/              # Documentación (diccionario, arquitectura, guias)
 ├── fabrica/           # Fábrica agéntica
 └── .claude/           # Skills y comandos
@@ -98,13 +122,13 @@ PruebaInicializa4/
 |-------|------|-----------|
 | `gas-deploy.md` | Backend | Despliegue clasp, endpoints, PropertiesService |
 | `chrome-extension-mv3.md` | Extension | MV3 patterns, service worker, storage, ventanas |
-| `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest (878 tests, 38 suites) |
+| `dual-compat-modules.md` | Arquitectura | Patron GAS/Node dual-compat para tests Jest (910 tests, 39 suites) |
 | `sheets-database.md` | Backend | CRUD Sheets, auto-sync headers, 6 hojas |
 | `alertas-proactivas.md` | Dominio | Motor de reglas R2-R6, niveles, notificaciones, resumen |
 | `productividad-avanzada.md` | Dominio | Recordatorios, secuencias, dashboard, historial, notas |
 | `trazabilidad-hilos.md` | Backend | ThreadManager, DB_HILOS, vinculacion auto/manual/hilo |
 | `pwa-mobile-development.md` | Mobile | PWA, integracion GAS, UI mobile-first, cambio estado |
-| `motor-reglas-acciones.md` | Dominio | Reglas parametrizables, 9 campos, 8 tipos accion |
+| `motor-reglas-acciones.md` | Dominio | Reglas parametrizables, 9 campos, 9 tipos accion |
 | `sistema-configuracion.md` | Arquitectura | Defaults, auto-migracion, export/import, sync GAS |
 | `envios-programados.md` | Dominio | Cola envios, ERROR editable, reactivacion, horario laboral |
 | `kanban-tablero.md` | UI | Kanban Trello, colapso horizontal, chips filtros, SortableJS |
@@ -179,11 +203,13 @@ just concluir [ID]
 
 | Métrica | Valor |
 |---------|-------|
-| Complejidad | MINI |
-| Stack | generic |
-| Archivos | 16 |
-| Docs | 8 |
-| Estado | Inicial |
+| Versión | 0.4.2 |
+| Stack | JavaScript (Chrome MV3 + GAS + PWA) |
+| Tests | 910 pasando, 39 suites |
+| Archivos src | 30+ extension, 11 GAS, 10+ movil |
+| Docs | 8+ |
+| Deploy PWA | v50 (Cloudflare Pages) |
+| Deploy GAS | @30 (clasp) |
 
 **Métricas detalladas:** `just diagnostico`
 
@@ -243,7 +269,7 @@ just concluir [ID]
 ---
 
 **Mantenedor:** [Definir]
-**Última sincronización:** 2026-02-13
+**Última sincronización:** 2026-02-28
 
 ---
 

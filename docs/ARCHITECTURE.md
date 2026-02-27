@@ -447,5 +447,5 @@ set shell := ["bash", "-c"]  # En lugar de Git Bash
 
 ---
 
-**Última actualización:** 2026-02-13
+**Última actualización:** 2026-02-28
 **Responsable arquitectura:** [Definir]
