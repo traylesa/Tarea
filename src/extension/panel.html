@@ -471,6 +471,15 @@
 
     <!-- Tab Tablero -->
     <section id="tab-tablero" class="tab-content">
+      <div id="kanban-bulk" class="panel-bulk hidden">
+        <label><input type="checkbox" id="kanban-chk-todos"> Todos</label>
+        <label><input type="checkbox" id="kanban-chk-bulk-fase"> Fase:</label>
+        <select id="kanban-bulk-fase" disabled></select>
+        <label><input type="checkbox" id="kanban-chk-bulk-estado"> Estado:</label>
+        <select id="kanban-bulk-estado" disabled></select>
+        <button id="btn-kanban-bulk-aplicar" class="btn-primario" disabled>Aplicar (0)</button>
+        <button id="btn-kanban-bulk-responder" class="btn-secundario" disabled>Responder</button>
+      </div>
       <div class="kanban-controls">
         <button id="btn-kanban-refresh" title="Actualizar tablero">Actualizar</button>
         <label><input type="checkbox" id="chk-kanban-sinfase" checked> Sin Fase</label>

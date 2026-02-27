@@ -11,6 +11,7 @@ var _kanbanMostrarNada = true;
 var _kanbanMostrarCerrado = true;
 var _kanbanEstadosActivo = true;
 var _kanbanColumnasColapsadas = {};
+var _kanbanSeleccionados = {};
 
 function _cargarPrefsKanban(cb) {
   chrome.storage.local.get('tarealog_kanban_prefs', function(data) {
@@ -296,6 +297,9 @@ function renderKanban() {
     totalSpan.textContent = formatearConteo(totalFiltrado, totalGeneral, hayFiltros) + ' cargas';
   }
 
+  _limpiarSeleccionadosNoVisibles();
+  _poblarSelectsBulkKanban();
+  _actualizarPanelBulkKanban();
 }
 
 function _crearTarjetaKanban(reg) {
@@ -357,6 +361,8 @@ function _crearTarjetaKanban(reg) {
   }
 
   card.innerHTML =
+    '<input type="checkbox" class="kanban-chk" data-mid="' + (reg.messageId || '') + '"' +
+      (_kanbanSeleccionados[reg.messageId] ? ' checked' : '') + '>' +
     bannerAlerta +
     '<div class="kanban-tarjeta-codcar">' + codCar + '</div>' +
     '<div class="kanban-tarjeta-transportista">' + transp + '</div>' +
@@ -367,8 +373,20 @@ function _crearTarjetaKanban(reg) {
       '<span class="kanban-tarjeta-indicadores">' + indicadores + '</span>' +
     '</div>';
 
+  // Checkbox seleccion
+  var chk = card.querySelector('.kanban-chk');
+  if (chk) {
+    chk.addEventListener('click', function(e) { e.stopPropagation(); });
+    chk.addEventListener('change', function() {
+      _toggleSeleccionKanban(reg, this.checked);
+      card.classList.toggle('seleccionada', this.checked);
+    });
+  }
+  if (_kanbanSeleccionados[reg.messageId]) card.classList.add('seleccionada');
+
   card.addEventListener('click', function(e) {
     if (e.defaultPrevented) return;
+    if (e.target.classList.contains('kanban-chk')) return;
     var target = e.target.closest('.kanban-ind-notas, .kanban-ind-recordatorio, .kanban-ind-programado');
     if (target) {
       e.stopPropagation();
@@ -394,6 +412,198 @@ function _crearTarjetaKanban(reg) {
   });
 
   return card;
+}
+
+// --- Seleccion masiva Kanban ---
+
+function _toggleSeleccionKanban(reg, seleccionado) {
+  if (seleccionado) {
+    _kanbanSeleccionados[reg.messageId] = reg;
+  } else {
+    delete _kanbanSeleccionados[reg.messageId];
+  }
+  _actualizarPanelBulkKanban();
+}
+
+function _seleccionarTodosKanban() {
+  var tarjetas = document.querySelectorAll('#kanban-board .kanban-tarjeta');
+  tarjetas.forEach(function(card) {
+    var mid = card.dataset.messageId;
+    if (!mid) return;
+    var reg = (registros || []).find(function(r) { return r.messageId === mid; });
+    if (reg) _kanbanSeleccionados[mid] = reg;
+    var chk = card.querySelector('.kanban-chk');
+    if (chk) chk.checked = true;
+    card.classList.add('seleccionada');
+  });
+  _actualizarPanelBulkKanban();
+}
+
+function _deseleccionarTodosKanban() {
+  _kanbanSeleccionados = {};
+  var tarjetas = document.querySelectorAll('#kanban-board .kanban-tarjeta');
+  tarjetas.forEach(function(card) {
+    var chk = card.querySelector('.kanban-chk');
+    if (chk) chk.checked = false;
+    card.classList.remove('seleccionada');
+  });
+  _actualizarPanelBulkKanban();
+}
+
+function _obtenerSeleccionadosKanban() {
+  return Object.values(_kanbanSeleccionados);
+}
+
+function _limpiarSeleccionadosNoVisibles() {
+  var visibles = {};
+  var tarjetas = document.querySelectorAll('#kanban-board .kanban-tarjeta');
+  tarjetas.forEach(function(card) {
+    if (card.dataset.messageId) visibles[card.dataset.messageId] = true;
+  });
+  var keys = Object.keys(_kanbanSeleccionados);
+  keys.forEach(function(mid) {
+    if (!visibles[mid]) delete _kanbanSeleccionados[mid];
+  });
+}
+
+function _poblarSelectsBulkKanban() {
+  var selFase = document.getElementById('kanban-bulk-fase');
+  var selEstado = document.getElementById('kanban-bulk-estado');
+  if (selFase && configActual && configActual.fases && selFase.options.length === 0) {
+    configActual.fases.forEach(function(f) {
+      var cod = f.codigo || f.id || '';
+      var opt = document.createElement('option');
+      opt.value = cod;
+      opt.textContent = cod + ' - ' + (f.nombre || '');
+      selFase.appendChild(opt);
+    });
+  }
+  if (selEstado && configActual && configActual.estados && selEstado.options.length === 0) {
+    configActual.estados.filter(function(e) { return e.activo !== false; }).forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e.codigo;
+      opt.textContent = e.codigo;
+      selEstado.appendChild(opt);
+    });
+  }
+}
+
+function _actualizarPanelBulkKanban() {
+  var panel = document.getElementById('kanban-bulk');
+  if (!panel) return;
+  var count = Object.keys(_kanbanSeleccionados).length;
+  if (count === 0) {
+    panel.classList.add('hidden');
+    return;
+  }
+  panel.classList.remove('hidden');
+  var btnAplicar = document.getElementById('btn-kanban-bulk-aplicar');
+  if (btnAplicar) {
+    btnAplicar.disabled = false;
+    btnAplicar.textContent = 'Aplicar (' + count + ')';
+  }
+  var btnResponder = document.getElementById('btn-kanban-bulk-responder');
+  if (btnResponder) btnResponder.disabled = false;
+}
+
+function _initKanbanBulk() {
+  var chkTodos = document.getElementById('kanban-chk-todos');
+  if (chkTodos) {
+    chkTodos.addEventListener('change', function() {
+      if (this.checked) _seleccionarTodosKanban();
+      else _deseleccionarTodosKanban();
+    });
+  }
+
+  var chkFase = document.getElementById('kanban-chk-bulk-fase');
+  var selFase = document.getElementById('kanban-bulk-fase');
+  if (chkFase && selFase) {
+    chkFase.addEventListener('change', function() { selFase.disabled = !this.checked; });
+  }
+
+  var chkEstado = document.getElementById('kanban-chk-bulk-estado');
+  var selEstado = document.getElementById('kanban-bulk-estado');
+  if (chkEstado && selEstado) {
+    chkEstado.addEventListener('change', function() { selEstado.disabled = !this.checked; });
+  }
+
+  var btnAplicar = document.getElementById('btn-kanban-bulk-aplicar');
+  if (btnAplicar) {
+    btnAplicar.addEventListener('click', _ejecutarCambioMasivoKanban);
+  }
+
+  var btnResponder = document.getElementById('btn-kanban-bulk-responder');
+  if (btnResponder) {
+    btnResponder.addEventListener('click', _responderDesdeKanban);
+  }
+}
+
+async function _ejecutarCambioMasivoKanban() {
+  var seleccionados = _obtenerSeleccionadosKanban();
+  if (seleccionados.length === 0) return;
+
+  var chkFase = document.getElementById('kanban-chk-bulk-fase');
+  var chkEstado = document.getElementById('kanban-chk-bulk-estado');
+  var fase = chkFase && chkFase.checked ? document.getElementById('kanban-bulk-fase').value : null;
+  var estado = chkEstado && chkEstado.checked ? document.getElementById('kanban-bulk-estado').value : null;
+
+  if (fase === null && estado === null) return;
+
+  var threadsAfectados = {};
+  seleccionados.forEach(function(r) {
+    if (r.threadId) threadsAfectados[r.threadId] = true;
+  });
+  var threadIds = Object.keys(threadsAfectados);
+
+  registros.forEach(function(r) {
+    if (r.threadId && threadsAfectados[r.threadId]) {
+      if (fase !== null) r.fase = fase;
+      if (estado !== null) r.estado = estado;
+    }
+  });
+
+  await chrome.storage.local.set({ registros: registros });
+  if (typeof tabla !== 'undefined' && tabla) tabla.replaceData(registros);
+
+  var url = obtenerUrlActiva();
+  if (url) {
+    threadIds.forEach(function(tid) {
+      if (fase !== null) {
+        ejecutarConRetry(function() {
+          return fetch(url + '?action=actualizarCampoPorThread', {
+            method: 'POST', credentials: 'omit',
+            body: JSON.stringify({ threadId: tid, campo: 'fase', valor: fase })
+          });
+        }, 2);
+      }
+      if (estado !== null) {
+        ejecutarConRetry(function() {
+          return fetch(url + '?action=actualizarCampoPorThread', {
+            method: 'POST', credentials: 'omit',
+            body: JSON.stringify({ threadId: tid, campo: 'estado', valor: estado })
+          });
+        }, 2);
+      }
+    });
+  }
+
+  _kanbanSeleccionados = {};
+  renderKanban();
+  mostrarToast('Cambio masivo aplicado a ' + threadIds.length + ' hilos', 'exito');
+}
+
+function _responderDesdeKanban() {
+  var seleccionados = _obtenerSeleccionadosKanban();
+  if (seleccionados.length === 0) return;
+  if (seleccionados.length === 1) {
+    if (typeof abrirModalRespuestaDesdeRegla === 'function') {
+      abrirModalRespuestaDesdeRegla(seleccionados[0], {});
+    }
+    return;
+  }
+  if (typeof abrirModalRespuesta === 'function') {
+    abrirModalRespuesta(seleccionados);
+  }
 }
 
 function _seleccionarEnTabla(reg) {
@@ -752,6 +962,7 @@ function inicializarKanbanEventos() {
 document.addEventListener('DOMContentLoaded', function() {
   _cargarPrefsKanban(function() {
     inicializarKanbanEventos();
+    _initKanbanBulk();
   });
 
   var btnCerrar = document.getElementById('btn-cerrar-kanban-detalle');

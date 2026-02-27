@@ -6,6 +6,8 @@
 // Depende de: bulk-reply.js (construirPayload, validarSeleccion, generarPrevisualizacion)
 // Depende de: resilience.js (dividirEnTandas)
 
+var _kanbanSeleccionadosRespuesta = null;
+
 async function cargarPlantillasGuardadas() {
   const result = await chrome.storage.local.get([STORAGE_KEY_PLANTILLAS, STORAGE_KEY_PIE]);
   plantillasGuardadas = (result[STORAGE_KEY_PLANTILLAS] || {}).plantillas || [];
@@ -137,9 +139,10 @@ function abrirModalRespuestaDesdeRegla(rowData, params) {
 
 // --- Modal respuesta masiva ---
 
-function abrirModalRespuesta() {
-  if (!tabla) return;
-  const seleccionados = tabla.getSelectedData();
+function abrirModalRespuesta(registrosExternos) {
+  _kanbanSeleccionadosRespuesta = registrosExternos || null;
+  var seleccionados = registrosExternos || (tabla ? tabla.getSelectedData() : []);
+  if (seleccionados.length === 0) return;
   const resultado = validarSeleccion(seleccionados);
   if (!resultado.valido) return;
 
@@ -183,7 +186,8 @@ function alSeleccionarPlantillaRespuesta() {
 }
 
 async function enviarRespuestaMasiva() {
-  const seleccionados = _registroRegla ? [_registroRegla] : tabla.getSelectedData();
+  const seleccionados = _registroRegla ? [_registroRegla]
+    : _kanbanSeleccionadosRespuesta || (tabla ? tabla.getSelectedData() : []);
   const plantilla = {
     asunto: document.getElementById('respuesta-asunto').value,
     cuerpo: document.getElementById('respuesta-cuerpo').value,

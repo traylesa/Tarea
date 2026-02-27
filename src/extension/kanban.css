@@ -170,8 +170,30 @@
 .kanban-placeholder:only-child { display: block; }
 .kanban-placeholder:not(:only-child) { display: none; }
 
+/* === Seleccion masiva === */
+.kanban-chk {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  cursor: pointer;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+}
+
+.kanban-tarjeta.seleccionada {
+  outline: 2px solid var(--primary);
+  background: var(--primary-container);
+}
+
+#kanban-bulk {
+  padding: 6px 8px;
+  gap: 6px;
+}
+
 /* === Tarjeta Kanban (estilo Trello) === */
 .kanban-tarjeta {
+  position: relative;
   background: var(--bg-surface);
   border-radius: 4px;
   padding: 6px 8px;

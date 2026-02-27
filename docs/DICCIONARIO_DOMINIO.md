@@ -19,10 +19,13 @@
 - Singular para entidades: `configuracion`, `sistema`
 
 ### Campos/Atributos
-- **snake_case** minusculas
+- **camelCase** en codigo JavaScript y headers Sheets (ej: `codCar`, `threadId`, `fechaCorreo`)
+- **snake_case** solo en este diccionario para legibilidad de documentacion
 - Descriptivos y autoexplicativos
 - `id` siempre como clave primaria
-- Timestamps: `created_at`, `updated_at`, `deleted_at`
+- Timestamps: `creadoAt`, `actualizadoAt`, `procesadoAt`
+
+**Nota:** Las tablas §2 documentan campos en snake_case por legibilidad, pero el codigo real usa camelCase (ej: `message_id` → `messageId`). La correspondencia es sistematica y directa.
 
 ### Estados/Enums
 - **UPPER_CASE** con guiones bajos
@@ -52,10 +55,11 @@ Cache oculta que vincula hilos de Gmail con codigos de carga.
 
 | Campo | Tipo | Restriccion | Descripcion |
 |-------|------|-------------|-------------|
-| thread_id | string | PK | ID del hilo Gmail |
-| cod_car | number | NOT NULL | Codigo de carga vinculado |
-| created_at | datetime | NOT NULL | Fecha creacion |
-| updated_at | datetime | NOT NULL | Ultima actualizacion |
+| thread_id | string | PK | ID del hilo Gmail (codigo: `threadId`) |
+| cod_car | number | NOT NULL | Codigo de carga vinculado (codigo: `codCar`) |
+| actualizado_at | datetime | NOT NULL | Fecha creacion/actualizacion (codigo: `actualizadoAt`) |
+
+**Nota:** Solo 3 columnas en `HEADERS_HILOS`. No existe campo `created_at` separado.
 
 ### seguimiento
 Registro principal de correos procesados con vinculacion a cargas.
@@ -91,8 +95,47 @@ Registro principal de correos procesados con vinculacion a cargas.
 | h_entrega | string (time) | NULLABLE | Hora de llegada/entrega (PEDCLI.FECHORLLE) |
 | zona | string | NULLABLE | Zona de origen (PEDCLI.ZONA) |
 | z_dest | string | NULLABLE | Zona de destino (PEDCLI.ZONADES) |
+| bandeja | string | NULLABLE | Bandeja Gmail del correo (extraida de labels: INBOX, OTRO, etc.) |
 
 **Campo calculado `interlocutor`:** Se obtiene uniendo `from` + `to`, extrayendo emails limpios, eliminando el email propio (cuenta GAS desplegada via `Session.getEffectiveUser()`) y deduplicando.
+
+### notas
+Notas rapidas asociadas a cargas (hoja NOTAS en Sheets).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|-------------|-------------|
+| clave | string | NOT NULL | Identificador de agrupacion (tipicamente codCar como string) |
+| id | string | PK | ID unico (nota_timestamp_random) |
+| texto | string | NOT NULL | Contenido de la nota |
+| fecha_creacion | string (ISO) | NOT NULL | Timestamp de creacion (codigo: `fechaCreacion`) |
+| tipo | string | NULLABLE | Contexto de la nota: `CARGA` o `HILO` |
+
+### recordatorios_sheets
+Recordatorios persistidos en backend (hoja RECORDATORIOS en Sheets).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|-------------|-------------|
+| id | string | PK | ID unico (rec_timestamp_random) |
+| clave | string | NOT NULL | Identificador de agrupacion (tipicamente codCar como string) |
+| texto | string | NOT NULL | Texto del recordatorio |
+| asunto | string | NULLABLE | Asunto del correo asociado |
+| fecha_disparo | string (ISO) | NOT NULL | Cuando debe dispararse (codigo: `fechaDisparo`) |
+| preset | string | NULLABLE | Preset temporal usado al crear (15min, 1h, manana, etc.) |
+| origen | string | | 'manual' o 'sugerido' |
+| estado | enum(ESTADO_RECORDATORIO) | NOT NULL | Estado del recordatorio: ACTIVO o COMPLETADO |
+
+**Nota:** Esta hoja difiere de la entidad RECORDATORIO en storage local (§3), que tiene campos adicionales como `snoozeCount` y `codCar` en vez de `clave`.
+
+### historial_sheets
+Historial de acciones persistido en backend (hoja HISTORIAL en Sheets).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|-------------|-------------|
+| id | string | PK | ID unico (hist_timestamp_random) |
+| clave | string | NOT NULL | Identificador de agrupacion (tipicamente codCar como string) |
+| tipo | enum(TIPO_ACCION) | NOT NULL | Tipo de accion |
+| descripcion | string | | Texto descriptivo |
+| fecha_creacion | string (ISO) | NOT NULL | Timestamp (codigo: `fechaCreacion`) |
 
 ---
 
@@ -111,6 +154,7 @@ Registro principal de correos procesados con vinculacion a cargas.
 - `GESTIONADO` - Correo procesado y gestionado
 - `ALERTA` - Requiere atencion urgente
 - `CERRADO` - Documentado y archivado, sin mas acciones
+- `NADA` - Sin estado asignado / no aplica filtro de estado
 
 ### CONFIG_ESTADO_REGISTRO
 Configuracion visual de un estado de registro (objeto configurable).
@@ -168,9 +212,14 @@ Estructura del archivo JSON de exportacion/importacion de configuracion.
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
-| `version` | string | Version del formato (ej: '1.0.0') |
+| `version` | string | Version del formato (actual: '1.2.0') |
 | `fecha_exportacion` | string (ISO) | Timestamp de la exportacion |
 | `config` | object | Configuracion completa de la extension |
+| `servicios` | object | OPCIONAL — Servicios GAS configurados |
+| `gmailQuery` | string | OPCIONAL — Query Gmail personalizada |
+| `spreadsheet` | object | OPCIONAL — Spreadsheet configurado |
+| `pieComun` | string (HTML) | OPCIONAL — Pie comun global |
+| `preferenciasRejilla` | object | OPCIONAL — Preferencias Tabulator (columnas, orden) |
 
 ### PLANTILLA_RESPUESTA
 Plantilla reutilizable para respuestas masivas a correos.
@@ -207,7 +256,7 @@ Claves usadas en `chrome.storage.local` para persistencia de la extension.
 | `tarealog_pie_comun` | string (HTML) | Pie comun global para todas las plantillas |
 | `tarealog_config` | object | Configuracion general de la extension |
 | `tarealog_ayuda_estado` | object | Ultima seccion de ayuda visitada |
-| `tarealog_spreadsheet` | string | ID del spreadsheet configurado |
+| `tarealog_spreadsheet` | object | Spreadsheet configurado: `{id: string, nombre: string, actualizadoAt: string(ISO)}` |
 | `registros` | array | Cache local de registros de seguimiento |
 | `ultimoBarrido` | string (ISO) | Timestamp del ultimo barrido |
 | `tarealog_alertas` | array(Alerta) | Alertas proactivas activas evaluadas por motor de reglas |
@@ -218,11 +267,17 @@ Claves usadas en `chrome.storage.local` para persistencia de la extension.
 | `tarealog_notas` | object | Mapa `{ [codCar]: NOTA_CARGA[] }` — notas rapidas por carga |
 | `tarealog_historial` | object | Mapa `{ [codCar]: ENTRADA_HISTORIAL[] }` — historial acciones por carga |
 | `tarealog_secuencias` | array(SECUENCIA_FOLLOWUP) | Secuencias de follow-up activas |
+| `tarealog_kanban_prefs` | object | Preferencias Kanban: `{colapsadas: object}` — columnas colapsadas |
+| `tarealog_darkmode` | boolean/string | Modo oscuro activo. Extension: boolean, PWA movil: string '0'/'1' via localStorage |
+| `tarealog_gmail_query` | string | Query Gmail personalizada para barrido |
+| `tarealog_programados` | array | Cache local de envios programados |
+| `tarealog_outdoor` | string | Flag modo outdoor PWA movil: '0'/'1' via localStorage |
 
 ### TIPO_ALERTA
 - `ALERTA_CONTACTO_NO_REGISTRADO` - Email no coincide con ERP
 - `ALERTA_SIN_CONTACTO_ERP` - Transportista sin email en ERP
 - `ALERTA_SLA_VENCIMIENTO` - Carga proxima a vencer sin correo
+- `ALERTA_SUPLANTACION` - Posible suplantacion de identidad (disponible en UI reglas, sin generador backend aun)
 
 ### NIVEL_ALERTA
 Nivel de urgencia de una alerta proactiva evaluada por el motor de reglas.
@@ -239,18 +294,26 @@ Identificadores de reglas de evaluacion de alertas proactivas.
 - `R5` - Incidencia activa: fase IN [05, 25]
 - `R6` - Carga HOY sin orden: fCarga=HOY + sin ENVIADO
 
+### ESTADO_RECORDATORIO
+Estado de un recordatorio en su ciclo de vida.
+- `ACTIVO` - Recordatorio activo, pendiente de dispararse o en espera de snooze
+- `COMPLETADO` - Recordatorio completado/descartado por el operador
+
 ### RECORDATORIO
-Aviso programado asociado a una carga, con snooze y persistencia.
+Aviso programado asociado a una carga, con snooze y persistencia (storage local).
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
 | `id` | string | ID unico (rec_timestamp_random) |
 | `codCar` | number/null | Codigo de carga asociado |
+| `asunto` | string/null | Asunto del correo asociado al recordatorio |
 | `texto` | string | Texto del recordatorio |
 | `fechaCreacion` | string (ISO) | Timestamp de creacion |
 | `fechaDisparo` | string (ISO) | Cuando debe dispararse la notificacion |
 | `snoozeCount` | number | Veces pospuesto (default 0) |
 | `origen` | string | 'manual' (creado por operador) o 'sugerido' (propuesto al cambiar fase) |
+
+**Nota:** El storage local usa `codCar` (number) y `snoozeCount`. La hoja Sheets (§2 `recordatorios_sheets`) usa `clave` (string), `preset` y `estado`, sin `snoozeCount`.
 
 ### ACCION_CONTEXTUAL
 Accion rapida asociada a un grupo de fase de transporte.
@@ -266,21 +329,24 @@ Agrupacion de fases de transporte para determinar acciones contextuales disponib
 
 | Valor | Fases incluidas | Descripcion |
 |-------|----------------|-------------|
+| `sin_fase` | (ninguna) | Correos sin fase asignada — bandeja de entrada kanban |
 | `espera` | 00, 01, 02 | Fases de espera pre-carga |
 | `carga` | 11, 12 | Fases de proceso de carga |
 | `en_ruta` | 19 | Cargado / en transito |
 | `descarga` | 21, 22 | Fases de descarga |
 | `vacio` | 29 | Descargado, pendiente documentacion |
 | `incidencia` | 05, 25 | Incidencias pre/post carga |
+| `documentado` | 30 | Cargas documentadas, archivadas (columna atenuada toggle) |
 
 ### NOTA_CARGA
-Nota rapida asociada a un codigo de carga para contexto operativo.
+Nota rapida asociada a un codigo de carga para contexto operativo (storage local).
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
 | `id` | string | ID unico (nota_timestamp_random) |
 | `texto` | string | Contenido de la nota |
 | `fechaCreacion` | string (ISO) | Timestamp de creacion |
+| `tipo` | string | OPCIONAL — Contexto de sincronizacion: `CARGA` o `HILO` (usado al persistir en backend) |
 
 ### ENTRADA_HISTORIAL
 Entrada de accion en el historial auditable de una carga.
@@ -299,6 +365,30 @@ Tipo de accion registrada en el historial de una carga.
 - `FASE` - Cambio de fase
 - `RECORDATORIO` - Recordatorio creado/completado
 - `NOTA` - Nota anadida
+
+### TIPO_ACCION_REGLA
+Tipo de accion ejecutable por una regla configurada por el usuario (`action-rules.js:TIPOS_ACCION`).
+- `PROPAGAR_HILO` - Propagar campos al hilo completo
+- `SUGERIR_RECORDATORIO` - Sugerir recordatorio automatico al operador
+- `CREAR_RECORDATORIO` - Programar recordatorio automatico
+- `INICIAR_SECUENCIA` - Iniciar secuencia de follow-up
+- `PRESELECCIONAR_PLANTILLA` - Preseleccionar plantilla de respuesta
+- `CAMBIAR_FASE` - Cambiar fase de la carga
+- `CAMBIAR_ESTADO` - Cambiar estado del registro
+- `MOSTRAR_AVISO` - Mostrar aviso/notificacion al operador
+- `HEREDAR_DEL_HILO` - Heredar campo (fase/estado/codCar) del ultimo registro del mismo hilo (solo extension, no movil)
+
+### CAMPO_CONDICION_REGLA
+Campos evaluables como condicion en una regla de accion.
+- `fase` - Fase de transporte del registro
+- `estado` - Estado del registro
+- `codCar` - Codigo de carga
+- `tipoTarea` - Tipo de tarea (OPERATIVO/ADMINISTRATIVA/SIN_CLASIFICAR)
+- `vinculacion` - Tipo de vinculacion
+- `alerta` - Tipo de alerta
+- `bandeja` - Bandeja Gmail (texto libre)
+- `interlocutor` - Email del interlocutor (texto libre)
+- `zona` - Zona de origen (texto libre)
 
 ### SECUENCIA_FOLLOWUP
 Secuencia de emails automatica para reclamar documentos.
@@ -532,6 +622,7 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 - **Envio programado:** Correo configurado para enviarse automaticamente en una fecha/hora futura via trigger periodico
 - **Horario laboral:** Ventana de dias y horas en que el trigger procesa envios programados (configurable desde UI)
 - **Cola de programados:** Hoja PROGRAMADOS en Sheets que almacena envios pendientes, enviados, con error o cancelados
+- **Estado inicial:** Estado por defecto asignado a correos nuevos procesados por el backend GAS. Configurable desde UI (tab Config), almacenado en PropertiesService del GAS. Default: NUEVO
 - **Alerta proactiva:** Aviso generado automaticamente por el motor de reglas tras cada barrido, categorizado por nivel de urgencia (CRITICO/ALTO/MEDIO/BAJO)
 - **Motor de reglas:** Modulo alerts.js que evalua 5 reglas (R2-R6) sobre registros de seguimiento para detectar situaciones que requieren atencion
 - **Deduplicacion:** Mecanismo que evita repetir la misma alerta dentro de un periodo de cooldown configurable
@@ -553,11 +644,20 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 - **Robustez:** Conjunto de mecanismos de tolerancia a fallos: timeout con AbortController, procesamiento por lotes, envio por tandas, reintentos con backoff exponencial (resilience.js)
 - **Tanda:** Subconjunto de items procesados secuencialmente para evitar sobrecargar el backend GAS (ej: 15 emails por tanda en envio masivo)
 - **Toast:** Notificacion efimera en la UI que informa resultado de operaciones (exito verde, error rojo, info azul). Se auto-elimina tras 5 segundos
+- **Seleccion masiva Kanban:** Funcionalidad que permite marcar multiples tarjetas en el tablero Kanban (via checkbox) para aplicar cambios de fase/estado o respuesta masiva. Extension usa panel bulk estatico; movil usa barra flotante dinamica
+- **Modo oscuro (dark mode):** Tema visual con fondo oscuro para la PWA movil. Activable desde Config. Almacenado en localStorage como '0'/'1'
+- **Modo outdoor:** Alto contraste y tipografia ampliada para uso de la PWA movil en exterior con luz solar directa. Activable desde Config
+- **Deduplicacion por carga:** Reduccion del listado de registros (multiples correos por carga) a uno por codCar (el mas reciente por fechaCorreo). Usada en vistas Kanban para mostrar una tarjeta por carga
+- **Gmail Query:** Expresion de busqueda configurable que determina que correos procesa el barrido. Configurable desde UI, almacenada en PropertiesService y en tarealog_gmail_query
+- **Pull-to-refresh:** Gesto de arrastre hacia abajo en la PWA movil para forzar sincronizacion con el backend GAS
+- **Barra de seleccion flotante:** Barra de acciones contextuales que aparece en la parte inferior de la PWA movil al seleccionar cargas en Kanban o Todo
 
 ---
 
 ## 6. Historial de Cambios
 
+- **2026-02-27:** Auditoria exhaustiva 4 agentes: corregido TIPO_ACCION_REGLA (5 valores fantasma→9 valores reales del codigo), +enum ESTADO_RECORDATORIO (ACTIVO/COMPLETADO), +campo asunto en RECORDATORIO, +3 hojas Sheets (notas/recordatorios_sheets/historial_sheets), corregido db_hilos (3 campos reales, no 4), corregidos tipos STORAGE_KEYS (spreadsheet→object, outdoor→string, darkmode→dual), +campos opcionales CONFIG_EXPORTACION, +tipo en NOTA_CARGA, +ALERTA_SUPLANTACION, nota naming camelCase/snake_case, +7 terminos glosario (dark mode, outdoor, deduplicacion por carga, gmail query, pull-to-refresh, barra flotante)
+- **2026-02-27:** Auditoria coherencia post multi-seleccion Kanban: +estado NADA, +campo bandeja en seguimiento, +5 STORAGE_KEYS (kanban_prefs, darkmode, gmail_query, programados, outdoor), +sin_fase/documentado en GRUPO_FASE, +enums TIPO_ACCION_REGLA y CAMPO_CONDICION_REGLA, +glosario estado inicial/seleccion masiva kanban
 - **2026-02-15:** Agregado modulo constants.js (CONSTANTES_PROYECTO) con 41 constantes: tiempo (8), limites (4), timeouts (4), lotes (2), umbrales (4), dashboard (1), presets (5), horarios (3). Reemplazadas constantes magicas en 7 modulos
 - **2026-02-15:** Agregado modulo date-utils.js (FUNCIONES_DATE_UTILS), convencion fechas LOCAL vs UTC, PRESET_RECORDATORIO, CONFIG_ROBUSTEZ, glosario date-utils/hora local/robustez/tanda/toast
 - **2026-02-15:** Sprint 5: Agregadas entidades ENTRADA_HISTORIAL, SECUENCIA_FOLLOWUP, PASO_SECUENCIA, enums TIPO_ACCION, ESTADO_SECUENCIA, ESTADO_PASO, storage keys tarealog_historial/tarealog_secuencias, glosario historial/secuencia/dashboard/reporte
@@ -577,6 +677,6 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 
 ---
 
-**Ultima actualizacion:** 2026-02-15 (date-utils + robustez)
+**Ultima actualizacion:** 2026-02-27 (auditoria coherencia post multi-seleccion Kanban)
 **Mantenido por:** Coordinacion entre expedientes
 **Consultas:** Antes de crear CUALQUIER nombre nuevo en codigo/diseno

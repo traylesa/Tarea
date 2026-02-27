@@ -9,6 +9,7 @@ var VistaKanban = {
   _refreshing: false,
   _filtroActivo: null,
   _busqueda: '',
+  _seleccionados: {},
 
   renderizar: function(contenedor) {
     // Scroll persistence: guardar posicion antes de re-render
@@ -152,11 +153,15 @@ var VistaKanban = {
     // Indicadores enriquecidos
     var indicadores = this._obtenerIndicadores(reg);
 
-    return '<div class="kanban-tarjeta" data-message-id="' + (reg.messageId || '') + '"'
+    var chkChecked = this._seleccionados[reg.messageId] ? ' checked' : '';
+    var chkClase = this._seleccionados[reg.messageId] ? ' seleccionada' : '';
+
+    return '<div class="kanban-tarjeta' + chkClase + '" data-message-id="' + (reg.messageId || '') + '"'
       + ' data-thread-id="' + (reg.threadId || '') + '"'
       + ' data-cod-car="' + (reg.codCar || '') + '"'
       + ' data-fase="' + (reg.fase || '') + '"'
       + ' data-estado="' + estado + '">'
+      + '<input type="checkbox" class="kanban-chk" data-mid="' + (reg.messageId || '') + '"' + chkChecked + '>'
       + '<div style="display:flex;justify-content:space-between;align-items:center">'
         + '<span class="kanban-tarjeta-codcar">' + codCar + '</span>'
         + chipEstado
@@ -316,11 +321,27 @@ var VistaKanban = {
       });
     });
 
+    // Checkboxes seleccion
+    document.querySelectorAll('.kanban-chk').forEach(function(chk) {
+      chk.addEventListener('click', function(e) { e.stopPropagation(); });
+      chk.addEventListener('change', function() {
+        var mid = this.dataset.mid;
+        var tarjeta = this.closest('.kanban-tarjeta');
+        var regs = Store.obtenerRegistros();
+        var reg = regs.find(function(r) { return r.messageId === mid; });
+        if (reg) {
+          self._toggleSeleccion(reg, this.checked);
+          if (tarjeta) tarjeta.classList.toggle('seleccionada', this.checked);
+        }
+      });
+    });
+
     // Click en tarjeta -> BottomSheet detalle (con delegation para indicadores)
     var tarjetas = document.querySelectorAll('.kanban-tarjeta');
     tarjetas.forEach(function(t) {
       t.addEventListener('click', function(e) {
         if (e.defaultPrevented) return;
+        if (e.target.classList.contains('kanban-chk')) return;
         var indicador = e.target.closest('.kanban-tarjeta-indicador');
         if (indicador) {
           var texto = indicador.textContent || '';
@@ -983,5 +1004,160 @@ var VistaKanban = {
   _rerenderizar: function() {
     var contenedor = document.getElementById('app-contenido');
     if (contenedor) this.renderizar(contenedor);
+  },
+
+  // --- Seleccion masiva ---
+
+  _toggleSeleccion: function(reg, seleccionado) {
+    if (seleccionado) {
+      this._seleccionados[reg.messageId] = reg;
+    } else {
+      delete this._seleccionados[reg.messageId];
+    }
+    this._actualizarBarraSeleccion();
+  },
+
+  _seleccionarTodosMovil: function() {
+    var self = this;
+    var tarjetas = document.querySelectorAll('.kanban-tarjeta');
+    var regs = Store.obtenerRegistros();
+    tarjetas.forEach(function(t) {
+      var mid = t.dataset.messageId;
+      if (!mid) return;
+      var reg = regs.find(function(r) { return r.messageId === mid; });
+      if (reg) self._seleccionados[mid] = reg;
+      var chk = t.querySelector('.kanban-chk');
+      if (chk) chk.checked = true;
+      t.classList.add('seleccionada');
+    });
+    this._actualizarBarraSeleccion();
+  },
+
+  _limpiarSeleccion: function() {
+    this._seleccionados = {};
+    document.querySelectorAll('.kanban-tarjeta').forEach(function(t) {
+      var chk = t.querySelector('.kanban-chk');
+      if (chk) chk.checked = false;
+      t.classList.remove('seleccionada');
+    });
+    this._actualizarBarraSeleccion();
+  },
+
+  _actualizarBarraSeleccion: function() {
+    var count = Object.keys(this._seleccionados).length;
+    var bar = document.getElementById('kanban-seleccion-bar');
+
+    if (count === 0) {
+      if (bar) bar.remove();
+      return;
+    }
+
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'kanban-seleccion-bar';
+      bar.className = 'kanban-seleccion-bar';
+      document.body.appendChild(bar);
+    }
+
+    var self = this;
+    bar.innerHTML =
+      '<span>' + count + ' selec.</span>' +
+      '<button data-act="todos">Todos</button>' +
+      '<button data-act="fase">Fase</button>' +
+      '<button data-act="estado">Estado</button>' +
+      '<button data-act="responder">\u2709</button>' +
+      '<button data-act="limpiar">\u2715</button>';
+
+    bar.onclick = function(e) {
+      var btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      var act = btn.dataset.act;
+      if (act === 'todos') self._seleccionarTodosMovil();
+      else if (act === 'fase') self._abrirCambioMasivoMovil('fase');
+      else if (act === 'estado') self._abrirCambioMasivoMovil('estado');
+      else if (act === 'responder') self._responderDesdeMovil();
+      else if (act === 'limpiar') self._limpiarSeleccion();
+    };
+  },
+
+  _responderDesdeMovil: function() {
+    var seleccionados = Object.values(this._seleccionados);
+    if (seleccionados.length === 0) return;
+    // Abrir detalle del primero para responder (BottomSheet con editor)
+    if (seleccionados.length === 1 && typeof VistaDetalle !== 'undefined') {
+      VistaDetalle._abrirEditor(seleccionados[0]);
+      return;
+    }
+    // Multiseleccion: abrir editor del primero (limitacion PWA — no hay modal masivo)
+    if (typeof VistaDetalle !== 'undefined') {
+      VistaDetalle._abrirEditor(seleccionados[0]);
+    }
+  },
+
+  _abrirCambioMasivoMovil: function(campo) {
+    var self = this;
+    var config = Store.obtenerConfig();
+    var opciones = [];
+
+    if (campo === 'fase') {
+      if (config && config.fases) {
+        config.fases.forEach(function(f) {
+          if (!f.codigo) return;
+          opciones.push({
+            texto: f.codigo + ' - ' + (f.nombre || ''),
+            accion: function() { self._ejecutarCambioMasivoMovil('fase', f.codigo); }
+          });
+        });
+      }
+    } else {
+      if (config && config.estados) {
+        config.estados.filter(function(e) { return e.activo !== false; }).forEach(function(e) {
+          opciones.push({
+            texto: e.codigo,
+            accion: function() { self._ejecutarCambioMasivoMovil('estado', e.codigo); }
+          });
+        });
+      }
+    }
+
+    if (typeof BottomSheet !== 'undefined') {
+      BottomSheet.abrir({
+        titulo: 'Cambiar ' + campo + ' (' + Object.keys(this._seleccionados).length + ' selec.)',
+        opciones: opciones
+      });
+    }
+  },
+
+  _ejecutarCambioMasivoMovil: async function(campo, valor) {
+    var seleccionados = Object.values(this._seleccionados);
+    if (seleccionados.length === 0) return;
+
+    var threadsAfectados = {};
+    seleccionados.forEach(function(r) {
+      if (r.threadId) threadsAfectados[r.threadId] = true;
+    });
+    var threadIds = Object.keys(threadsAfectados);
+
+    var regs = Store.obtenerRegistros();
+    regs.forEach(function(r) {
+      if (r.threadId && threadsAfectados[r.threadId]) {
+        r[campo] = valor;
+      }
+    });
+    Store.guardarRegistros(regs);
+
+    for (var i = 0; i < threadIds.length; i++) {
+      try {
+        await API.post('actualizarCampoPorThread', {
+          threadId: threadIds[i], campo: campo, valor: valor
+        });
+      } catch (e) { /* silencioso */ }
+    }
+
+    this._seleccionados = {};
+    if (typeof ToastUI !== 'undefined') {
+      ToastUI.mostrar(campo + ' actualizado en ' + threadIds.length + ' hilos', { tipo: 'exito' });
+    }
+    this._rerenderizar();
   }
 };
