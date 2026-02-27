@@ -236,6 +236,7 @@ function crearColumnas() {
     },
     {
       title: 'FCarga', field: 'fCarga', width: 90,
+      editor: 'input',
       sorter: 'date',
       formatter: cell => {
         const v = cell.getValue();
@@ -248,11 +249,13 @@ function crearColumnas() {
     },
     {
       title: 'HCarga', field: 'hCarga', width: 60,
+      editor: 'input',
       formatter: cell => cell.getValue() || '--',
       headerMenu: columnVisibilityMenu
     },
     {
       title: 'FEntrega', field: 'fEntrega', width: 90,
+      editor: 'input',
       sorter: 'date',
       formatter: cell => {
         const v = cell.getValue();
@@ -265,6 +268,7 @@ function crearColumnas() {
     },
     {
       title: 'HEntrega', field: 'hEntrega', width: 60,
+      editor: 'input',
       formatter: cell => cell.getValue() || '--',
       headerMenu: columnVisibilityMenu
     },

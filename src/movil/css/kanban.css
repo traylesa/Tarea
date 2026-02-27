@@ -531,6 +531,11 @@
 }
 
 /* === Long-press visual feedback === */
+/* === Fechas editables en detalle === */
+.kd-fecha-item[data-accion] { cursor: pointer; }
+.kd-fecha-item[data-accion]:active { opacity: 0.7; }
+.kd-fecha-vacia { color: #999; font-style: italic; font-weight: 400; border-bottom: 1px dashed #ccc; }
+
 .kanban-tarjeta:active {
   cursor: grabbing;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);

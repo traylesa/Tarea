@@ -135,6 +135,7 @@ var VistaKanban = {
       var horas = Math.floor(diff / 3600000);
       fechaStr = horas < 1 ? '<1h' : horas < 24 ? horas + 'h' : Math.floor(horas / 24) + 'd';
     }
+    var hCargaStr = reg.hCarga ? ' \u23F0' + reg.hCarga : '';
 
     // Chip estado
     var chipEstado = '';
@@ -160,7 +161,7 @@ var VistaKanban = {
       + '<div class="kanban-tarjeta-transportista">' + transp + '</div>'
       + '<div class="kanban-tarjeta-asunto">' + asunto + '</div>'
       + '<div class="kanban-tarjeta-footer">'
-        + '<span>' + fechaStr + '</span>'
+        + '<span>' + fechaStr + hCargaStr + '</span>'
         + indicadores
       + '</div>'
     + '</div>';
@@ -400,20 +401,17 @@ var VistaKanban = {
     }
     gridHtml += '</div>';
 
-    // Fechas logisticas (fCarga, fEntrega)
-    var fechasHtml = '';
-    if (reg.fCarga || reg.fEntrega) {
-      fechasHtml = '<div class="kd-fechas">';
-      if (reg.fCarga) {
-        fechasHtml += '<div class="kd-fecha-item"><div class="kd-fecha-label">Carga</div>' +
-          '<div class="kd-fecha-valor">' + reg.fCarga + (reg.hCarga ? ' ' + reg.hCarga : '') + '</div></div>';
-      }
-      if (reg.fEntrega) {
-        fechasHtml += '<div class="kd-fecha-item"><div class="kd-fecha-label">Entrega</div>' +
-          '<div class="kd-fecha-valor">' + reg.fEntrega + (reg.hEntrega ? ' ' + reg.hEntrega : '') + '</div></div>';
-      }
-      fechasHtml += '</div>';
-    }
+    // Fechas logisticas (fCarga, fEntrega) — siempre visibles, editables
+    var fCargaValor = reg.fCarga ? reg.fCarga + (reg.hCarga ? ' ' + reg.hCarga : '') : '';
+    var fEntregaValor = reg.fEntrega ? reg.fEntrega + (reg.hEntrega ? ' ' + reg.hEntrega : '') : '';
+    var fechasHtml = '<div class="kd-fechas">';
+    fechasHtml += '<div class="kd-fecha-item" data-accion="editar-fecha" data-campo="fCarga">'
+      + '<div class="kd-fecha-label">Carga</div>'
+      + '<div class="kd-fecha-valor' + (fCargaValor ? '' : ' kd-fecha-vacia') + '">' + (fCargaValor || 'Asignar') + '</div></div>';
+    fechasHtml += '<div class="kd-fecha-item" data-accion="editar-fecha" data-campo="fEntrega">'
+      + '<div class="kd-fecha-label">Entrega</div>'
+      + '<div class="kd-fecha-valor' + (fEntregaValor ? '' : ' kd-fecha-vacia') + '">' + (fEntregaValor || 'Asignar') + '</div></div>';
+    fechasHtml += '</div>';
 
     // Indicadores
     var indHtml = '';
@@ -463,7 +461,12 @@ var VistaKanban = {
       var ind = target.dataset.ind;
       var act = target.dataset.act;
 
-      if (accion === 'estado') { BottomSheet.cerrar(); VistaDetalle._abrirCambioEstado(reg); }
+      if (accion === 'editar-fecha') {
+        var campo = target.closest('[data-campo]').dataset.campo;
+        BottomSheet.cerrar();
+        self._abrirEditorFecha(reg, campo);
+      }
+      else if (accion === 'estado') { BottomSheet.cerrar(); VistaDetalle._abrirCambioEstado(reg); }
       else if (accion === 'fase') { BottomSheet.cerrar(); VistaDetalle._abrirCambioFase(reg); }
       else if (ind === 'notas' || act === 'nota') { BottomSheet.cerrar(); VistaDetalle._agregarNota(codCar); }
       else if (ind === 'record' || act === 'record') { BottomSheet.cerrar(); VistaDetalle._crearRecordatorio(reg); }
@@ -906,6 +909,68 @@ var VistaKanban = {
     if (typeof BottomSheet !== 'undefined') {
       BottomSheet.abrir({ titulo: 'Filtros', opciones: opciones });
     }
+  },
+
+  _abrirEditorFecha: function(reg, campoFecha) {
+    var self = this;
+    var esCarga = campoFecha === 'fCarga';
+    var titulo = esCarga ? 'Fecha de Carga' : 'Fecha de Entrega';
+    var fechaActual = esCarga ? (reg.fCarga || '') : (reg.fEntrega || '');
+    var horaActual = esCarga ? (reg.hCarga || '') : (reg.hEntrega || '');
+
+    var contenido = document.createElement('div');
+    contenido.style.padding = '0 4px 8px';
+    contenido.innerHTML =
+      '<div style="font-size:16px;font-weight:bold;margin-bottom:12px">' + titulo + '</div>' +
+      '<div style="margin-bottom:8px"><label style="font-size:13px;color:#666">Fecha</label>' +
+        '<input type="date" id="ef-fecha" value="' + fechaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>' +
+      '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666">Hora</label>' +
+        '<input type="time" id="ef-hora" value="' + horaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>';
+
+    var opciones = [
+      { texto: 'Guardar', accion: function() {
+        var f = document.getElementById('ef-fecha').value || '';
+        var h = document.getElementById('ef-hora').value || '';
+        self._guardarFechaLogistica(reg, campoFecha, f, h);
+      }},
+      { texto: 'Borrar fecha', color: '#d32f2f', accion: function() {
+        self._guardarFechaLogistica(reg, campoFecha, '', '');
+      }}
+    ];
+
+    BottomSheet.abrir({ titulo: titulo, contenido: contenido, opciones: opciones });
+  },
+
+  _guardarFechaLogistica: async function(reg, campoFecha, fecha, hora) {
+    var esCarga = campoFecha === 'fCarga';
+    var campoF = esCarga ? 'fCarga' : 'fEntrega';
+    var campoH = esCarga ? 'hCarga' : 'hEntrega';
+
+    // Actualizar local
+    var regs = Store.obtenerRegistros();
+    regs.forEach(function(r) {
+      if (r.threadId === reg.threadId) {
+        r[campoF] = fecha;
+        r[campoH] = hora;
+      }
+    });
+    Store.guardarRegistros(regs);
+
+    if (typeof ToastUI !== 'undefined') {
+      ToastUI.mostrar(fecha ? 'Fecha guardada' : 'Fecha borrada', { tipo: 'exito', duracion: 2000 });
+    }
+
+    // Persistir en backend
+    try {
+      await API.post('actualizarCampoPorThread', { threadId: reg.threadId, campo: campoF, valor: fecha });
+      await API.post('actualizarCampoPorThread', { threadId: reg.threadId, campo: campoH, valor: hora });
+    } catch (e) {
+      if (typeof ToastUI !== 'undefined') {
+        ToastUI.mostrar('Error al guardar en backend', { tipo: 'error' });
+      }
+    }
+
+    this._rerenderizar();
   },
 
   _rerenderizar: function() {
