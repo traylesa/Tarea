@@ -24,6 +24,14 @@ async function inicializarConfigUI() {
   reglasEditando = config.reglasAcciones
     ? JSON.parse(JSON.stringify(config.reglasAcciones))
     : (typeof generarReglasDefault === 'function' ? generarReglasDefault() : []);
+  if (reglasEditando && Array.isArray(reglasEditando)) {
+    var _mapaObsoletos = { 'CARGA': 'OPERATIVO', 'ADMIN': 'ADMINISTRATIVA', 'GENERAL': 'SIN_CLASIFICAR' };
+    reglasEditando.forEach(function(r) {
+      if (r.condicion && r.condicion.campo === 'tipoTarea' && _mapaObsoletos[r.condicion.valor]) {
+        r.condicion.valor = _mapaObsoletos[r.condicion.valor];
+      }
+    });
+  }
   renderListaFasesConfig();
   renderListaEstadosConfig();
   if (typeof renderListaReglasConfig === 'function') renderListaReglasConfig();

@@ -5,7 +5,8 @@
  */
 
 var TIPOS_ACCION = ['EMAIL', 'FASE', 'RECORDATORIO', 'NOTA'];
-var MAX_ENTRADAS_POR_CARGA = 200;
+// Coherente con MAX_ENTRADAS_HISTORIAL_POR_CARGA de constants.js
+var MAX_ENTRADAS_POR_CARGA = 100;
 
 function _generarIdHist() {
   return 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);

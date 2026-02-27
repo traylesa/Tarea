@@ -217,7 +217,7 @@ var VistaConfig = {
     btnExport.textContent = 'Exportar plantillas';
     btnExport.addEventListener('click', function() {
       var plantillas = Store.obtenerPlantillas();
-      var datos = JSON.stringify({ plantillas: plantillas, pieComun: Store.obtenerPieComun() }, null, 2);
+      var datos = JSON.stringify({ version: 1, plantillas: plantillas, pieComun: Store.obtenerPieComun() }, null, 2);
       var blob = new Blob([datos], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');

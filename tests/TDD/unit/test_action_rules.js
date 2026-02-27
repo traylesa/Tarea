@@ -240,6 +240,43 @@ describe('action-rules.js', () => {
         expect(Array.isArray(r.acciones)).toBe(true);
       });
     });
+
+    test('dispara regla con tipoTarea OPERATIVO', () => {
+      var reglasCustom = [
+        {
+          id: 'tt_1', nombre: 'Regla operativo', activa: true,
+          condicion: { campo: 'tipoTarea', valor: 'OPERATIVO' },
+          acciones: [{ tipo: 'MOSTRAR_AVISO', params: { mensaje: 'Op' } }],
+          orden: 10, origen: 'usuario'
+        }
+      ];
+      expect(evaluarReglas(reglasCustom, 'tipoTarea', 'OPERATIVO', '')).toHaveLength(1);
+    });
+
+    test('dispara regla con tipoTarea ADMINISTRATIVA', () => {
+      var reglasCustom = [
+        {
+          id: 'tt_2', nombre: 'Regla admin', activa: true,
+          condicion: { campo: 'tipoTarea', valor: 'ADMINISTRATIVA' },
+          acciones: [{ tipo: 'MOSTRAR_AVISO', params: { mensaje: 'Adm' } }],
+          orden: 10, origen: 'usuario'
+        }
+      ];
+      expect(evaluarReglas(reglasCustom, 'tipoTarea', 'ADMINISTRATIVA', '')).toHaveLength(1);
+      expect(evaluarReglas(reglasCustom, 'tipoTarea', 'OPERATIVO', '')).toHaveLength(0);
+    });
+
+    test('dispara regla con tipoTarea SIN_CLASIFICAR', () => {
+      var reglasCustom = [
+        {
+          id: 'tt_3', nombre: 'Regla sin clasificar', activa: true,
+          condicion: { campo: 'tipoTarea', valor: 'SIN_CLASIFICAR' },
+          acciones: [{ tipo: 'MOSTRAR_AVISO', params: { mensaje: 'SC' } }],
+          orden: 10, origen: 'usuario'
+        }
+      ];
+      expect(evaluarReglas(reglasCustom, 'tipoTarea', 'SIN_CLASIFICAR', '')).toHaveLength(1);
+    });
   });
 
   // --- validarRegla ---

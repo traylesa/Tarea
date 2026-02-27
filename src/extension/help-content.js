@@ -422,7 +422,7 @@ const SECCIONES = [
       '<li><strong>fase</strong> — Codigo de fase logistica.</li>' +
       '<li><strong>estado</strong> — Estado del registro.</li>' +
       '<li><strong>codCar</strong> — Codigo de carga.</li>' +
-      '<li><strong>tipoTarea</strong> — Tipo de tarea (CARGA, DESCARGA, etc.).</li>' +
+      '<li><strong>tipoTarea</strong> — Tipo de tarea (OPERATIVO, ADMINISTRATIVA, SIN_CLASIFICAR).</li>' +
       '<li><strong>vinculacion</strong> — Tipo de vinculacion (AUTOMATICA, MANUAL, HILO, etc.).</li>' +
       '<li><strong>alerta</strong> — Nivel de alerta activo.</li>' +
       '<li><strong>bandeja</strong> — Bandeja de origen del email (INBOX, OTRO).</li>' +

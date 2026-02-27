@@ -268,8 +268,9 @@ describe('action-log.js', () => {
       expect(TIPOS_ACCION).toEqual(['EMAIL', 'FASE', 'RECORDATORIO', 'NOTA']);
     });
 
-    test('MAX_ENTRADAS_POR_CARGA es 200', () => {
-      expect(MAX_ENTRADAS_POR_CARGA).toBe(200);
+    test('MAX_ENTRADAS_POR_CARGA coincide con constants (100)', () => {
+      expect(MAX_ENTRADAS_POR_CARGA).toBe(MAX_ENTRADAS_HISTORIAL_POR_CARGA);
+      expect(MAX_ENTRADAS_POR_CARGA).toBe(100);
     });
   });
 });

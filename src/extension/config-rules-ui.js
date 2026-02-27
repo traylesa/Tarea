@@ -137,9 +137,9 @@ function _poblarSelectValores() {
       .map(function(e) { return { cod: e.codigo, nom: e.nombre }; });
   } else if (campoSel === 'tipoTarea') {
     opciones = [
-      { cod: 'CARGA', nom: 'Carga' },
-      { cod: 'ADMIN', nom: 'Administrativo' },
-      { cod: 'GENERAL', nom: 'General' }
+      { cod: 'OPERATIVO', nom: 'Operativo' },
+      { cod: 'ADMINISTRATIVA', nom: 'Administrativa' },
+      { cod: 'SIN_CLASIFICAR', nom: 'Sin clasificar' }
     ];
   } else if (campoSel === 'vinculacion') {
     opciones = [
