@@ -25,9 +25,15 @@ const SECCIONES = [
       '<li><strong>Datos</strong> — Tabla principal con todos los registros, filtros y acciones.</li>' +
       '<li><strong>Tablero</strong> — Vista Kanban tipo Trello con las cargas organizadas por fase.</li>' +
       '<li><strong>Plantillas</strong> — Crea y gestiona plantillas de respuesta con variables.</li>' +
-      '<li><strong>Config</strong> — Servicios GAS, hoja destino, apariencia, fases y mas.</li>' +
+      '<li><strong>Config</strong> — Servicios GAS, hoja destino, apariencia, fases, reglas y mas.</li>' +
       '<li><strong>? (Ayuda)</strong> — Esta guia.</li>' +
       '</ul>' +
+
+      '<h4>App movil (PWA)</h4>' +
+      '<p>TareaLog cuenta con una version movil accesible desde <strong>tarealog-movil.pages.dev</strong>. ' +
+      'Incluye tablero Kanban con drag &amp; drop tactil, detalle de carga, cambio de fase/estado, ' +
+      'respuesta rapida, recordatorios, notas y envios programados. ' +
+      'Funciona offline y se actualiza automaticamente.</p>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> El barrido automatico sincroniza tus correos ' +
       'cada 15 minutos. Puedes cambiar el intervalo en Config.</div>'
@@ -37,11 +43,12 @@ const SECCIONES = [
     titulo: 'Tabla y edicion',
     contenido:
       '<h3>Tabla de registros</h3>' +
-      '<p>La tabla muestra tus cargas con todos sus datos. Puedes interactuar de varias formas:</p>' +
+      '<p>La tabla muestra tus cargas con mas de 20 columnas. Puedes interactuar de varias formas:</p>' +
 
       '<h4>Edicion directa</h4>' +
       '<ul>' +
-      '<li><strong>Doble click</strong> en una celda para editarla (fase, estado, transportista, etc.).</li>' +
+      '<li><strong>Doble click</strong> en una celda para editarla (fase, estado, transportista, fechas logisticas, etc.).</li>' +
+      '<li>Los campos <strong>fCarga, hCarga, fEntrega, hEntrega</strong> son editables directamente en la tabla.</li>' +
       '<li>Los cambios se guardan automaticamente en la hoja de calculo.</li>' +
       '</ul>' +
 
@@ -50,6 +57,7 @@ const SECCIONES = [
       '<li>Click en la <strong>cabecera</strong> de cualquier columna para ordenar.</li>' +
       '<li>Arrastra el <strong>borde</strong> de una cabecera para redimensionar.</li>' +
       '<li>Click derecho en cabecera para <strong>ocultar/mostrar</strong> columnas.</li>' +
+      '<li>La rejilla tiene <strong>preferencias por defecto</strong> (orden, anchos y visibilidad predefinidos) que se aplican en la primera carga.</li>' +
       '</ul>' +
 
       '<h4>Busqueda global</h4>' +
@@ -60,16 +68,21 @@ const SECCIONES = [
       '<p>Pulsa <strong>Agrupar por hilo</strong> para ver los correos agrupados por conversacion. ' +
       'Click en la cabecera del grupo para expandir o colapsar.</p>' +
 
-      '<h4>Seleccion multiple</h4>' +
+      '<h4>Herencia en hilos</h4>' +
+      '<p>Cuando llega un nuevo correo dentro de un hilo existente, TareaLog hereda automaticamente ' +
+      'la <strong>fase, estado y codigo de carga</strong> del ultimo registro de ese hilo. ' +
+      'Asi no necesitas reasignar datos manualmente en cada respuesta de la conversacion.</p>' +
+
+      '<h4>Seleccion multiple y edicion masiva</h4>' +
       '<p>Marca las casillas de la primera columna para seleccionar varios registros. ' +
-      'Aparecera el panel de <strong>edicion masiva</strong> donde puedes cambiar fase y/o estado a todos a la vez.</p>'
+      'Aparecera el panel de <strong>edicion masiva</strong> donde puedes cambiar <strong>fase y/o estado</strong> a todos a la vez.</p>'
   },
   {
     id: 'filtros',
     titulo: 'Filtros',
     contenido:
       '<h3>Filtros avanzados</h3>' +
-      '<p>Pulsa el boton <strong>Filtros</strong> para abrir el panel con cuatro secciones de filtrado. ' +
+      '<p>Pulsa el boton <strong>Filtros</strong> para abrir el panel con tarjetas colapsables. ' +
       'Los filtros se comparten entre la tabla <strong>Datos</strong> y el <strong>Tablero</strong> Kanban.</p>' +
 
       '<h4>1. Fechas</h4>' +
@@ -142,26 +155,40 @@ const SECCIONES = [
       '<h3>Vista Kanban</h3>' +
       '<p>La pestana <strong>Tablero</strong> muestra las cargas en un tablero tipo Trello, organizadas en columnas por grupo de fase:</p>' +
       '<ul>' +
+      '<li><strong>Sin fase</strong> — Registros sin fase asignada (primera columna).</li>' +
       '<li><strong>Espera</strong> — Fases 00, 01, 02.</li>' +
       '<li><strong>Carga</strong> — Fases 11, 12.</li>' +
       '<li><strong>En ruta</strong> — Fase 19.</li>' +
       '<li><strong>Descarga</strong> — Fases 21, 22.</li>' +
       '<li><strong>Vacio</strong> — Fase 29.</li>' +
       '<li><strong>Incidencia</strong> — Fases 05, 25 (columna roja).</li>' +
+      '<li><strong>Documentado</strong> — Fase 30 (oculto por defecto).</li>' +
       '</ul>' +
 
       '<h4>Tarjetas</h4>' +
-      '<p>Cada tarjeta representa una carga y muestra: asunto, transportista, codigo de carga, estado y tiempo en fase.</p>' +
+      '<p>Cada tarjeta muestra: codigo de carga, transportista, asunto (2 lineas), estado (chip con color), ' +
+      'tiempo relativo y hora de carga si existe (ej: "2d \u23F014:30").</p>' +
+      '<p>Los indicadores en la tarjeta muestran alertas (\u26A0), notas (\uD83D\uDCDD) y recordatorios (\u23F0).</p>' +
       '<ul>' +
       '<li><strong>Click en tarjeta</strong> — Abre el detalle con todos los campos y opciones de edicion.</li>' +
-      '<li><strong>Arrastrar (drag & drop)</strong> — Mueve una carga a otra columna, cambiando su fase automaticamente.</li>' +
+      '<li><strong>Arrastrar (drag &amp; drop)</strong> — Mueve una carga a otra columna, cambiando su fase automaticamente.</li>' +
+      '<li><strong>Long-press</strong> — Abre acciones contextuales rapidas (cambiar fase, estado, ver detalle).</li>' +
+      '</ul>' +
+
+      '<h4>Detalle de tarjeta</h4>' +
+      '<p>Al abrir una tarjeta aparece un panel con:</p>' +
+      '<ul>' +
+      '<li><strong>Chips</strong> — Estado y fase (clickables para cambiar), bandeja, tipo de tarea.</li>' +
+      '<li><strong>Fechas logisticas</strong> — Carga y Entrega siempre visibles. Pulsa para <strong>editar</strong> ' +
+      'fecha y hora, o para asignarlas si estan vacias. Boton "Borrar fecha" para limpiar.</li>' +
+      '<li><strong>Acciones</strong> — Responder, +Nota, +Recordatorio, Ver detalle.</li>' +
       '</ul>' +
 
       '<h4>Controles</h4>' +
       '<ul>' +
-      '<li><strong>Actualizar</strong> — Refresca el tablero con los datos actuales.</li>' +
-      '<li><strong>Mostrar Documentado</strong> — Agrega la columna "Documentado" (fase 30), oculta por defecto.</li>' +
-      '<li><strong>Estados</strong> — Activa swimlanes (subagrupar por estado dentro de cada columna).</li>' +
+      '<li><strong>Chips de columnas</strong> — Activa/desactiva columnas visibles en el tablero.</li>' +
+      '<li><strong>Colapso horizontal</strong> — Click en la cabecera de una columna para colapsarla a una barra vertical.</li>' +
+      '<li><strong>Swimlanes</strong> — Subagrupar por estado dentro de cada columna (toggle on/off).</li>' +
       '</ul>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> Los filtros de la barra (fases, estados, busqueda global) ' +
@@ -213,8 +240,8 @@ const SECCIONES = [
       '<li>Pulsa <strong>Enviar</strong> o marca "Programar envio" para enviarlo mas tarde.</li>' +
       '</ol>' +
 
-      '<div class="ayuda-tip"><strong>Consejo:</strong> Las respuestas se envian como reply-all, ' +
-      'excluyendo automaticamente tu propio email.</div>' +
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Las respuestas se envian como reply al hilo original, ' +
+      'excluyendo automaticamente tu propio email. No se crea un email nuevo.</div>' +
 
       '<h3>Plantillas de respuesta</h3>' +
       '<p>Crea plantillas en la pestana <strong>Plantillas</strong>:</p>' +
@@ -285,6 +312,7 @@ const SECCIONES = [
       '<li>Pulsa <strong>"Recordar"</strong> en la barra de acciones.</li>' +
       '<li>Escribe el texto del recordatorio.</li>' +
       '<li>Elige cuando quieres que salte: 15min, 30min, 1h, 2h, 4h o manana a las 9.</li>' +
+      '<li>Opcionalmente, selecciona una <strong>fecha y hora personalizada</strong>.</li>' +
       '</ol>' +
 
       '<h4>Sugerencias automaticas</h4>' +
@@ -371,8 +399,48 @@ const SECCIONES = [
       '<li><strong>Reenviar</strong> — Reintenta un envio que fallo.</li>' +
       '</ul>' +
 
+      '<h4>Envios con error</h4>' +
+      '<p>Si un envio programado falla, queda en estado <strong>ERROR</strong>. ' +
+      'Puedes <strong>editar</strong> el contenido del correo y corregir el problema, ' +
+      'o pulsar <strong>"Reintentar"</strong> para volver a enviarlo. ' +
+      'Al editar un envio en ERROR, se reactiva automaticamente a estado Pendiente.</p>' +
+
       '<div class="ayuda-tip"><strong>Consejo:</strong> Los envios programados respetan el horario laboral ' +
       'y el limite de emails por minuto configurados en Config.</div>'
+  },
+  {
+    id: 'reglas',
+    titulo: 'Motor de reglas',
+    contenido:
+      '<h3>Reglas de acciones automaticas</h3>' +
+      '<p>TareaLog incluye un motor de reglas configurable que ejecuta acciones automaticas cuando un registro cumple condiciones. ' +
+      'Accede desde la pestana <strong>Config</strong>, seccion <strong>Reglas</strong>.</p>' +
+
+      '<h4>Campos disponibles</h4>' +
+      '<p>Puedes crear condiciones sobre <strong>9 campos</strong>:</p>' +
+      '<ul>' +
+      '<li><strong>fase</strong> — Codigo de fase logistica.</li>' +
+      '<li><strong>estado</strong> — Estado del registro.</li>' +
+      '<li><strong>codCar</strong> — Codigo de carga.</li>' +
+      '<li><strong>tipoTarea</strong> — Tipo de tarea (CARGA, DESCARGA, etc.).</li>' +
+      '<li><strong>vinculacion</strong> — Tipo de vinculacion (AUTOMATICA, MANUAL, HILO, etc.).</li>' +
+      '<li><strong>alerta</strong> — Nivel de alerta activo.</li>' +
+      '<li><strong>bandeja</strong> — Bandeja de origen del email (INBOX, OTRO).</li>' +
+      '<li><strong>interlocutor</strong> — Email del interlocutor.</li>' +
+      '<li><strong>zona</strong> — Zona geografica.</li>' +
+      '</ul>' +
+
+      '<h4>Tipos de accion</h4>' +
+      '<p>Cada regla puede ejecutar una accion cuando se cumple la condicion:</p>' +
+      '<ul>' +
+      '<li><strong>Cambiar fase</strong> — Mover la carga a otra fase automaticamente.</li>' +
+      '<li><strong>Cambiar estado</strong> — Asignar un estado.</li>' +
+      '<li><strong>Notificar</strong> — Mostrar una notificacion.</li>' +
+      '<li><strong>Heredar del hilo</strong> — Copiar un campo (fase/estado/codCar) del registro anterior del mismo hilo.</li>' +
+      '</ul>' +
+
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Las reglas se evaluan en orden de prioridad. ' +
+      'Puedes activar o desactivar cada regla individualmente.</div>'
   },
   {
     id: 'config',
@@ -386,7 +454,8 @@ const SECCIONES = [
       'Cada servicio tiene un alias descriptivo y puedes cambiar entre ellos con el selector de la barra principal.</p>' +
 
       '<h4>Hoja de calculo</h4>' +
-      '<p>Pega la URL completa de tu Google Sheet. Pulsa <strong>"Detectar"</strong> para validarla.</p>' +
+      '<p>Pega la URL completa de tu Google Sheet. Pulsa <strong>"Detectar"</strong> para validarla. ' +
+      'Puedes cambiar de hoja en cualquier momento con el selector dinamico.</p>' +
 
       '<h4>Busqueda Gmail</h4>' +
       '<p>Define que correos procesa el barrido. Usa la sintaxis de Gmail:</p>' +
@@ -402,7 +471,11 @@ const SECCIONES = [
       '</ul>' +
 
       '<h4>Estado inicial de emails</h4>' +
-      '<p>Selecciona el estado que se asigna automaticamente a los correos nuevos al procesarlos (p.ej. NUEVO, RECIBIDO). Se guarda en el backend GAS.</p>' +
+      '<p>Selecciona el estado que se asigna automaticamente a los correos nuevos al procesarlos (p.ej. NUEVO, RECIBIDO). ' +
+      'Se guarda en el backend GAS y se aplica a todos los dispositivos.</p>' +
+
+      '<h4>Reglas</h4>' +
+      '<p>Configura reglas de acciones automaticas con 9 campos de condicion. Ver seccion <strong>"Motor de reglas"</strong> para detalles.</p>' +
 
       '<h4>Otros ajustes</h4>' +
       '<ul>' +
@@ -443,11 +516,20 @@ const SECCIONES = [
 
       '<h4>Interacciones en tabla</h4>' +
       '<ul>' +
-      '<li><strong>Doble click</strong> en celda — Editar valor.</li>' +
+      '<li><strong>Doble click</strong> en celda — Editar valor (incluye fechas logisticas).</li>' +
       '<li><strong>Click</strong> en cabecera — Ordenar columna.</li>' +
       '<li><strong>Click derecho</strong> en cabecera — Opciones de columna.</li>' +
-      '<li><strong>Checkbox</strong> — Seleccionar para acciones masivas.</li>' +
+      '<li><strong>Checkbox</strong> — Seleccionar para edicion masiva (fase + estado).</li>' +
       '<li><strong>Click en fila</strong> — Muestra barra de acciones contextuales.</li>' +
+      '</ul>' +
+
+      '<h4>Interacciones en tablero Kanban</h4>' +
+      '<ul>' +
+      '<li><strong>Click en tarjeta</strong> — Abre detalle con fechas editables.</li>' +
+      '<li><strong>Arrastrar tarjeta</strong> — Cambia de fase (escritorio y movil).</li>' +
+      '<li><strong>Long-press</strong> — Acciones rapidas (movil).</li>' +
+      '<li><strong>Click en cabecera columna</strong> — Colapsar/expandir.</li>' +
+      '<li><strong>Chips superiores</strong> — Mostrar/ocultar columnas.</li>' +
       '</ul>' +
 
       '<h4>Variables de plantilla</h4>' +
@@ -458,6 +540,8 @@ const SECCIONES = [
       '<li><code>{{interlocutor}}</code> — Email del interlocutor.</li>' +
       '<li><code>{{fechaCorreo}}</code> — Fecha del correo.</li>' +
       '<li><code>{{estado}}</code> — Estado actual.</li>' +
+      '<li><code>{{fCarga}}</code> — Fecha de carga.</li>' +
+      '<li><code>{{fEntrega}}</code> — Fecha de entrega.</li>' +
       '</ul>' +
 
       '<h4>Fases logisticas</h4>' +
