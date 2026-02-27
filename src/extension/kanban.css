@@ -383,6 +383,17 @@
 .kanban-detalle-select:hover { border-color: #ddd; }
 .kanban-detalle-select:focus { border-color: var(--primary); outline: none; background: var(--bg-surface); }
 
+.kanban-detalle-input {
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--bg-surface-variant);
+  font-size: 13px;
+}
+.kanban-detalle-input:hover { border-color: #ddd; }
+.kanban-detalle-input:focus { border-color: var(--primary); outline: none; background: var(--bg-surface); }
+.kanban-detalle-hora { width: 80px; margin-left: 4px; }
+
 .kanban-detalle-indicadores {
   display: flex;
   gap: 8px;

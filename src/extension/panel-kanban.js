@@ -319,6 +319,11 @@ function _crearTarjetaKanban(reg) {
     fechaStr = horas < 1 ? '<1h' : horas < 24 ? horas + 'h' : Math.floor(horas / 24) + 'd';
   }
 
+  // Hora condicional: antes de en_ruta → hCarga, en_ruta+ → hEntrega
+  var faseNum = parseInt(reg.fase, 10);
+  var horaLog = (faseNum >= 19 ? reg.hEntrega : reg.hCarga) || '';
+  if (horaLog) fechaStr += ' \u23F0' + horaLog;
+
   // Banner alerta
   var bannerAlerta = '';
   if (reg.alerta && reg.alerta !== '') {
@@ -570,6 +575,12 @@ function _abrirModalKanban(reg) {
       '<span>' + (reg.interlocutor || '---') + '</span>' +
       '<span class="kanban-detalle-label">Fecha</span>' +
       '<span>' + (fechaStr || '---') + '</span>' +
+      '<span class="kanban-detalle-label">F.Carga</span>' +
+      '<span><input type="date" id="kanban-detalle-fCarga" class="kanban-detalle-input" value="' + (reg.fCarga || '') + '">' +
+        '<input type="time" id="kanban-detalle-hCarga" class="kanban-detalle-input kanban-detalle-hora" value="' + (reg.hCarga || '') + '"></span>' +
+      '<span class="kanban-detalle-label">F.Entrega</span>' +
+      '<span><input type="date" id="kanban-detalle-fEntrega" class="kanban-detalle-input" value="' + (reg.fEntrega || '') + '">' +
+        '<input type="time" id="kanban-detalle-hEntrega" class="kanban-detalle-input kanban-detalle-hora" value="' + (reg.hEntrega || '') + '"></span>' +
     '</div>' +
     (indicadores ? '<div class="kanban-detalle-indicadores">' + indicadores + '</div>' : '') +
     '<div class="kanban-detalle-acciones">' +
@@ -589,6 +600,16 @@ function _abrirModalKanban(reg) {
   document.getElementById('kanban-detalle-fase').addEventListener('change', function() {
     _persistirCambioKanban(reg, 'fase', this.value);
     renderKanban();
+  });
+
+  // Fechas logisticas editables
+  ['fCarga', 'hCarga', 'fEntrega', 'hEntrega'].forEach(function(campo) {
+    var input = document.getElementById('kanban-detalle-' + campo);
+    if (input) {
+      input.addEventListener('change', function() {
+        _persistirCambioKanban(reg, campo, this.value);
+      });
+    }
   });
 
   document.getElementById('btn-kanban-ver-tabla').addEventListener('click', function() {

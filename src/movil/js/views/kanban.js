@@ -135,7 +135,10 @@ var VistaKanban = {
       var horas = Math.floor(diff / 3600000);
       fechaStr = horas < 1 ? '<1h' : horas < 24 ? horas + 'h' : Math.floor(horas / 24) + 'd';
     }
-    var hCargaStr = reg.hCarga ? ' \u23F0' + reg.hCarga : '';
+    // Hora condicional: antes de en_ruta → hCarga, en_ruta+ → hEntrega
+    var faseNum = parseInt(reg.fase, 10);
+    var horaLogistica = (faseNum >= 19 ? reg.hEntrega : reg.hCarga) || '';
+    var hLogStr = horaLogistica ? ' \u23F0' + horaLogistica : '';
 
     // Chip estado
     var chipEstado = '';
@@ -161,7 +164,7 @@ var VistaKanban = {
       + '<div class="kanban-tarjeta-transportista">' + transp + '</div>'
       + '<div class="kanban-tarjeta-asunto">' + asunto + '</div>'
       + '<div class="kanban-tarjeta-footer">'
-        + '<span>' + fechaStr + hCargaStr + '</span>'
+        + '<span>' + fechaStr + hLogStr + '</span>'
         + indicadores
       + '</div>'
     + '</div>';
@@ -923,14 +926,18 @@ var VistaKanban = {
     contenido.innerHTML =
       '<div style="font-size:16px;font-weight:bold;margin-bottom:12px">' + titulo + '</div>' +
       '<div style="margin-bottom:8px"><label style="font-size:13px;color:#666">Fecha</label>' +
-        '<input type="date" id="ef-fecha" value="' + fechaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>' +
+        '<input type="date" class="ef-fecha" value="' + fechaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>' +
       '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666">Hora</label>' +
-        '<input type="time" id="ef-hora" value="' + horaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>';
+        '<input type="time" class="ef-hora" value="' + horaActual + '" style="width:100%;font-size:16px;min-height:44px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px"></div>';
+
+    // Capturar refs ANTES de que BottomSheet.cerrar() elimine el DOM
+    var inputFecha = contenido.querySelector('.ef-fecha');
+    var inputHora = contenido.querySelector('.ef-hora');
 
     var opciones = [
       { texto: 'Guardar', accion: function() {
-        var f = document.getElementById('ef-fecha').value || '';
-        var h = document.getElementById('ef-hora').value || '';
+        var f = inputFecha ? inputFecha.value : '';
+        var h = inputHora ? inputHora.value : '';
         self._guardarFechaLogistica(reg, campoFecha, f, h);
       }},
       { texto: 'Borrar fecha', color: '#d32f2f', accion: function() {
