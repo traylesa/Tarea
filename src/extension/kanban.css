@@ -186,6 +186,21 @@
   background: var(--primary-container);
 }
 
+.kanban-col-chk {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.kanban-col-chk:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+.kanban-columna.collapsed .kanban-col-chk {
+  display: none;
+}
+
 #kanban-bulk {
   padding: 6px 8px;
   gap: 6px;

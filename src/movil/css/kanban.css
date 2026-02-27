@@ -201,6 +201,18 @@
   background: #E3F2FD;
 }
 
+.kanban-col-chk {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.kanban-col-chk:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
 .kanban-seleccion-bar {
   position: fixed;
   bottom: 56px;

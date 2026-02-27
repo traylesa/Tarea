@@ -79,6 +79,9 @@ var VistaKanban = {
 
       html += '<div class="kanban-columna' + (colapsada ? ' collapsed' : '') + '" data-grupo="' + col.id + '">';
       html += '<div class="kanban-columna-header" data-toggle-col="' + col.id + '">';
+      html += '<input type="checkbox" class="kanban-col-chk" data-grupo-chk="' + col.id + '"'
+        + (colapsada ? ' style="display:none"' : '')
+        + (regsCol.length === 0 ? ' disabled' : '') + '>';
       html += '<span>' + col.nombre + '</span>';
       html += '<span class="kanban-columna-count">' + conteo.total + '</span>';
       html += '</div>';
@@ -318,6 +321,16 @@ var VistaKanban = {
         var colId = h.dataset.toggleCol;
         self._columnasColapsadas[colId] = !self._columnasColapsadas[colId];
         self._rerenderizar();
+      });
+    });
+
+    // Checkboxes seleccion por columna
+    document.querySelectorAll('.kanban-col-chk').forEach(function(chk) {
+      chk.addEventListener('click', function(e) { e.stopPropagation(); });
+      chk.addEventListener('change', function() {
+        var grupoId = this.dataset.grupoChk;
+        if (this.checked) self._seleccionarColumnaMovil(grupoId);
+        else self._deseleccionarColumnaMovil(grupoId);
       });
     });
 
@@ -1008,6 +1021,33 @@ var VistaKanban = {
 
   // --- Seleccion masiva ---
 
+  _seleccionarColumnaMovil: function(grupoId) {
+    var self = this;
+    var regs = Store.obtenerRegistros();
+    document.querySelectorAll('.kanban-columna[data-grupo="' + grupoId + '"] .kanban-tarjeta').forEach(function(t) {
+      var mid = t.dataset.messageId;
+      if (!mid) return;
+      var reg = regs.find(function(r) { return r.messageId === mid; });
+      if (reg) self._seleccionados[mid] = reg;
+      var chk = t.querySelector('.kanban-chk');
+      if (chk) chk.checked = true;
+      t.classList.add('seleccionada');
+    });
+    this._actualizarBarraSeleccion();
+  },
+
+  _deseleccionarColumnaMovil: function(grupoId) {
+    var self = this;
+    document.querySelectorAll('.kanban-columna[data-grupo="' + grupoId + '"] .kanban-tarjeta').forEach(function(t) {
+      var mid = t.dataset.messageId;
+      if (mid) delete self._seleccionados[mid];
+      var chk = t.querySelector('.kanban-chk');
+      if (chk) chk.checked = false;
+      t.classList.remove('seleccionada');
+    });
+    this._actualizarBarraSeleccion();
+  },
+
   _toggleSeleccion: function(reg, seleccionado) {
     if (seleccionado) {
       this._seleccionados[reg.messageId] = reg;
@@ -1062,7 +1102,6 @@ var VistaKanban = {
     var self = this;
     bar.innerHTML =
       '<span>' + count + ' selec.</span>' +
-      '<button data-act="todos">Todos</button>' +
       '<button data-act="fase">Fase</button>' +
       '<button data-act="estado">Estado</button>' +
       '<button data-act="responder">\u2709</button>' +
@@ -1072,8 +1111,7 @@ var VistaKanban = {
       var btn = e.target.closest('[data-act]');
       if (!btn) return;
       var act = btn.dataset.act;
-      if (act === 'todos') self._seleccionarTodosMovil();
-      else if (act === 'fase') self._abrirCambioMasivoMovil('fase');
+      if (act === 'fase') self._abrirCambioMasivoMovil('fase');
       else if (act === 'estado') self._abrirCambioMasivoMovil('estado');
       else if (act === 'responder') self._responderDesdeMovil();
       else if (act === 'limpiar') self._limpiarSeleccion();

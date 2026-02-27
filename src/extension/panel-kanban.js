@@ -204,6 +204,19 @@ function renderKanban() {
     else if (conteo.total === 0) countSpan.classList.add('empty');
     countSpan.textContent = formatearConteo(conteo.filtrado, conteo.total, hayFiltros);
 
+    var chkCol = document.createElement('input');
+    chkCol.type = 'checkbox';
+    chkCol.className = 'kanban-col-chk';
+    chkCol.title = 'Seleccionar columna ' + col.nombre;
+    if (colapsada) chkCol.style.display = 'none';
+    chkCol.addEventListener('click', function(e) { e.stopPropagation(); });
+    chkCol.addEventListener('change', (function(gId) {
+      return function() {
+        if (this.checked) _seleccionarColumna(gId);
+        else _deseleccionarColumna(gId);
+      };
+    })(col.id));
+    header.appendChild(chkCol);
     header.appendChild(nombreSpan);
     header.appendChild(countSpan);
     divCol.appendChild(header);
@@ -267,6 +280,7 @@ function renderKanban() {
 
     divCol.appendChild(body);
     board.appendChild(divCol);
+    _sincronizarCheckboxColumna(col.id);
 
     // SortableJS en TODAS las drop-zones (incluso colapsadas)
     var dropZones = divCol.querySelectorAll('.kanban-drop-zone');
@@ -466,6 +480,62 @@ function _limpiarSeleccionadosNoVisibles() {
   });
 }
 
+function _obtenerTarjetasColumna(grupoId) {
+  var divCol = document.querySelector('#kanban-board .kanban-columna[data-grupo="' + grupoId + '"]');
+  if (!divCol) return [];
+  return Array.from(divCol.querySelectorAll('.kanban-tarjeta'));
+}
+
+function _seleccionarColumna(grupoId) {
+  _obtenerTarjetasColumna(grupoId).forEach(function(card) {
+    var mid = card.dataset.messageId;
+    if (!mid) return;
+    var reg = (registros || []).find(function(r) { return r.messageId === mid; });
+    if (reg) _kanbanSeleccionados[mid] = reg;
+    var chk = card.querySelector('.kanban-chk');
+    if (chk) chk.checked = true;
+    card.classList.add('seleccionada');
+  });
+  _actualizarPanelBulkKanban();
+}
+
+function _deseleccionarColumna(grupoId) {
+  _obtenerTarjetasColumna(grupoId).forEach(function(card) {
+    var mid = card.dataset.messageId;
+    if (mid) delete _kanbanSeleccionados[mid];
+    var chk = card.querySelector('.kanban-chk');
+    if (chk) chk.checked = false;
+    card.classList.remove('seleccionada');
+  });
+  _actualizarPanelBulkKanban();
+}
+
+function _sincronizarCheckboxColumna(grupoId) {
+  var divCol = document.querySelector('#kanban-board .kanban-columna[data-grupo="' + grupoId + '"]');
+  if (!divCol) return;
+  var chkCol = divCol.querySelector('.kanban-col-chk');
+  if (!chkCol) return;
+  var tarjetas = Array.from(divCol.querySelectorAll('.kanban-tarjeta'));
+  if (tarjetas.length === 0) {
+    chkCol.disabled = true;
+    chkCol.checked = false;
+    chkCol.indeterminate = false;
+    return;
+  }
+  var numSel = tarjetas.filter(function(card) {
+    return !!_kanbanSeleccionados[card.dataset.messageId];
+  }).length;
+  chkCol.disabled = false;
+  chkCol.checked = numSel === tarjetas.length;
+  chkCol.indeterminate = numSel > 0 && numSel < tarjetas.length;
+}
+
+function _actualizarTodosCheckboxColumnas() {
+  COLUMNAS_KANBAN.forEach(function(col) {
+    _sincronizarCheckboxColumna(col.id);
+  });
+}
+
 function _poblarSelectsBulkKanban() {
   var selFase = document.getElementById('kanban-bulk-fase');
   var selEstado = document.getElementById('kanban-bulk-estado');
@@ -504,17 +574,10 @@ function _actualizarPanelBulkKanban() {
   }
   var btnResponder = document.getElementById('btn-kanban-bulk-responder');
   if (btnResponder) btnResponder.disabled = false;
+  _actualizarTodosCheckboxColumnas();
 }
 
 function _initKanbanBulk() {
-  var chkTodos = document.getElementById('kanban-chk-todos');
-  if (chkTodos) {
-    chkTodos.addEventListener('change', function() {
-      if (this.checked) _seleccionarTodosKanban();
-      else _deseleccionarTodosKanban();
-    });
-  }
-
   var chkFase = document.getElementById('kanban-chk-bulk-fase');
   var selFase = document.getElementById('kanban-bulk-fase');
   if (chkFase && selFase) {

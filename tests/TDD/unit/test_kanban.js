@@ -18,7 +18,8 @@ const {
   resolverFaseAlMover,
   calcularConteos,
   calcularConteosDual,
-  formatearConteo
+  formatearConteo,
+  obtenerSeleccionEstadoColumna
 } = require('../../../src/extension/kanban.js');
 
 // --- Helpers ---
@@ -456,6 +457,48 @@ describe('kanban.js', function() {
 
     test('con filtros e iguales', function() {
       expect(formatearConteo(5, 5, true)).toBe('5/5');
+    });
+  });
+
+  // --- obtenerSeleccionEstadoColumna ---
+
+  describe('obtenerSeleccionEstadoColumna', function() {
+    test('retorna ninguno y total 0 para columna vacia', function() {
+      var r = obtenerSeleccionEstadoColumna([], {});
+      expect(r).toEqual({ total: 0, seleccionados: 0, estado: 'ninguno' });
+    });
+
+    test('retorna ninguno si mapa vacio', function() {
+      var regs = [{ messageId: 'a' }, { messageId: 'b' }];
+      var r = obtenerSeleccionEstadoColumna(regs, {});
+      expect(r.estado).toBe('ninguno');
+      expect(r.seleccionados).toBe(0);
+    });
+
+    test('retorna todos si todos seleccionados', function() {
+      var regs = [{ messageId: 'a' }, { messageId: 'b' }];
+      var r = obtenerSeleccionEstadoColumna(regs, { a: {}, b: {} });
+      expect(r.estado).toBe('todos');
+      expect(r.seleccionados).toBe(2);
+    });
+
+    test('retorna parcial si solo algunos seleccionados', function() {
+      var regs = [{ messageId: 'a' }, { messageId: 'b' }, { messageId: 'c' }];
+      var r = obtenerSeleccionEstadoColumna(regs, { a: {} });
+      expect(r.estado).toBe('parcial');
+      expect(r.seleccionados).toBe(1);
+    });
+
+    test('total refleja registros de la columna', function() {
+      var regs = [{ messageId: 'x' }, { messageId: 'y' }];
+      expect(obtenerSeleccionEstadoColumna(regs, {}).total).toBe(2);
+    });
+
+    test('ignora IDs de seleccionadosMap que no pertenecen a la columna', function() {
+      var regs = [{ messageId: 'a' }, { messageId: 'b' }];
+      var r = obtenerSeleccionEstadoColumna(regs, { a: {}, z: {}, w: {} });
+      expect(r.seleccionados).toBe(1);
+      expect(r.estado).toBe('parcial');
     });
   });
 });

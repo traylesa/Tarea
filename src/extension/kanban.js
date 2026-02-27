@@ -149,6 +149,15 @@ function formatearConteo(filtrado, total, hayFiltros) {
   return filtrado + '/' + total;
 }
 
+function obtenerSeleccionEstadoColumna(regsColumna, seleccionadosMap) {
+  var total = regsColumna.length;
+  if (total === 0) return { total: 0, seleccionados: 0, estado: 'ninguno' };
+  var mapa = seleccionadosMap || {};
+  var numSel = regsColumna.filter(function(r) { return !!mapa[r.messageId]; }).length;
+  var estado = numSel === 0 ? 'ninguno' : numSel === total ? 'todos' : 'parcial';
+  return { total: total, seleccionados: numSel, estado: estado };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     COLUMNAS_KANBAN: COLUMNAS_KANBAN,
@@ -159,6 +168,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolverFaseAlMover: resolverFaseAlMover,
     calcularConteos: calcularConteos,
     calcularConteosDual: calcularConteosDual,
-    formatearConteo: formatearConteo
+    formatearConteo: formatearConteo,
+    obtenerSeleccionEstadoColumna: obtenerSeleccionEstadoColumna
   };
 }
