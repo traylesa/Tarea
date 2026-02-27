@@ -3,7 +3,7 @@
  * Guia de usuario organizada por secciones.
  */
 
-const SECCIONES = [
+var SECCIONES = [
   {
     id: 'inicio',
     titulo: 'Inicio rapido',
@@ -49,7 +49,7 @@ const SECCIONES = [
       '<ul>' +
       '<li><strong>Doble click</strong> en una celda para editarla (fase, estado, transportista, fechas logisticas, etc.).</li>' +
       '<li>Los campos <strong>fCarga, hCarga, fEntrega, hEntrega</strong> son editables directamente en la tabla.</li>' +
-      '<li>Los cambios se guardan automaticamente en la hoja de calculo.</li>' +
+      '<li>Los cambios se guardan automaticamente en la hoja de calculo y se propagan al hilo completo.</li>' +
       '</ul>' +
 
       '<h4>Ordenar y redimensionar</h4>' +
@@ -72,10 +72,13 @@ const SECCIONES = [
       '<p>Cuando llega un nuevo correo dentro de un hilo existente, TareaLog hereda automaticamente ' +
       'la <strong>fase, estado y codigo de carga</strong> del ultimo registro de ese hilo. ' +
       'Asi no necesitas reasignar datos manualmente en cada respuesta de la conversacion.</p>' +
+      '<p>La prioridad de herencia es: adjunto (AUTOMATICA) &gt; ThreadManager (HILO) &gt; SEGUIMIENTO (HILO). ' +
+      'Si el registro tiene alerta, esta prevalece siempre sobre el estado heredado.</p>' +
 
       '<h4>Seleccion multiple y edicion masiva</h4>' +
       '<p>Marca las casillas de la primera columna para seleccionar varios registros. ' +
-      'Aparecera el panel de <strong>edicion masiva</strong> donde puedes cambiar <strong>fase y/o estado</strong> a todos a la vez.</p>'
+      'Aparecera el panel de <strong>edicion masiva</strong> donde puedes cambiar <strong>fase y/o estado</strong> a todos a la vez. ' +
+      'Los cambios se propagan al hilo completo de cada registro seleccionado.</p>'
   },
   {
     id: 'filtros',
@@ -105,9 +108,8 @@ const SECCIONES = [
       '</ul>' +
       '<p>Botones de control rapido:</p>' +
       '<ul>' +
-      '<li><strong>Todas</strong> — Activa todas las tarjetas de fase de una vez.</li>' +
-      '<li><strong>Ninguna</strong> — Desactiva todas (equivale a mostrar todo).</li>' +
-      '<li><strong>Invertir</strong> — Invierte la seleccion: las activas pasan a inactivas y viceversa.</li>' +
+      '<li><strong>Marcar Todas</strong> — Activa todas las tarjetas de fase de una vez.</li>' +
+      '<li><strong>Desmarcar Todas</strong> — Desactiva todas (equivale a mostrar todo).</li>' +
       '</ul>' +
 
       '<h4>3. Tarjetas de estados</h4>' +
@@ -134,7 +136,7 @@ const SECCIONES = [
       '<h4>5. Filtros personalizados</h4>' +
       '<p>Pulsa <strong>"+ Agregar filtro"</strong> para crear condiciones a medida:</p>' +
       '<ol>' +
-      '<li>Selecciona el <strong>campo</strong> (transportista, zona, referencia...).</li>' +
+      '<li>Selecciona el <strong>campo</strong> (transportista, zona, referencia, bandeja, interlocutor...).</li>' +
       '<li>Elige el <strong>operador</strong> (contiene, no contiene, igual, mayor, menor).</li>' +
       '<li>Escribe el <strong>valor</strong>.</li>' +
       '</ol>' +
@@ -155,51 +157,107 @@ const SECCIONES = [
       '<h3>Vista Kanban</h3>' +
       '<p>La pestana <strong>Tablero</strong> muestra las cargas en un tablero tipo Trello, organizadas en columnas por grupo de fase:</p>' +
       '<ul>' +
-      '<li><strong>Sin fase</strong> — Registros sin fase asignada (primera columna).</li>' +
+      '<li><strong>Sin fase</strong> — Registros sin fase asignada (primera columna, fondo rayado).</li>' +
       '<li><strong>Espera</strong> — Fases 00, 01, 02.</li>' +
       '<li><strong>Carga</strong> — Fases 11, 12.</li>' +
       '<li><strong>En ruta</strong> — Fase 19.</li>' +
       '<li><strong>Descarga</strong> — Fases 21, 22.</li>' +
       '<li><strong>Vacio</strong> — Fase 29.</li>' +
       '<li><strong>Incidencia</strong> — Fases 05, 25 (columna roja).</li>' +
-      '<li><strong>Documentado</strong> — Fase 30 (oculto por defecto).</li>' +
+      '<li><strong>Documentado</strong> — Fase 30 (oculto por defecto, atenuado).</li>' +
       '</ul>' +
+
+      '<h4>Deduplicacion</h4>' +
+      '<p>Si una misma carga (mismo <strong>codCar</strong>) aparece en varios correos, el tablero muestra ' +
+      'solo el registro mas reciente. Esto evita tarjetas duplicadas.</p>' +
 
       '<h4>Tarjetas</h4>' +
-      '<p>Cada tarjeta muestra: codigo de carga, transportista, asunto (2 lineas), estado (chip con color), ' +
-      'tiempo relativo y hora de carga si existe (ej: "2d \u23F014:30").</p>' +
-      '<p>Los indicadores en la tarjeta muestran alertas (\u26A0), notas (\uD83D\uDCDD) y recordatorios (\u23F0).</p>' +
+      '<p>Cada tarjeta muestra:</p>' +
       '<ul>' +
-      '<li><strong>Click en tarjeta</strong> — Abre el detalle con todos los campos y opciones de edicion.</li>' +
+      '<li><strong>Codigo de carga</strong> — En tipografia monoespaciada.</li>' +
+      '<li><strong>Transportista</strong> — Nombre o email del interlocutor.</li>' +
+      '<li><strong>Asunto</strong> — Dos lineas maximas del asunto del correo.</li>' +
+      '<li><strong>Estado</strong> — Chip coloreado (NUEVO, PENDIENTE, GESTIONADO, etc.).</li>' +
+      '<li><strong>Tiempo</strong> — Relativo (&lt;1h, 3h, 2d) + hora logistica (\u23F014:30).</li>' +
+      '<li><strong>Borde izquierdo</strong> — Color segun estado del registro.</li>' +
+      '<li><strong>Banner rojo</strong> — Si la carga tiene alerta activa.</li>' +
+      '</ul>' +
+
+      '<h4>Indicadores en tarjeta</h4>' +
+      '<p>Iconos pequenos en la esquina inferior derecha:</p>' +
+      '<ul>' +
+      '<li>\uD83D\uDCDD — <strong>Notas</strong> con contador. Click para abrir.</li>' +
+      '<li>\u23F0 — <strong>Recordatorio</strong> activo. Click para ver detalle.</li>' +
+      '<li>\uD83D\uDCC5 — <strong>Envio programado</strong>. Click para ver detalle.</li>' +
+      '</ul>' +
+
+      '<h4>Interacciones</h4>' +
+      '<ul>' +
+      '<li><strong>Click en tarjeta</strong> — Abre modal con detalle completo y campos editables.</li>' +
       '<li><strong>Arrastrar (drag &amp; drop)</strong> — Mueve una carga a otra columna, cambiando su fase automaticamente.</li>' +
-      '<li><strong>Long-press</strong> — Abre acciones contextuales rapidas (cambiar fase, estado, ver detalle).</li>' +
+      '<li>Puedes soltar sobre una columna <strong>colapsada</strong>: la zona de drop sigue activa.</li>' +
       '</ul>' +
 
-      '<h4>Detalle de tarjeta</h4>' +
-      '<p>Al abrir una tarjeta aparece un panel con:</p>' +
+      '<h4>Detalle de tarjeta (modal)</h4>' +
+      '<p>Al hacer click en una tarjeta se abre un panel con:</p>' +
       '<ul>' +
-      '<li><strong>Chips</strong> — Estado y fase (clickables para cambiar), bandeja, tipo de tarea.</li>' +
-      '<li><strong>Fechas logisticas</strong> — Carga y Entrega siempre visibles. Pulsa para <strong>editar</strong> ' +
-      'fecha y hora, o para asignarlas si estan vacias. Boton "Borrar fecha" para limpiar.</li>' +
-      '<li><strong>Acciones</strong> — Responder, +Nota, +Recordatorio, Ver detalle.</li>' +
+      '<li><strong>Selects</strong> — Estado y fase editables directamente.</li>' +
+      '<li><strong>Fechas logisticas</strong> — F.Carga y F.Entrega con campos date + time editables.</li>' +
+      '<li><strong>Indicadores clickables</strong> — Notas, recordatorio y programado.</li>' +
+      '<li><strong>Botones</strong> — +Nota, +Recordatorio, Responder, Ver en tabla.</li>' +
       '</ul>' +
 
-      '<h4>Controles</h4>' +
+      '<h4>Seleccion por columna</h4>' +
+      '<p>Cada cabecera de columna tiene un <strong>checkbox</strong> para seleccionar/deseleccionar ' +
+      'todas las tarjetas de esa columna de una vez:</p>' +
       '<ul>' +
-      '<li><strong>Chips de columnas</strong> — Activa/desactiva columnas visibles en el tablero.</li>' +
-      '<li><strong>Colapso horizontal</strong> — Click en la cabecera de una columna para colapsarla a una barra vertical.</li>' +
-      '<li><strong>Swimlanes</strong> — Subagrupar por estado dentro de cada columna (toggle on/off).</li>' +
+      '<li><strong>Marcar</strong> — Selecciona todas las tarjetas visibles de la columna.</li>' +
+      '<li><strong>Desmarcar</strong> — Deselecciona todas las de la columna.</li>' +
+      '<li><strong>Indeterminate</strong> — Si hay seleccion parcial, el checkbox muestra estado mixto.</li>' +
+      '<li><strong>Columna vacia</strong> — Checkbox deshabilitado.</li>' +
+      '<li><strong>Columna colapsada</strong> — Checkbox oculto.</li>' +
+      '</ul>' +
+      '<p>Tambien puedes marcar tarjetas individuales con el checkbox de cada tarjeta.</p>' +
+
+      '<h4>Edicion masiva desde tablero</h4>' +
+      '<p>Al seleccionar tarjetas aparece un panel de edicion masiva:</p>' +
+      '<ul>' +
+      '<li>Marca <strong>"Fase"</strong> y selecciona la nueva fase.</li>' +
+      '<li>Marca <strong>"Estado"</strong> y selecciona el nuevo estado.</li>' +
+      '<li>Pulsa <strong>"Aplicar (N)"</strong> para cambiar todos a la vez.</li>' +
+      '<li>Pulsa <strong>"Responder"</strong> para enviar respuesta a los seleccionados.</li>' +
+      '</ul>' +
+
+      '<h4>Conteos duales</h4>' +
+      '<p>Cuando hay filtros activos, el contador de cada columna muestra <strong>filtrado/total</strong> ' +
+      '(ej: "3/8"). Sin filtros, muestra solo el total. Columnas con 6+ cargas resaltan el badge en naranja.</p>' +
+
+      '<h4>Controles superiores</h4>' +
+      '<ul>' +
+      '<li><strong>Actualizar</strong> — Refresca el tablero con los datos actuales.</li>' +
+      '<li><strong>Checkboxes de columnas</strong> — Sin Fase, Espera, Vacio, Documentado, Nada, Cerrado.</li>' +
+      '<li><strong>Todas/Ninguna</strong> — Mostrar/ocultar columnas opcionales de una vez.</li>' +
+      '<li><strong>Estados</strong> — Toggle swimlanes (subagrupar por estado dentro de cada columna).</li>' +
+      '<li><strong>Colapso horizontal</strong> — Click en el nombre de columna para colapsarla a una barra vertical fina (44px).</li>' +
+      '</ul>' +
+
+      '<h4>Atajos de teclado (tablero)</h4>' +
+      '<ul>' +
+      '<li><span class="ayuda-kbd">f</span> — Enfocar busqueda global.</li>' +
+      '<li><span class="ayuda-kbd">r</span> — Refrescar tablero.</li>' +
+      '<li><span class="ayuda-kbd">Esc</span> — Cerrar modal de detalle.</li>' +
       '</ul>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> Los filtros de la barra (fases, estados, busqueda global) ' +
-      'tambien se aplican al tablero. Es la misma barra de filtros compartida.</div>'
+      'se aplican tambien al tablero. Es la misma barra de filtros compartida. En el tablero se ocultan ' +
+      'los botones exclusivos de la tabla (Ejecutar, Agrupar, Programados, etc.).</div>'
   },
   {
     id: 'acciones',
     titulo: 'Acciones y notas',
     contenido:
       '<h3>Barra de acciones contextuales</h3>' +
-      '<p>Al seleccionar <strong>una fila</strong>, aparece una barra con acciones rapidas adaptadas a la fase actual:</p>' +
+      '<p>Al seleccionar <strong>una fila</strong> en la tabla, aparece una barra con acciones rapidas adaptadas a la fase actual:</p>' +
 
       '<h4>Acciones por fase</h4>' +
       '<ul>' +
@@ -215,16 +273,26 @@ const SECCIONES = [
       '<ul>' +
       '<li><strong>Recordar</strong> — Crea un recordatorio para esta carga.</li>' +
       '<li><strong>Notas</strong> — Abre las notas asociadas a la carga.</li>' +
-      '<li><strong>Vincular</strong> — Asocia manualmente un codigo de carga.</li>' +
+      '<li><strong>Vincular</strong> — Asocia manualmente un codigo de carga al registro.</li>' +
       '</ul>' +
 
       '<h3>Notas por carga</h3>' +
       '<p>Cada carga puede tener notas privadas. Utiles para anotar incidencias, acuerdos telefonicos o cualquier observacion.</p>' +
       '<ul>' +
-      '<li>Escribe en el campo y pulsa <strong>Enter</strong> para agregar.</li>' +
+      '<li>Escribe en el campo y pulsa <strong>Enter</strong> o el boton <strong>Agregar</strong>.</li>' +
       '<li>Las notas se guardan con fecha y hora automatica.</li>' +
-      '<li>El boton "Notas" muestra un <strong>badge</strong> si la carga tiene notas.</li>' +
-      '</ul>'
+      '<li>Las notas son <strong>inmutables</strong>: se crean nuevas, no se editan las existentes.</li>' +
+      '<li>En la tabla y tablero, un indicador \uD83D\uDCDD con contador aparece si la carga tiene notas.</li>' +
+      '</ul>' +
+
+      '<h3>Vinculacion manual</h3>' +
+      '<p>Si un correo no se vinculo automaticamente a una carga, puedes asociarlo manualmente:</p>' +
+      '<ol>' +
+      '<li>Selecciona la fila en la tabla.</li>' +
+      '<li>Pulsa <strong>"Vincular"</strong> en la barra de acciones.</li>' +
+      '<li>Introduce el <strong>codigo de carga</strong> numerico.</li>' +
+      '<li>Pulsa <strong>"Vincular"</strong> para confirmar. Se marca como vinculacion MANUAL.</li>' +
+      '</ol>'
   },
   {
     id: 'respuestas',
@@ -233,15 +301,15 @@ const SECCIONES = [
       '<h3>Respuesta masiva</h3>' +
       '<p>Envia respuestas a multiples transportistas de una vez:</p>' +
       '<ol>' +
-      '<li>Marca los correos con las <strong>casillas</strong> de seleccion.</li>' +
-      '<li>Pulsa <strong>"Responder seleccionados"</strong>.</li>' +
+      '<li>Marca los correos con las <strong>casillas</strong> de seleccion (tabla o tablero Kanban).</li>' +
+      '<li>Pulsa <strong>"Responder seleccionados"</strong> (tabla) o <strong>"Responder"</strong> (tablero).</li>' +
       '<li>Elige una <strong>plantilla</strong> o escribe un mensaje libre.</li>' +
       '<li>Revisa la <strong>previsualizacion</strong> (muestra el primer destinatario).</li>' +
       '<li>Pulsa <strong>Enviar</strong> o marca "Programar envio" para enviarlo mas tarde.</li>' +
       '</ol>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> Las respuestas se envian como reply al hilo original, ' +
-      'excluyendo automaticamente tu propio email. No se crea un email nuevo.</div>' +
+      'excluyendo automaticamente tu propio email (calculado via Session.getEffectiveUser). No se crea un email nuevo.</div>' +
 
       '<h3>Plantillas de respuesta</h3>' +
       '<p>Crea plantillas en la pestana <strong>Plantillas</strong>:</p>' +
@@ -268,13 +336,13 @@ const SECCIONES = [
       '<h3>Sistema de alertas proactivas</h3>' +
       '<p>TareaLog evalua automaticamente tus cargas despues de cada barrido y genera alertas cuando detecta situaciones que requieren atencion:</p>' +
 
-      '<h4>Tipos de alerta</h4>' +
+      '<h4>Tipos de alerta (reglas R2-R6)</h4>' +
       '<ul>' +
-      '<li><strong>Sin respuesta</strong> — Un transportista no ha respondido a tu email en mas de 4 horas.</li>' +
-      '<li><strong>Fase estancada</strong> — Una carga lleva demasiado tiempo en la misma fase (ej: >3h en posicion carga).</li>' +
-      '<li><strong>Documentacion pendiente</strong> — Carga en fase 29 (vacio) sin documentar durante mas de 2 dias.</li>' +
-      '<li><strong>Incidencia activa</strong> — Cualquier carga en fases 05 o 25 (siempre critica).</li>' +
-      '<li><strong>Carga HOY sin orden</strong> — Carga programada para hoy sin email de confirmacion enviado.</li>' +
+      '<li><strong>R2 — Sin respuesta</strong> — Un transportista no ha respondido a tu email en mas de 4 horas.</li>' +
+      '<li><strong>R3 — Fase estancada</strong> — Una carga lleva demasiado tiempo en la misma fase (ej: &gt;3h en posicion carga).</li>' +
+      '<li><strong>R4 — Documentacion pendiente</strong> — Carga en fase 29 (vacio) sin documentar durante mas de 2 dias.</li>' +
+      '<li><strong>R5 — Incidencia activa</strong> — Cualquier carga en fases 05 o 25 (siempre critica).</li>' +
+      '<li><strong>R6 — Carga HOY sin orden</strong> — Carga programada para hoy sin email de confirmacion enviado.</li>' +
       '</ul>' +
 
       '<h4>Niveles</h4>' +
@@ -288,13 +356,14 @@ const SECCIONES = [
       '<ul>' +
       '<li>El <strong>icono de la extension</strong> muestra un badge con el numero de alertas y color segun gravedad.</li>' +
       '<li>Las alertas criticas y altas generan <strong>notificaciones</strong> de Chrome.</li>' +
+      '<li>Las alertas se <strong>deduplican</strong> por ID + cooldown configurable para evitar spam.</li>' +
       '</ul>' +
 
       '<h4>Resumen matutino</h4>' +
-      '<p>Una vez al dia (a la hora configurada), se abre automaticamente una ventana con el <strong>resumen de alertas</strong> ' +
+      '<p>Una vez al dia (a la hora configurada, por defecto 08:00), se abre automaticamente una ventana con el <strong>resumen de alertas</strong> ' +
       'organizado por categorias: Urgente, Sin respuesta, Documentacion, Fases estancadas.</p>' +
       '<p>Tambien puedes abrirlo manualmente con el boton <strong>"Resumen"</strong>.</p>' +
-      '<p>Desde el resumen, pulsa <strong>"Ver"</strong> en cualquier categoria para abrir el panel con los filtros ya aplicados.</p>' +
+      '<p>Desde el resumen, pulsa <strong>"Ver"</strong> en cualquier categoria para abrir el panel con los filtros ya aplicados (click-through).</p>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> Puedes ajustar los umbrales de cada alerta ' +
       'y la hora del resumen matutino en la pestana Config.</div>'
@@ -308,8 +377,8 @@ const SECCIONES = [
 
       '<h4>Crear un recordatorio</h4>' +
       '<ol>' +
-      '<li>Selecciona una fila en la tabla.</li>' +
-      '<li>Pulsa <strong>"Recordar"</strong> en la barra de acciones.</li>' +
+      '<li>Selecciona una fila en la tabla o abre una tarjeta en el tablero.</li>' +
+      '<li>Pulsa <strong>"Recordar"</strong> o <strong>"+Record."</strong>.</li>' +
       '<li>Escribe el texto del recordatorio.</li>' +
       '<li>Elige cuando quieres que salte: 15min, 30min, 1h, 2h, 4h o manana a las 9.</li>' +
       '<li>Opcionalmente, selecciona una <strong>fecha y hora personalizada</strong>.</li>' +
@@ -321,17 +390,20 @@ const SECCIONES = [
       '<li><strong>Fase 19 (En ruta)</strong> — "Verificar descarga" en 8 horas.</li>' +
       '<li><strong>Fase 29 (Vacio)</strong> — "Reclamar POD" en 24 horas.</li>' +
       '</ul>' +
-      '<p>Puedes aceptar la sugerencia o descartarla. Se configuran en Config.</p>' +
+      '<p>Puedes aceptar la sugerencia o descartarla. Se activan/desactivan en Config.</p>' +
 
       '<h4>Gestionar recordatorios</h4>' +
       '<p>Pulsa el boton <strong>"Recordatorios"</strong> para ver el panel con todos los activos:</p>' +
       '<ul>' +
+      '<li><strong>Click en un recordatorio</strong> — Abre modal de detalle con contexto de carga.</li>' +
       '<li><strong>Snooze</strong> — Posponer con los mismos presets de tiempo.</li>' +
-      '<li><strong>Hecho</strong> — Marcar como completado y eliminarlo.</li>' +
+      '<li><strong>Completar</strong> — Marcar como hecho y eliminarlo.</li>' +
+      '<li><strong>Editar</strong> — Modificar texto o reprogramar.</li>' +
       '</ul>' +
-      '<p>Cuando un recordatorio vence, recibes una <strong>notificacion de Chrome</strong> con opciones de snooze directas.</p>' +
+      '<p>Cuando un recordatorio vence, recibes una <strong>notificacion de Chrome</strong> con opciones de snooze directas en los botones.</p>' +
 
-      '<div class="ayuda-warn"><strong>Limite:</strong> Maximo 50 recordatorios activos simultaneamente.</div>'
+      '<div class="ayuda-warn"><strong>Limite:</strong> Maximo 50 recordatorios activos simultaneamente. ' +
+      'Los recordatorios se verifican cada 1 minuto.</div>'
   },
   {
     id: 'turno',
@@ -351,6 +423,10 @@ const SECCIONES = [
       'Incluye cargas gestionadas, incidencias y recordatorios pendientes.</p>' +
       '<p>Usa el boton <strong>"Copiar"</strong> para pegar el reporte donde necesites (email, chat, etc.).</p>' +
 
+      '<h3>Historial de acciones</h3>' +
+      '<p>TareaLog registra automaticamente un historial de las acciones realizadas sobre cada carga ' +
+      '(cambios de fase, estado, etc.). El historial se rota automaticamente para no acumular datos excesivos.</p>' +
+
       '<div class="ayuda-tip"><strong>Consejo:</strong> Puedes configurar la hora de generacion automatica del reporte en Config.</div>'
   },
   {
@@ -361,7 +437,7 @@ const SECCIONES = [
       '<p>Las secuencias automatizan cadenas de emails escalonados para una carga. ' +
       'Si no recibes respuesta, TareaLog envia recordatorios automaticos en los intervalos configurados.</p>' +
 
-      '<h4>Secuencias disponibles</h4>' +
+      '<h4>Secuencias predefinidas</h4>' +
       '<ul>' +
       '<li><strong>Reclamar POD</strong> — 3 pasos: solicitud inicial, recordatorio a las 72h, escalado a las 168h (7 dias).</li>' +
       '<li><strong>Confirmar carga</strong> — 3 pasos: consulta inicial, recordatorio a las 24h, urgente a las 48h.</li>' +
@@ -370,10 +446,11 @@ const SECCIONES = [
 
       '<h4>Como funcionan</h4>' +
       '<ul>' +
-      '<li>Se inician desde la <strong>barra de acciones</strong> de una carga.</li>' +
-      '<li>TareaLog evalua las secuencias cada 15 minutos.</li>' +
+      '<li>Se inician desde la <strong>barra de acciones</strong> de una carga o via reglas automaticas.</li>' +
+      '<li>TareaLog evalua las secuencias cada 15 minutos (configurable).</li>' +
       '<li>Si el transportista responde, puedes <strong>detener</strong> la secuencia manualmente.</li>' +
       '<li>Al completar todos los pasos, la secuencia se marca como completada.</li>' +
+      '<li>Las secuencias pueden iniciarse automaticamente via el motor de reglas (accion <strong>INICIAR_SECUENCIA</strong>).</li>' +
       '</ul>' +
 
       '<div class="ayuda-warn"><strong>Importante:</strong> Los envios respetan el horario laboral configurado en Config. ' +
@@ -388,25 +465,31 @@ const SECCIONES = [
       '<ol>' +
       '<li>Al responder, marca la casilla <strong>"Programar envio"</strong>.</li>' +
       '<li>Selecciona la <strong>fecha y hora</strong> deseada.</li>' +
-      '<li>El correo quedara en estado <strong>Pendiente</strong> hasta el momento del envio.</li>' +
+      '<li>El correo quedara en estado <strong>PENDIENTE</strong> hasta el momento del envio.</li>' +
       '</ol>' +
 
       '<h4>Panel de programados</h4>' +
       '<p>Pulsa <strong>"Programados"</strong> para ver todos los envios:</p>' +
       '<ul>' +
-      '<li>Filtra por estado: Pendiente, Enviado, Error, Cancelado.</li>' +
-      '<li><strong>Cancelar</strong> — Detiene un envio pendiente.</li>' +
-      '<li><strong>Reenviar</strong> — Reintenta un envio que fallo.</li>' +
+      '<li>Filtra por estado: Todos, Pendiente, Enviado, Error, Cancelado.</li>' +
+      '<li><strong>Click en un envio</strong> — Abre modal de detalle con todos los campos editables.</li>' +
+      '<li><strong>Cancelar envio</strong> — Detiene un envio pendiente.</li>' +
+      '<li><strong>Enviar ahora</strong> — Envia inmediatamente sin esperar la hora programada.</li>' +
       '</ul>' +
 
       '<h4>Envios con error</h4>' +
-      '<p>Si un envio programado falla, queda en estado <strong>ERROR</strong>. ' +
-      'Puedes <strong>editar</strong> el contenido del correo y corregir el problema, ' +
-      'o pulsar <strong>"Reintentar"</strong> para volver a enviarlo. ' +
-      'Al editar un envio en ERROR, se reactiva automaticamente a estado Pendiente.</p>' +
+      '<p>Si un envio programado falla, queda en estado <strong>ERROR</strong>:</p>' +
+      '<ul>' +
+      '<li>El modal muestra el <strong>mensaje de error</strong> detallado.</li>' +
+      '<li>Puedes <strong>editar</strong> el asunto, cuerpo, CC y BCC del correo para corregir el problema.</li>' +
+      '<li>Al guardar cambios en un envio ERROR, se <strong>reactiva automaticamente</strong> a estado PENDIENTE.</li>' +
+      '<li>Pulsa <strong>"Enviar ahora"</strong> para reintentarlo inmediatamente.</li>' +
+      '<li><strong>"Reprogramar"</strong> para asignar una nueva fecha de envio.</li>' +
+      '</ul>' +
 
       '<div class="ayuda-tip"><strong>Consejo:</strong> Los envios programados respetan el horario laboral ' +
-      'y el limite de emails por minuto configurados en Config.</div>'
+      'y el limite de emails por minuto configurados en Config. En la PWA movil, ' +
+      'puedes ver y gestionar programados con boton Reintentar y editor BottomSheet.</div>'
   },
   {
     id: 'reglas',
@@ -414,33 +497,46 @@ const SECCIONES = [
     contenido:
       '<h3>Reglas de acciones automaticas</h3>' +
       '<p>TareaLog incluye un motor de reglas configurable que ejecuta acciones automaticas cuando un registro cumple condiciones. ' +
-      'Accede desde la pestana <strong>Config</strong>, seccion <strong>Reglas</strong>.</p>' +
+      'Accede desde la pestana <strong>Config</strong>, seccion <strong>Reglas de Acciones</strong>.</p>' +
 
-      '<h4>Campos disponibles</h4>' +
-      '<p>Puedes crear condiciones sobre <strong>9 campos</strong>:</p>' +
+      '<h4>Campos de condicion (9)</h4>' +
+      '<p>Puedes crear condiciones sobre cualquiera de estos campos:</p>' +
       '<ul>' +
-      '<li><strong>fase</strong> — Codigo de fase logistica.</li>' +
-      '<li><strong>estado</strong> — Estado del registro.</li>' +
+      '<li><strong>fase</strong> — Codigo de fase logistica (00-30).</li>' +
+      '<li><strong>estado</strong> — Estado del registro (NUEVO, PENDIENTE, GESTIONADO, etc.).</li>' +
       '<li><strong>codCar</strong> — Codigo de carga.</li>' +
-      '<li><strong>tipoTarea</strong> — Tipo de tarea (OPERATIVO, ADMINISTRATIVA, SIN_CLASIFICAR).</li>' +
-      '<li><strong>vinculacion</strong> — Tipo de vinculacion (AUTOMATICA, MANUAL, HILO, etc.).</li>' +
+      '<li><strong>tipoTarea</strong> — OPERATIVO, ADMINISTRATIVA o SIN_CLASIFICAR.</li>' +
+      '<li><strong>vinculacion</strong> — AUTOMATICA, MANUAL, HILO, SIN_VINCULAR.</li>' +
       '<li><strong>alerta</strong> — Nivel de alerta activo.</li>' +
-      '<li><strong>bandeja</strong> — Bandeja de origen del email (INBOX, OTRO).</li>' +
-      '<li><strong>interlocutor</strong> — Email del interlocutor.</li>' +
-      '<li><strong>zona</strong> — Zona geografica.</li>' +
+      '<li><strong>bandeja</strong> — Bandeja de origen del email (INBOX, OTRO, texto libre).</li>' +
+      '<li><strong>interlocutor</strong> — Email del interlocutor (texto libre).</li>' +
+      '<li><strong>zona</strong> — Zona geografica (texto libre).</li>' +
       '</ul>' +
+      '<p>Cada condicion tiene: campo que cambia, valor destino (o "*" para cualquiera) y opcionalmente valor de origen.</p>' +
 
-      '<h4>Tipos de accion</h4>' +
-      '<p>Cada regla puede ejecutar una accion cuando se cumple la condicion:</p>' +
+      '<h4>Tipos de accion (9)</h4>' +
+      '<p>Cada regla puede ejecutar una o mas acciones:</p>' +
       '<ul>' +
-      '<li><strong>Cambiar fase</strong> — Mover la carga a otra fase automaticamente.</li>' +
-      '<li><strong>Cambiar estado</strong> — Asignar un estado.</li>' +
-      '<li><strong>Notificar</strong> — Mostrar una notificacion.</li>' +
-      '<li><strong>Heredar del hilo</strong> — Copiar un campo (fase/estado/codCar) del registro anterior del mismo hilo.</li>' +
+      '<li><strong>Propagar al hilo</strong> — Copia el cambio a todos los registros del mismo hilo.</li>' +
+      '<li><strong>Sugerir recordatorio</strong> — Muestra sugerencia de recordatorio al usuario.</li>' +
+      '<li><strong>Crear recordatorio</strong> — Crea un recordatorio automaticamente.</li>' +
+      '<li><strong>Iniciar secuencia</strong> — Lanza una secuencia de seguimiento automatica.</li>' +
+      '<li><strong>Preseleccionar plantilla</strong> — Abre el modal de respuesta con una plantilla predefinida.</li>' +
+      '<li><strong>Cambiar fase</strong> — Mueve la carga a otra fase.</li>' +
+      '<li><strong>Cambiar estado</strong> — Asigna un estado.</li>' +
+      '<li><strong>Mostrar aviso</strong> — Muestra una notificacion informativa.</li>' +
+      '<li><strong>Heredar campo del hilo</strong> — Copia un campo (fase, estado o codCar) del registro anterior del mismo hilo.</li>' +
       '</ul>' +
 
-      '<div class="ayuda-tip"><strong>Consejo:</strong> Las reglas se evaluan en orden de prioridad. ' +
-      'Puedes activar o desactivar cada regla individualmente.</div>'
+      '<h4>Reglas de sistema vs. usuario</h4>' +
+      '<ul>' +
+      '<li>Las reglas de <strong>sistema</strong> vienen predefinidas y se pueden desactivar pero no eliminar.</li>' +
+      '<li>Las reglas de <strong>usuario</strong> se crean, editan y eliminan libremente.</li>' +
+      '<li>Usa <strong>"Restaurar por defecto"</strong> para volver a las reglas de sistema originales.</li>' +
+      '</ul>' +
+
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Las reglas se evaluan en orden de prioridad (campo Orden). ' +
+      'Puedes activar o desactivar cada regla individualmente. Una regla puede tener multiples acciones.</div>'
   },
   {
     id: 'config',
@@ -454,46 +550,102 @@ const SECCIONES = [
       'Cada servicio tiene un alias descriptivo y puedes cambiar entre ellos con el selector de la barra principal.</p>' +
 
       '<h4>Hoja de calculo</h4>' +
-      '<p>Pega la URL completa de tu Google Sheet. Pulsa <strong>"Detectar"</strong> para validarla. ' +
-      'Puedes cambiar de hoja en cualquier momento con el selector dinamico.</p>' +
+      '<p>Pega la URL completa de tu Google Sheet o introduce el ID directamente. Pulsa <strong>"Detectar"</strong> para validarla. ' +
+      'El ID se guarda en el backend GAS via PropertiesService, asi todos los dispositivos usan la misma hoja.</p>' +
 
       '<h4>Busqueda Gmail</h4>' +
       '<p>Define que correos procesa el barrido. Usa la sintaxis de Gmail:</p>' +
       '<ul>' +
       '<li><code>(in:inbox OR in:sent) newer_than:7d</code> — Inbox y enviados de ultima semana.</li>' +
       '<li><code>in:inbox is:unread</code> — Solo no leidos.</li>' +
+      '<li><code>(in:inbox OR in:sent) newer_than:30d</code> — Ultimo mes.</li>' +
       '</ul>' +
       '<p>Pulsa los botones de ejemplo para aplicar queries comunes.</p>' +
+
+      '<h4>Horario laboral</h4>' +
+      '<p>Configura los <strong>dias</strong> (Lun-Dom) y las <strong>horas</strong> (de/a) en que se permiten envios automaticos. ' +
+      'Los envios programados y secuencias fuera de horario se posponen al siguiente periodo laboral.</p>' +
+
+      '<h4>Estado inicial de emails</h4>' +
+      '<p>Selecciona el estado que se asigna automaticamente a los correos nuevos al procesarlos (p.ej. NUEVO, RECIBIDO). ' +
+      'Se guarda en el backend GAS y se aplica a todos los dispositivos.</p>' +
 
       '<h4>Apariencia</h4>' +
       '<ul>' +
       '<li><strong>Modo oscuro</strong> — Alterna entre tema claro y oscuro. La preferencia se guarda y persiste entre sesiones.</li>' +
       '</ul>' +
 
-      '<h4>Estado inicial de emails</h4>' +
-      '<p>Selecciona el estado que se asigna automaticamente a los correos nuevos al procesarlos (p.ej. NUEVO, RECIBIDO). ' +
-      'Se guarda en el backend GAS y se aplica a todos los dispositivos.</p>' +
+      '<h4>Fases de transporte</h4>' +
+      '<p>Personaliza las fases logisticas: codigo (2 caracteres), nombre, orden, si es critica y clase CSS. ' +
+      'Puedes crear nuevas fases o desactivar las que no uses.</p>' +
 
-      '<h4>Reglas</h4>' +
-      '<p>Configura reglas de acciones automaticas con 9 campos de condicion. Ver seccion <strong>"Motor de reglas"</strong> para detalles.</p>' +
+      '<h4>Estados</h4>' +
+      '<p>Personaliza los estados del seguimiento: codigo, nombre visible, icono (emoji), orden y clase CSS. ' +
+      'Cada estado tiene un color asociado que se refleja en toda la aplicacion.</p>' +
+
+      '<h4>Reglas de acciones</h4>' +
+      '<p>Configura reglas automaticas con 9 campos de condicion y 9 tipos de accion. ' +
+      'Ver seccion <strong>"Motor de reglas"</strong> para detalles completos.</p>' +
 
       '<h4>Otros ajustes</h4>' +
       '<ul>' +
       '<li><strong>Intervalo de barrido</strong> — Cada cuantos minutos sincronizar (1-1440, defecto: 15).</li>' +
       '<li><strong>Limite de envio</strong> — Maximo emails por minuto (1-30, defecto: 10).</li>' +
-      '<li><strong>Horario laboral</strong> — Dias y horas en que se permiten envios automaticos.</li>' +
-      '<li><strong>Resumen matutino</strong> — Activar/desactivar y hora de inicio.</li>' +
-      '<li><strong>Reporte de turno</strong> — Activar/desactivar y hora de generacion.</li>' +
-      '<li><strong>Sugerencias de recordatorio</strong> — Activar/desactivar.</li>' +
-      '<li><strong>Secuencias</strong> — Activar/desactivar e intervalo de evaluacion.</li>' +
-      '<li><strong>Patrones regex</strong> — Expresiones para extraer codigo de carga y clasificar emails.</li>' +
-      '<li><strong>Fases y estados</strong> — Personaliza las fases logisticas y los estados disponibles.</li>' +
+      '<li><strong>Resumen matutino</strong> — Activar/desactivar y hora de inicio (defecto: 08:00).</li>' +
+      '<li><strong>Patrones regex</strong> — Expresiones para extraer codigo de carga de adjuntos y clasificar emails administrativos.</li>' +
+      '<li><strong>Rutas</strong> — Ruta a archivos CSV del ERP.</li>' +
       '</ul>' +
 
       '<h4>Backup</h4>' +
-      '<p>Usa <strong>"Exportar configuracion"</strong> para descargar un JSON con todos tus ajustes. ' +
+      '<p>Usa <strong>"Exportar configuracion"</strong> para descargar un JSON con todos tus ajustes ' +
+      '(servicios, fases, estados, reglas, filtros, etc.). ' +
       '<strong>"Importar configuracion"</strong> restaura desde un archivo previo. ' +
-      '<strong>"Restaurar valores por defecto"</strong> reinicia todo.</p>'
+      '<strong>"Restaurar valores por defecto"</strong> reinicia todo a la configuracion original.</p>'
+  },
+  {
+    id: 'movil',
+    titulo: 'App movil',
+    contenido:
+      '<h3>PWA Movil</h3>' +
+      '<p>TareaLog dispone de una aplicacion movil (PWA) accesible desde ' +
+      '<strong>tarealog-movil.pages.dev</strong>. Se instala como app nativa y funciona offline.</p>' +
+
+      '<h4>Vistas disponibles</h4>' +
+      '<ul>' +
+      '<li><strong>Mi Turno</strong> — Dashboard con KPIs del turno actual.</li>' +
+      '<li><strong>Todo</strong> — Lista de todas las cargas con busqueda y filtros.</li>' +
+      '<li><strong>Tablero</strong> — Kanban con scroll horizontal snap, drag &amp; drop tactil y seleccion por columna.</li>' +
+      '<li><strong>Programados</strong> — Envios programados con filtro por estado, edicion y reintento.</li>' +
+      '<li><strong>Config</strong> — Configuracion del servicio GAS, spreadsheet y sync.</li>' +
+      '</ul>' +
+
+      '<h4>Tablero movil</h4>' +
+      '<p>El tablero movil tiene las mismas columnas que el escritorio pero con interfaz tactil:</p>' +
+      '<ul>' +
+      '<li><strong>Scroll horizontal con snap</strong> — Las columnas se alinean al deslizar.</li>' +
+      '<li><strong>Chips toggle</strong> — Barra scrollable para mostrar/ocultar columnas.</li>' +
+      '<li><strong>Drag &amp; drop tactil</strong> — Mantener pulsada una tarjeta para moverla.</li>' +
+      '<li><strong>Seleccion por columna</strong> — Checkbox en cabecera de cada columna.</li>' +
+      '<li><strong>Barra de seleccion flotante</strong> — Al seleccionar, aparece barra con Fase, Estado, Responder y Limpiar.</li>' +
+      '<li><strong>Pull-to-refresh</strong> — Tira hacia abajo para actualizar datos.</li>' +
+      '<li><strong>Dots de posicion</strong> — Indicadores de columna visible.</li>' +
+      '</ul>' +
+
+      '<h4>Detalle de carga (BottomSheet)</h4>' +
+      '<p>Al pulsar una tarjeta se abre un panel inferior con:</p>' +
+      '<ul>' +
+      '<li><strong>Chips</strong> — Estado (clickable para cambiar), fase, bandeja, tipo de tarea.</li>' +
+      '<li><strong>Fechas logisticas</strong> — Carga y Entrega editables pulsando sobre ellas.</li>' +
+      '<li><strong>Indicadores</strong> — Notas, recordatorios y programados (clickables).</li>' +
+      '<li><strong>Acciones</strong> — Responder, +Nota, +Recordatorio, Ver detalle completo.</li>' +
+      '</ul>' +
+
+      '<h4>Actualizaciones</h4>' +
+      '<p>La PWA se actualiza automaticamente. Cuando hay una nueva version, aparece un toast con boton ' +
+      '<strong>"Actualizar"</strong>. El Service Worker gestiona el cache versionado.</p>' +
+
+      '<div class="ayuda-tip"><strong>Consejo:</strong> Anade la PWA a la pantalla de inicio de tu movil ' +
+      'para acceder como una app nativa. En Chrome: menu &gt; "Anadir a pantalla de inicio".</div>'
   },
   {
     id: 'atajos',
@@ -501,17 +653,17 @@ const SECCIONES = [
     contenido:
       '<h3>Referencia rapida</h3>' +
 
-      '<h4>Barra de controles</h4>' +
+      '<h4>Barra de controles (tab Datos)</h4>' +
       '<ul>' +
       '<li><strong>Ejecutar Ahora</strong> — Lanza un barrido inmediato.</li>' +
-      '<li><strong>Filtros</strong> — Abre/cierra el panel de filtros.</li>' +
+      '<li><strong>Filtros</strong> — Abre/cierra el panel de filtros avanzados.</li>' +
       '<li><strong>Agrupar por hilo</strong> — Agrupa correos por conversacion.</li>' +
       '<li><strong>Responder seleccionados</strong> — Respuesta masiva a los marcados.</li>' +
       '<li><strong>Programados</strong> — Panel de envios programados.</li>' +
+      '<li><strong>Resumen</strong> — Ventana de resumen de alertas.</li>' +
       '<li><strong>Recordatorios</strong> — Panel de recordatorios activos.</li>' +
       '<li><strong>Mi Turno</strong> — Dashboard con KPIs del turno.</li>' +
       '<li><strong>Reporte</strong> — Genera resumen de fin de turno.</li>' +
-      '<li><strong>Resumen</strong> — Ventana de resumen de alertas.</li>' +
       '</ul>' +
 
       '<h4>Interacciones en tabla</h4>' +
@@ -525,11 +677,19 @@ const SECCIONES = [
 
       '<h4>Interacciones en tablero Kanban</h4>' +
       '<ul>' +
-      '<li><strong>Click en tarjeta</strong> — Abre detalle con fechas editables.</li>' +
+      '<li><strong>Click en tarjeta</strong> — Abre detalle con campos editables.</li>' +
       '<li><strong>Arrastrar tarjeta</strong> — Cambia de fase (escritorio y movil).</li>' +
-      '<li><strong>Long-press</strong> — Acciones rapidas (movil).</li>' +
-      '<li><strong>Click en cabecera columna</strong> — Colapsar/expandir.</li>' +
-      '<li><strong>Chips superiores</strong> — Mostrar/ocultar columnas.</li>' +
+      '<li><strong>Checkbox columna</strong> — Selecciona/deselecciona todas las tarjetas de la columna.</li>' +
+      '<li><strong>Checkbox tarjeta</strong> — Seleccion individual.</li>' +
+      '<li><strong>Click en nombre columna</strong> — Colapsar/expandir.</li>' +
+      '<li><strong>Indicadores</strong> — Click en notas/recordatorio/programado para abrir detalle.</li>' +
+      '</ul>' +
+
+      '<h4>Atajos de teclado</h4>' +
+      '<ul>' +
+      '<li><span class="ayuda-kbd">f</span> — Enfocar campo de busqueda global (en tab Tablero).</li>' +
+      '<li><span class="ayuda-kbd">r</span> — Refrescar tablero Kanban.</li>' +
+      '<li><span class="ayuda-kbd">Esc</span> — Cerrar modal de detalle Kanban.</li>' +
       '</ul>' +
 
       '<h4>Variables de plantilla</h4>' +
@@ -540,32 +700,54 @@ const SECCIONES = [
       '<li><code>{{interlocutor}}</code> — Email del interlocutor.</li>' +
       '<li><code>{{fechaCorreo}}</code> — Fecha del correo.</li>' +
       '<li><code>{{estado}}</code> — Estado actual.</li>' +
+      '<li><code>{{fase}}</code> — Fase actual.</li>' +
       '<li><code>{{fCarga}}</code> — Fecha de carga.</li>' +
+      '<li><code>{{hCarga}}</code> — Hora de carga.</li>' +
       '<li><code>{{fEntrega}}</code> — Fecha de entrega.</li>' +
+      '<li><code>{{hEntrega}}</code> — Hora de entrega.</li>' +
+      '<li><code>{{asunto}}</code> — Asunto del correo.</li>' +
+      '<li><code>{{bandeja}}</code> — Bandeja de origen.</li>' +
+      '<li><code>{{zona}}</code> — Zona geografica.</li>' +
       '</ul>' +
 
       '<h4>Fases logisticas</h4>' +
       '<ul>' +
-      '<li><strong>00-02</strong> — Espera / Sin asignar / Alerta transportista.</li>' +
-      '<li><strong>05</strong> — Incidencia.</li>' +
-      '<li><strong>11-12</strong> — Carga / Posicion carga.</li>' +
+      '<li><strong>00</strong> — Espera / Sin asignar.</li>' +
+      '<li><strong>01</strong> — Alerta transportista.</li>' +
+      '<li><strong>02</strong> — Confirmada.</li>' +
+      '<li><strong>05</strong> — Incidencia carga.</li>' +
+      '<li><strong>11</strong> — Carga.</li>' +
+      '<li><strong>12</strong> — Posicion carga.</li>' +
       '<li><strong>19</strong> — En ruta.</li>' +
-      '<li><strong>21-22</strong> — Descarga / Posicion descarga.</li>' +
+      '<li><strong>21</strong> — Descarga.</li>' +
+      '<li><strong>22</strong> — Posicion descarga.</li>' +
       '<li><strong>25</strong> — Incidencia descarga.</li>' +
       '<li><strong>29</strong> — Vacio (pendiente docs).</li>' +
-      '<li><strong>30</strong> — Cierre.</li>' +
+      '<li><strong>30</strong> — Cierre / Documentado.</li>' +
+      '</ul>' +
+
+      '<h4>Estados</h4>' +
+      '<ul>' +
+      '<li><strong>NUEVO</strong> — Recien procesado.</li>' +
+      '<li><strong>ENVIADO</strong> — Respuesta enviada.</li>' +
+      '<li><strong>RECIBIDO</strong> — Confirmacion recibida.</li>' +
+      '<li><strong>PENDIENTE</strong> — Esperando accion.</li>' +
+      '<li><strong>GESTIONADO</strong> — Accion completada.</li>' +
+      '<li><strong>ALERTA</strong> — Requiere atencion urgente.</li>' +
+      '<li><strong>CERRADO</strong> — Finalizado.</li>' +
+      '<li><strong>NADA</strong> — Sin seguimiento necesario.</li>' +
       '</ul>'
   }
 ];
 
 function obtenerSecciones() {
-  return SECCIONES.map(s => ({ id: s.id, titulo: s.titulo, contenido: s.contenido }));
+  return SECCIONES.map(function(s) { return { id: s.id, titulo: s.titulo, contenido: s.contenido }; });
 }
 
 function obtenerSeccion(id) {
-  return SECCIONES.find(s => s.id === id) || null;
+  return SECCIONES.find(function(s) { return s.id === id; }) || null;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { obtenerSecciones, obtenerSeccion };
+  module.exports = { obtenerSecciones: obtenerSecciones, obtenerSeccion: obtenerSeccion };
 }
