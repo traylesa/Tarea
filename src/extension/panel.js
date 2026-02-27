@@ -545,7 +545,8 @@ async function persistirCambio(cell) {
   });
 
   // Fallback: si no hay reglas configuradas, propagar por defecto
-  if (!reglasConfig && (campo === 'fase' || campo === 'estado' || campo === 'codCar')) {
+  var camposPropagables = ['fase', 'estado', 'codCar', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega'];
+  if (!reglasConfig && camposPropagables.indexOf(campo) !== -1) {
     debePropagarHilo = true;
   }
 

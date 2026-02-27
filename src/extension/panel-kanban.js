@@ -453,7 +453,8 @@ async function _persistirCambioKanban(reg, campo, valor) {
     return r.acciones.some(function(a) { return a.tipo === 'PROPAGAR_HILO'; });
   });
 
-  if (!reglasConfig && (campo === 'fase' || campo === 'estado')) {
+  var camposPropagables = ['fase', 'estado', 'fCarga', 'hCarga', 'fEntrega', 'hEntrega'];
+  if (!reglasConfig && camposPropagables.indexOf(campo) !== -1) {
     debePropagarHilo = true;
   }
 
