@@ -185,6 +185,13 @@ var CardUI = {
       items.push('<span class="card-indicador" data-tipo="record">\u23F0</span>');
     }
 
+    // Programados
+    var progs = [];
+    try { progs = JSON.parse(localStorage.getItem('tarealog_programados')) || []; } catch(e) {}
+    if (progs.some(function(p) { return p.threadId === carga.threadId || (codCar && String(p.codCar) === String(codCar)); })) {
+      items.push('<span class="card-indicador" data-tipo="programado">\uD83D\uDCC5</span>');
+    }
+
     if (items.length === 0) return null;
 
     var fila = document.createElement('div');

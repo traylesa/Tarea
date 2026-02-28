@@ -217,6 +217,20 @@ var VistaKanban = {
       }
     }
 
+    // Programados
+    if (reg.threadId) {
+      var programados = [];
+      try { programados = JSON.parse(localStorage.getItem('tarealog_programados')) || []; } catch(e) {}
+      var tid = reg.threadId;
+      var codStr = reg.codCar ? String(reg.codCar) : '';
+      var tieneProg = programados.some(function(p) {
+        return p.threadId === tid || (codStr && String(p.codCar) === codStr);
+      });
+      if (tieneProg) {
+        items.push('<span class="kanban-tarjeta-indicador" title="Envio programado">&#128197;</span>');
+      }
+    }
+
     if (items.length === 0) return '';
     return '<span class="kanban-tarjeta-indicadores">' + items.join('') + '</span>';
   },

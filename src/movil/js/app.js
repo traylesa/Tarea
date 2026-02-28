@@ -149,6 +149,32 @@ var App = {
         }
       } catch(e) { /* mantener cache local */ }
 
+      // Sincronizar notas desde GAS
+      try {
+        var dataNotas = await API.get('getNotas');
+        if (dataNotas.notas && Array.isArray(dataNotas.notas)) {
+          var mapaNotas = {};
+          dataNotas.notas.forEach(function(n) {
+            var cl = String(n.clave || '');
+            if (!cl) return;
+            if (!mapaNotas[cl]) mapaNotas[cl] = [];
+            mapaNotas[cl].push({ id: n.id, texto: n.texto, fechaCreacion: n.fechaCreacion, tipo: n.tipo || 'CARGA' });
+          });
+          Store._guardarJSON('tarealog_notas', mapaNotas);
+        }
+      } catch(e) { /* mantener cache local */ }
+
+      // Sincronizar programados desde GAS (solo activos)
+      try {
+        var dataProg = await API.get('getProgramados');
+        if (dataProg.programados && Array.isArray(dataProg.programados)) {
+          var activos = dataProg.programados.filter(function(p) {
+            return p.estado === 'PENDIENTE' || p.estado === 'ERROR';
+          });
+          Store._guardarJSON('tarealog_programados', activos);
+        }
+      } catch(e) { /* mantener cache local */ }
+
       // Evaluar alertas
       if (typeof evaluarAlertas === 'function') {
         var alertas = evaluarAlertas(Store.obtenerRegistros(), Store.obtenerConfig());
