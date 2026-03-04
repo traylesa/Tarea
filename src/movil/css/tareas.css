@@ -237,6 +237,57 @@
   margin-top: 2px;
 }
 
+/* Tabs maestros (Contactos/Entidades/Centros) */
+.maestro-tabs {
+  display: flex;
+  background: var(--bg-primary);
+  border-bottom: 1px solid #E0E0E0;
+}
+.maestro-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  min-height: 40px;
+}
+.maestro-tab.activo {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Fila inline: select + boton "+" */
+.form-fila-inline {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.form-fila-inline select {
+  flex: 1;
+}
+.btn-inline-add {
+  width: 42px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-inline-add:active {
+  background: var(--color-primary);
+  color: white;
+}
+
 /* Lista vacia */
 .lista-vacia {
   text-align: center;
@@ -257,5 +308,21 @@ body.darkmode .subtarea-item { border-color: #444; }
 body.darkmode .tarea-detalle-row { border-color: #444; }
 body.darkmode .contacto-avatar {
   background: #1E3A5F;
+  color: #90CAF9;
+}
+body.darkmode .maestro-tabs {
+  background: #222;
+  border-color: #444;
+}
+body.darkmode .maestro-tab {
+  color: #999;
+}
+body.darkmode .maestro-tab.activo {
+  color: #90CAF9;
+  border-bottom-color: #90CAF9;
+}
+body.darkmode .btn-inline-add {
+  background: #1E3A5F;
+  border-color: #5C94C8;
   color: #90CAF9;
 }

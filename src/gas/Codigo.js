@@ -53,6 +53,8 @@ function doPost(e) {
     if (action === 'valorarTareaIA') return accionValorarTareaIA(body);
     if (action === 'atomizarTareaIA') return accionAtomizarTareaIA(body);
     if (action === 'crearContacto') return accionCrearContacto(body);
+    if (action === 'crearEntidad') return accionCrearEntidad(body);
+    if (action === 'crearCentro') return accionCrearCentro(body);
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -566,6 +568,26 @@ function accionCrearContacto(body) {
   try {
     var contacto = crearContacto(body);
     return respuestaJson({ ok: true, contacto: contacto });
+  } catch (err) {
+    return respuestaError(err.message);
+  }
+}
+
+function accionCrearEntidad(body) {
+  if (!body.nombre) return respuestaError('nombre es requerido');
+  try {
+    var entidad = crearEntidad(body);
+    return respuestaJson({ ok: true, entidad: entidad });
+  } catch (err) {
+    return respuestaError(err.message);
+  }
+}
+
+function accionCrearCentro(body) {
+  if (!body.nombre) return respuestaError('nombre es requerido');
+  try {
+    var centro = crearCentro(body);
+    return respuestaJson({ ok: true, centro: centro });
   } catch (err) {
     return respuestaError(err.message);
   }

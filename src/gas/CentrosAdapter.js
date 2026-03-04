@@ -12,19 +12,34 @@ function _filaACentro(fila) {
   };
 }
 
+function _generarIdCentro() {
+  return 'ctr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+/**
+ * Crea centro de trabajo. Auto-genera ID si no viene.
+ */
 function crearCentro(datos) {
+  if (!datos.nombre) throw new Error('nombre es requerido');
+
   var hoja = _obtenerHojaCentros();
   var ahora = new Date().toISOString();
   var fila = [
-    datos.id, datos.nombre, datos.entidadId || '',
-    datos.direccion || '', true, ahora
+    datos.id || _generarIdCentro(),
+    datos.nombre,
+    datos.entidadId || '',
+    datos.direccion || '',
+    datos.activo !== undefined ? datos.activo : true,
+    ahora
   ];
   hoja.appendRow(fila);
   return _filaACentro(fila);
 }
 
 function leerCentros() {
-  var filas = _obtenerHojaCentros().getDataRange().getValues();
+  var hoja = _obtenerHojaCentros();
+  if (!hoja) return [];
+  var filas = hoja.getDataRange().getValues();
   return filas.slice(1).map(_filaACentro);
 }
 
@@ -36,6 +51,20 @@ function obtenerCentro(id) {
   return null;
 }
 
+/**
+ * Retorna centros filtrados por entidadId.
+ */
+function centrosPorEntidad(entidadId) {
+  if (!entidadId) return [];
+  var filas = _obtenerHojaCentros().getDataRange().getValues();
+  return filas.slice(1)
+    .filter(function(f) { return f[2] === entidadId; })
+    .map(_filaACentro);
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { crearCentro, leerCentros, obtenerCentro };
+  module.exports = {
+    crearCentro, leerCentros, obtenerCentro,
+    centrosPorEntidad, _generarIdCentro
+  };
 }

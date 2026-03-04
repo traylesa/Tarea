@@ -272,6 +272,9 @@ Claves usadas en `chrome.storage.local` para persistencia de la extension.
 | `tarealog_gmail_query` | string | Query Gmail personalizada para barrido |
 | `tarealog_programados` | array | Cache local de envios programados |
 | `tarealog_outdoor` | string | Flag modo outdoor PWA movil: '0'/'1' via localStorage |
+| `tarealog_contactos_maestro` | array | Cache local contactos maestros (PWA movil) |
+| `tarealog_entidades` | array | Cache local entidades/empresas (PWA movil) |
+| `tarealog_centros` | array | Cache local centros de trabajo (PWA movil) |
 
 ### TIPO_ALERTA
 - `ALERTA_CONTACTO_NO_REGISTRADO` - Email no coincide con ERP
@@ -461,6 +464,64 @@ Cola de envios programados de email (hoja PROGRAMADOS en Sheets).
 | error_detalle | string | | Mensaje de error (si fallo) |
 | creado_por | string | | Email del usuario que programo |
 | created_at | string (ISO) | | Timestamp de creacion |
+
+### entidades
+Datos maestros de empresas/organizaciones. Hoja: `ENTIDADES`. Creacion desde extension, movil (tab Datos Maestros) y API GAS.
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|------------|-------------|
+| id | string | PK, AUTO | ID unico (prefijo `ent_` + timestamp + random) |
+| nombre | string | NOT NULL | Razon social o nombre comercial |
+| tipo | string | | Clasificacion: Cliente, Proveedor, Transportista, Colaborador |
+| cif | string | UNIQUE | CIF/NIF fiscal (validacion case-insensitive, sin guiones) |
+| direccion | string | | Domicilio fiscal |
+| activa | boolean | DEFAULT true | Soft-delete |
+| creado_at | string (ISO) | NOT NULL | Timestamp creacion (codigo: `creadoAt`) |
+
+**Relaciones:** Una entidad tiene N centros_trabajo y N contactos.
+**Endpoint crear:** POST `crearEntidad` { nombre*, tipo, cif, direccion }
+**Endpoint leer:** GET `getEntidades`
+
+### centros_trabajo
+Ubicaciones fisicas de una entidad. Hoja: `CENTROS_TRABAJO`. Creacion desde movil (tab Datos Maestros o inline al crear contacto).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|------------|-------------|
+| id | string | PK, AUTO | ID unico (prefijo `ctr_` + timestamp + random) |
+| nombre | string | NOT NULL | Nombre del centro (ej: Nave Norte, Oficina Central) |
+| entidad_id | string | FK→entidades.id | Empresa propietaria (codigo: `entidadId`) |
+| direccion | string | | Direccion del centro |
+| activo | boolean | DEFAULT true | Soft-delete |
+| creado_at | string (ISO) | NOT NULL | Timestamp creacion (codigo: `creadoAt`) |
+
+**Relaciones:** Pertenece a una entidad. Referenciado por contactos.
+**Endpoint crear:** POST `crearCentro` { nombre*, entidadId, direccion }
+**Endpoint leer:** GET `getCentros`
+
+### contactos
+Maestro de personas/contactos. Hoja: `CONTACTOS`. PK por telefono normalizado (+34XXXXXXXXX).
+
+| Campo | Tipo | Restriccion | Descripcion |
+|-------|------|------------|-------------|
+| telefono | string | PK, UNIQUE | Telefono normalizado +34XXXXXXXXX |
+| nombre | string | NOT NULL | Nombre del contacto |
+| email | string | | Email de contacto |
+| entidad_id | string | FK→entidades.id | Empresa (codigo: `entidadId`) |
+| centro_id | string | FK→centros_trabajo.id | Centro de trabajo (codigo: `centroId`) |
+| notas | string | | Anotaciones libres |
+| creado_por | string | | Email del usuario creador (codigo: `creadoPor`) |
+| creado_at | string (ISO) | NOT NULL | Timestamp creacion (codigo: `creadoAt`) |
+
+**Validaciones:** Telefono 9 digitos ES o +34XXXXXXXXX. Rechaza duplicados por telefono.
+**Relaciones:** Pertenece a entidad y centro. Referenciado por tareas (contactoTel).
+**Endpoint crear:** POST `crearContacto` { telefono*, nombre*, email, entidadId, centroId, notas }
+**Endpoint leer:** GET `getContactos`, GET `buscarContactos?q=texto`
+
+### TIPO_ENTIDAD
+- `Cliente` - Empresa cliente
+- `Proveedor` - Proveedor de servicios
+- `Transportista` - Empresa de transporte
+- `Colaborador` - Colaborador externo
 
 ### HORARIO_LABORAL
 Configuracion de horario en que el trigger procesa envios programados (almacenado en PropertiesService).
@@ -657,6 +718,7 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 
 ## 6. Historial de Cambios
 
+- **2026-03-04:** Datos maestros completos (Fase B): +tablas entidades, centros_trabajo, contactos con campos, relaciones y endpoints. +enum TIPO_ENTIDAD (Cliente/Proveedor/Transportista/Colaborador). +3 STORAGE_KEYS movil (contactos_maestro, entidades, centros). Adaptadores con auto-generacion IDs (ent_/ctr_), validacion CIF unico, busqueda por nombre/CIF. Endpoints POST crearEntidad/crearCentro. Vista movil unificada "Datos Maestros" con 3 tabs + creacion en cascada inline. +35 tests (EntidadesAdapter 12 + CentrosAdapter 11 + ContactosAdapter 12)
 - **2026-02-28:** v0.4.2: +funcion pura `obtenerSeleccionEstadoColumna(regsColumna, seleccionadosMap)` en kanban.js (retorna {total, seleccionados, estado:'ninguno'|'parcial'|'todos'}), checkbox por columna `.kanban-col-chk` reemplaza checkbox global "Todos", +glosario seleccion por columna, ayuda actualizada (15 secciones)
 - **2026-02-27:** Auditoria exhaustiva 4 agentes: corregido TIPO_ACCION_REGLA (5 valores fantasma→9 valores reales del codigo), +enum ESTADO_RECORDATORIO (ACTIVO/COMPLETADO), +campo asunto en RECORDATORIO, +3 hojas Sheets (notas/recordatorios_sheets/historial_sheets), corregido db_hilos (3 campos reales, no 4), corregidos tipos STORAGE_KEYS (spreadsheet→object, outdoor→string, darkmode→dual), +campos opcionales CONFIG_EXPORTACION, +tipo en NOTA_CARGA, +ALERTA_SUPLANTACION, nota naming camelCase/snake_case, +7 terminos glosario (dark mode, outdoor, deduplicacion por carga, gmail query, pull-to-refresh, barra flotante)
 - **2026-02-27:** Auditoria coherencia post multi-seleccion Kanban: +estado NADA, +campo bandeja en seguimiento, +5 STORAGE_KEYS (kanban_prefs, darkmode, gmail_query, programados, outdoor), +sin_fase/documentado en GRUPO_FASE, +enums TIPO_ACCION_REGLA y CAMPO_CONDICION_REGLA, +glosario estado inicial/seleccion masiva kanban
@@ -679,6 +741,6 @@ Configuracion de resiliencia y tolerancia a fallos (seccion `robustez` en config
 
 ---
 
-**Ultima actualizacion:** 2026-02-28 (v0.4.2: seleccion por columna Kanban)
+**Ultima actualizacion:** 2026-03-04 (Datos maestros completos: entidades, centros, contactos)
 **Mantenido por:** Coordinacion entre expedientes
 **Consultas:** Antes de crear CUALQUIER nombre nuevo en codigo/diseno
