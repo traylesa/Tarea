@@ -12,6 +12,11 @@ function doGet(e) {
     if (action === 'getNotas') return accionGetNotas();
     if (action === 'getRecordatorios') return accionGetRecordatorios();
     if (action === 'getHistorial') return accionGetHistorial();
+    if (action === 'getTareas') return accionGetTareas();
+    if (action === 'getContactos') return accionGetContactos();
+    if (action === 'buscarContactos') return accionBuscarContactos(e.parameter.q || '');
+    if (action === 'getEntidades') return accionGetEntidades();
+    if (action === 'getCentros') return accionGetCentros();
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -43,6 +48,11 @@ function doPost(e) {
     if (action === 'registrarHistorial') return accionRegistrarHistorial(body);
     if (action === 'actualizarCampoPorThread') return accionActualizarCampoPorThread(body);
     if (action === 'configurarEstadoInicial') return accionConfigurarEstadoInicial(body);
+    if (action === 'crearTarea') return accionCrearTarea(body);
+    if (action === 'actualizarTarea') return accionActualizarTarea(body);
+    if (action === 'valorarTareaIA') return accionValorarTareaIA(body);
+    if (action === 'atomizarTareaIA') return accionAtomizarTareaIA(body);
+    if (action === 'crearContacto') return accionCrearContacto(body);
 
     return respuestaError('Accion no reconocida');
   } catch (err) {
@@ -492,6 +502,73 @@ function accionRegistrarHistorial(body) {
   };
   guardarEntradaHistorial(registro);
   return respuestaJson({ ok: true, id: registro.id });
+}
+
+// --- Acciones Tareas, Contactos, Entidades, Centros ---
+
+function accionGetTareas() {
+  return respuestaJson({ ok: true, tareas: obtenerTareas() });
+}
+
+function accionGetContactos() {
+  return respuestaJson({ ok: true, contactos: leerContactos() });
+}
+
+function accionBuscarContactos(q) {
+  if (!q) return accionGetContactos();
+  return respuestaJson({ ok: true, contactos: buscarContactos(q) });
+}
+
+function accionGetEntidades() {
+  return respuestaJson({ ok: true, entidades: leerEntidades() });
+}
+
+function accionGetCentros() {
+  return respuestaJson({ ok: true, centros: leerCentros() });
+}
+
+function accionCrearTarea(body) {
+  if (!body.titulo) return respuestaError('titulo es requerido');
+  if (!body.creadoPor) body.creadoPor = obtenerEmailPropio();
+  var tarea = crearTarea(body);
+  return respuestaJson({ ok: true, tarea: tarea });
+}
+
+function accionActualizarTarea(body) {
+  if (!body.id) return respuestaError('id es requerido');
+  if (!body.campos) return respuestaError('campos es requerido');
+  body.campos.actualizadoAt = ahoraLocalISO();
+  var ok = actualizarTarea(body.id, body.campos);
+  if (!ok) return respuestaError('Tarea no encontrada: ' + body.id);
+  return respuestaJson({ ok: true });
+}
+
+function accionValorarTareaIA(body) {
+  if (!body.id || !body.titulo) return respuestaError('id y titulo son requeridos');
+  var valoracion = valorarConIA(body);
+  if (!valoracion) return respuestaError('No se pudo valorar (API key o error)');
+  actualizarValoracionIA(body.id, valoracion);
+  return respuestaJson({ ok: true, valoracion: valoracion });
+}
+
+function accionAtomizarTareaIA(body) {
+  if (!body.id || !body.descripcion) return respuestaError('id y descripcion son requeridos');
+  var subtareas = atomizarConIA(body);
+  if (!subtareas) return respuestaError('No se pudo atomizar (API key o error)');
+  actualizarSubtareas(body.id, subtareas);
+  return respuestaJson({ ok: true, subtareas: subtareas });
+}
+
+function accionCrearContacto(body) {
+  if (!body.telefono) return respuestaError('telefono es requerido');
+  if (!body.nombre) return respuestaError('nombre es requerido');
+  if (!body.creadoPor) body.creadoPor = obtenerEmailPropio();
+  try {
+    var contacto = crearContacto(body);
+    return respuestaJson({ ok: true, contacto: contacto });
+  } catch (err) {
+    return respuestaError(err.message);
+  }
 }
 
 // --- Trigger programado ---

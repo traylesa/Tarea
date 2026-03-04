@@ -84,6 +84,42 @@ var Store = {
     localStorage.setItem('ultimoBarrido', iso);
   },
 
+  // --- Tareas ---
+  obtenerTareas: function() {
+    return this._leerJSON('tarealog_tareas', []);
+  },
+
+  guardarTareas: function(tareas) {
+    this._guardarJSON('tarealog_tareas', tareas);
+  },
+
+  // --- Contactos ---
+  obtenerContactos: function() {
+    return this._leerJSON('tarealog_contactos_maestro', []);
+  },
+
+  guardarContactos: function(contactos) {
+    this._guardarJSON('tarealog_contactos_maestro', contactos);
+  },
+
+  // --- Entidades ---
+  obtenerEntidades: function() {
+    return this._leerJSON('tarealog_entidades', []);
+  },
+
+  guardarEntidades: function(entidades) {
+    this._guardarJSON('tarealog_entidades', entidades);
+  },
+
+  // --- Centros ---
+  obtenerCentros: function() {
+    return this._leerJSON('tarealog_centros', []);
+  },
+
+  guardarCentros: function(centros) {
+    this._guardarJSON('tarealog_centros', centros);
+  },
+
   // --- Helpers internos ---
   _leerJSON: function(clave, defaultVal) {
     var raw = localStorage.getItem(clave);

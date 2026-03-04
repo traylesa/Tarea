@@ -1,7 +1,7 @@
 {
-  "name": "TareaLog Movil",
-  "short_name": "TareaLog",
-  "description": "Gestion logistica movil TRAYLESA",
+  "name": "Tarea Movil",
+  "short_name": "Tarea",
+  "description": "Gestion de tareas movil TRAYLESA",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#FFFFFF",

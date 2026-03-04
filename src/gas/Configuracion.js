@@ -49,6 +49,15 @@ const HEADERS_RECORDATORIOS = ['id', 'clave', 'texto', 'asunto', 'fechaDisparo',
 const HOJA_HISTORIAL = 'HISTORIAL';
 const HEADERS_HISTORIAL = ['id', 'clave', 'tipo', 'descripcion', 'fechaCreacion'];
 
+// Hojas IA (Fase C: Multiusuario)
+const HOJA_TAREAS = 'TAREAS';
+const HEADERS_TAREAS = [
+  'id', 'titulo', 'descripcion', 'referencia', 'contactoTel',
+  'entidadId', 'centroId', 'usuarioAsignado', 'creadoPor',
+  'estado', 'fase', 'prioridadIa', 'horasIa', 'riesgoIa',
+  'justificacionIa', 'subtareasJson', 'creadoAt', 'actualizadoAt'
+];
+
 // Email propio: cuenta que despliega el script (funciona en Web App)
 function obtenerEmailPropio() {
   return Session.getEffectiveUser().getEmail().toLowerCase();
@@ -128,3 +137,23 @@ function ahoraLocalISO() {
 function fechaLocalISO(date) {
   return Utilities.formatDate(date, TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
+
+// Setup inicial (ejecutar UNA VEZ desde editor GAS: Run > setupInicial)
+function setupInicial() {
+  guardarSpreadsheetId('12NH1UZJbGqa2QOYHudegL0rt4VTqN_sEdgl_DVm9aEg');
+  Logger.log('SPREADSHEET_ID configurado: 12NH1UZJbGqa2QOYHudegL0rt4VTqN_sEdgl_DVm9aEg');
+}
+
+// Hojas multiusuario (Fase A)
+const HOJA_USUARIOS = 'USUARIOS';
+const HEADERS_USUARIOS = ['uid', 'nombre', 'email', 'rol', 'fechaAlta', 'activo'];
+
+// Hojas datos maestros (Fase B)
+const HOJA_CONTACTOS = 'CONTACTOS';
+const HEADERS_CONTACTOS = ['telefono', 'nombre', 'email', 'entidadId', 'centroId', 'notas', 'creadoPor', 'creadoAt'];
+
+const HOJA_ENTIDADES = 'ENTIDADES';
+const HEADERS_ENTIDADES = ['id', 'nombre', 'tipo', 'cif', 'direccion', 'activa', 'creadoAt'];
+
+const HOJA_CENTROS = 'CENTROS_TRABAJO';
+const HEADERS_CENTROS = ['id', 'nombre', 'entidadId', 'direccion', 'activo', 'creadoAt'];
