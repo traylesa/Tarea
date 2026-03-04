@@ -1,7 +1,7 @@
 // sw.js - Service Worker para cache offline y notificaciones
 'use strict';
 
-var CACHE_NAME = 'tarea-v2';
+var CACHE_NAME = 'tarea-v3';
 var CACHE_URLS = [
   './',
   './index.html',
