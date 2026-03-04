@@ -9,6 +9,11 @@ function obtenerHoja(nombre) {
   else if (nombre === HOJA_NOTAS) headersEsperados = HEADERS_NOTAS;
   else if (nombre === HOJA_RECORDATORIOS) headersEsperados = HEADERS_RECORDATORIOS;
   else if (nombre === HOJA_HISTORIAL) headersEsperados = HEADERS_HISTORIAL;
+  else if (nombre === HOJA_TAREAS) headersEsperados = HEADERS_TAREAS;
+  else if (nombre === HOJA_USUARIOS) headersEsperados = HEADERS_USUARIOS;
+  else if (nombre === HOJA_CONTACTOS) headersEsperados = HEADERS_CONTACTOS;
+  else if (nombre === HOJA_ENTIDADES) headersEsperados = HEADERS_ENTIDADES;
+  else if (nombre === HOJA_CENTROS) headersEsperados = HEADERS_CENTROS;
 
   if (!hoja) {
     const nueva = ss.insertSheet(nombre);

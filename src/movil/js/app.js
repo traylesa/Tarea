@@ -80,6 +80,12 @@ var App = {
       case 'kanban':
         VistaKanban.renderizar(contenedor);
         break;
+      case 'tareas':
+        VistaTareas.renderizar(contenedor);
+        break;
+      case 'contactos':
+        VistaContactos.renderizar(contenedor);
+        break;
       case 'programados':
         VistaProgramados.renderizar(contenedor);
         break;
@@ -161,6 +167,38 @@ var App = {
             mapaNotas[cl].push({ id: n.id, texto: n.texto, fechaCreacion: n.fechaCreacion, tipo: n.tipo || 'CARGA' });
           });
           Store._guardarJSON('tarealog_notas', mapaNotas);
+        }
+      } catch(e) { /* mantener cache local */ }
+
+      // Sincronizar tareas desde GAS (Fase C)
+      try {
+        var dataTareas = await API.get('getTareas');
+        if (dataTareas.tareas && Array.isArray(dataTareas.tareas)) {
+          Store.guardarTareas(dataTareas.tareas);
+        }
+      } catch(e) { /* mantener cache local */ }
+
+      // Sincronizar contactos desde GAS (Fase B)
+      try {
+        var dataContactos = await API.get('getContactos');
+        if (dataContactos.contactos && Array.isArray(dataContactos.contactos)) {
+          Store.guardarContactos(dataContactos.contactos);
+        }
+      } catch(e) { /* mantener cache local */ }
+
+      // Sincronizar entidades desde GAS (Fase B)
+      try {
+        var dataEntidades = await API.get('getEntidades');
+        if (dataEntidades.entidades && Array.isArray(dataEntidades.entidades)) {
+          Store.guardarEntidades(dataEntidades.entidades);
+        }
+      } catch(e) { /* mantener cache local */ }
+
+      // Sincronizar centros desde GAS (Fase B)
+      try {
+        var dataCentros = await API.get('getCentros');
+        if (dataCentros.centros && Array.isArray(dataCentros.centros)) {
+          Store.guardarCentros(dataCentros.centros);
         }
       } catch(e) { /* mantener cache local */ }
 

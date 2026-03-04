@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/outdoor.css">
   <link rel="stylesheet" href="css/mi-turno.css">
   <link rel="stylesheet" href="css/kanban.css">
+  <link rel="stylesheet" href="css/tareas.css">
   <link rel="stylesheet" href="css/dark-mode.css">
 </head>
 <body>
@@ -37,6 +38,14 @@
       <a class="bottom-nav-item" data-ruta="kanban" onclick="App.navegar('kanban')">
         <span style="font-size:20px">&#9634;</span>
         <span>Tablero</span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="tareas" onclick="App.navegar('tareas')">
+        <span style="font-size:20px">&#10004;</span>
+        <span>Tareas</span>
+      </a>
+      <a class="bottom-nav-item" data-ruta="contactos" onclick="App.navegar('contactos')">
+        <span style="font-size:20px">&#128100;</span>
+        <span>Contactos</span>
       </a>
       <a class="bottom-nav-item" data-ruta="programados" onclick="App.navegar('programados')">
         <span style="font-size:20px">&#128339;</span>
@@ -91,6 +100,8 @@
   <script src="js/views/detalle.js"></script>
   <script src="js/views/programados.js"></script>
   <script src="js/views/kanban.js"></script>
+  <script src="js/views/tareas.js"></script>
+  <script src="js/views/contactos.js"></script>
   <script src="js/views/config.js"></script>
 
   <!-- App principal (ultimo) -->
